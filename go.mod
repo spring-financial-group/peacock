@@ -1,4 +1,4 @@
-module spring-financial-group/mqube-go-cli-barebones
+module github.com/spring-financial-group/peacock
 
 go 1.18
 

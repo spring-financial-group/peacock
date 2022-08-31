@@ -3,4 +3,4 @@ RUN apk upgrade --no-cache
 
 COPY ./build/linux /
 
-ENTRYPOINT ["mqube-go-cli-barebones", "version"]
+ENTRYPOINT ["peacock", "version"]

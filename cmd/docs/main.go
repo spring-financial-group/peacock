@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/spring-financial-group/peacock/pkg/cmd"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"spring-financial-group/mqube-go-cli-barebones/pkg/cmd"
 	"strings"
 
 	"github.com/spf13/cobra"
