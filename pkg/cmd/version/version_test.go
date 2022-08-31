@@ -2,7 +2,7 @@ package version_test
 
 import (
 	"github.com/stretchr/testify/assert"
-	"spring-financial-group/mqube-go-cli-barebones/pkg/cmd/version"
+	"spring-financial-group/peacock/pkg/cmd/version"
 	"testing"
 )
 

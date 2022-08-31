@@ -1,5 +1,5 @@
-NAME := mqube-go-cli-barebones
-BINARY_NAME := mqube-go-cli-barebones
+NAME := peacock
+BINARY_NAME := peacock
 BUILD_TARGET = build
 ORG := spring-financial-group
 ORG_REPO := $(ORG)/$(NAME)
@@ -80,7 +80,7 @@ get-test-deps: ## Install test dependencies
 print-version: ## Print version
 	@echo $(VERSION)
 
-build: $(GO_DEPENDENCIES) clean ## Build mqube-go-cli-barebones binary for current OS
+build: $(GO_DEPENDENCIES) clean ## Build peacock binary for current OS
 	CGO_ENABLED=$(CGO_ENABLED) $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/$(BINARY_NAME) $(MAIN_SRC_FILE)
 
 build-all: $(GO_DEPENDENCIES) build make-reports-dir ## Build all files - runtime, all tests etc.

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"spring-financial-group/mqube-go-cli-barebones/cmd/app"
+	"spring-financial-group/peacock/cmd/app"
 )
 
 func main() {

@@ -43,7 +43,7 @@ spec:
             #!/bin/sh
             make release linux win darwin
 
-            ./build/linux/mqube-go-cli-barebones version
+            ./build/linux/peacock version
         - image: ghcr.io/jenkins-x/jx-registry:0.1.1
           name: check-registry
         - image: gcr.io/kaniko-project/executor:debug-v1.3.0
@@ -86,10 +86,10 @@ spec:
 
             gh auth login --with-token < /workspace/source/gittoken.gt
             echo "uploading to release v$VERSION"
-            gh release upload v$VERSION ./build/linux/mqube-go-cli-barebones
-            gh release upload v$VERSION ./build/win/mqube-go-cli-barebones-windows-amd64.exe
-            mv ./build/darwin/mqube-go-cli-barebones ./build/darwin/mqube-go-cli-barebones-darwin
-            gh release upload v$VERSION ./build/darwin/mqube-go-cli-barebones-darwin
+            gh release upload v$VERSION ./build/linux/peacock
+            gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
+            mv ./build/darwin/peacock ./build/darwin/peacock-darwin
+            gh release upload v$VERSION ./build/darwin/peacock-darwin
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 12h0m0s

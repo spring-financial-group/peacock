@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"spring-financial-group/mqube-go-cli-barebones/pkg/cmd"
+	"spring-financial-group/peacock/pkg/cmd"
 	"strings"
 
 	"github.com/spf13/cobra"

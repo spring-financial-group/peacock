@@ -4,8 +4,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras"
 	"github.com/spring-financial-group/mqa-logging/pkg/log"
-	"spring-financial-group/mqube-go-cli-barebones/pkg/cmd/version"
-	"spring-financial-group/mqube-go-cli-barebones/pkg/rootcmd"
+	"spring-financial-group/peacock/pkg/cmd/version"
+	"spring-financial-group/peacock/pkg/rootcmd"
 )
 
 // Main creates the new command
