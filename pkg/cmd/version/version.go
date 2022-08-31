@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
-	"spring-financial-group/peacock/pkg/rootcmd"
+	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
 )

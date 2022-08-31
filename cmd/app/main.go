@@ -1,7 +1,7 @@
 package app
 
 import (
-	"spring-financial-group/peacock/pkg/cmd"
+	"github.com/spring-financial-group/peacock/pkg/cmd"
 )
 
 // Run runs the command, if args are not nil they will be set on the command

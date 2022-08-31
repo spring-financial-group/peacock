@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"spring-financial-group/peacock/cmd/app"
+	"github.com/spring-financial-group/peacock/cmd/app"
 )
 
 func main() {
