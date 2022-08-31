@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  creationTimestamp: null
+  name: tests
+spec:
+  pipelineSpec:
+    tasks:
+      - name: from-build-pack
+        resources: {}
+        taskSpec:
+          metadata: {}
+          stepTemplate:
+            image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go/release.yaml@versionStream
+            name: ""
+            resources:
+              limits: {}
+            workingDir: /workspace/source
+          steps:
+            - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
+              name: ""
+              resources: {}
+            - name: jx-variables
+              resources: {}
+            - image: golang:1.18
+              name: build-make-test
+              resources: {}
+              script: |
+                #!/bin/sh
+                . /workspace/source/.jx/variables.sh
+                make test
+  podTemplate: {}
+  serviceAccountName: tekton-bot
+  timeout: 1h0m0s
+status: {}
