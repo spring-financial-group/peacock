@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
-	"spring-financial-group/mqube-go-cli-barebones/pkg/rootcmd"
+	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
 )
@@ -42,7 +42,7 @@ func NewCmdVersion() (*cobra.Command, *Options) {
 
 	cmd := &cobra.Command{
 		Use:     "version",
-		Short:   "Shows the version of the mqube-go-cli-barebones",
+		Short:   "Shows the version of the peacock",
 		Long:    createLong,
 		Example: fmt.Sprintf(createExample, rootcmd.BinaryName),
 		Run: func(cmd *cobra.Command, args []string) {
