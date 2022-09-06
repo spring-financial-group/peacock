@@ -80,9 +80,11 @@ func TestOptions_Run(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		mockGit.On("GetPullRequest", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(tt.pr, nil).Once()
+		mockGit.On("GetPullRequestFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(tt.pr, nil).Once()
 		if tt.opts.DryRun {
 			mockGit.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), mock.AnythingOfType("*github.PullRequest"), mock.AnythingOfType("string")).Return(nil).Once()
+		} else {
+			mockGit.On("GetPullRequestFromLastCommit", mock.AnythingOfType("*context.emptyCtx")).Return(tt.pr, nil)
 		}
 
 		for _, team := range tt.opts.Config.Teams {
