@@ -110,10 +110,8 @@ func (o *Options) Run() error {
 		fmt.Println("Loading config from local instance")
 		o.Config, err = config.LoadConfig()
 		if err != nil {
-			if o.DryRun {
-				err = errors.Wrapf(err, "failed to load config")
-				o.PostErrorToPR(ctx, err)
-			}
+			err = errors.Wrapf(err, "failed to load config")
+			o.PostErrorToPR(ctx, err)
 			return err
 		}
 	}
@@ -122,10 +120,8 @@ func (o *Options) Run() error {
 		fmt.Println("Initialising message handlers")
 		err = o.initialiseHandlers()
 		if err != nil {
-			if o.DryRun {
-				err = errors.Wrapf(err, "failed to init handlers")
-				o.PostErrorToPR(ctx, err)
-			}
+			err = errors.Wrapf(err, "failed to init handlers")
+			o.PostErrorToPR(ctx, err)
 			return err
 		}
 	}
@@ -133,20 +129,16 @@ func (o *Options) Run() error {
 	fmt.Println("Parsing messages from pull request body")
 	messages, err := message.ParseMessagesFromMarkdown(*o.pr.Body)
 	if err != nil {
-		if o.DryRun {
-			err = errors.Wrapf(err, "failed to parse messages from pull request")
-			o.PostErrorToPR(ctx, err)
-		}
+		err = errors.Wrapf(err, "failed to parse messages from pull request")
+		o.PostErrorToPR(ctx, err)
 		return err
 	}
 
 	fmt.Println("Validating messages")
 	err = o.ValidateMessagesWithConfig(messages)
 	if err != nil {
-		if o.DryRun {
-			err = errors.Wrapf(err, "failed validate messages with config")
-			o.PostErrorToPR(ctx, err)
-		}
+		err = errors.Wrapf(err, "failed validate messages with config")
+		o.PostErrorToPR(ctx, err)
 		return err
 	}
 
@@ -231,9 +223,12 @@ func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, 
 
 // PostErrorToPR posts an error to the pull request as a comment
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
-	err = o.Git.CommentOnPR(ctx, o.pr, "Error: "+err.Error())
-	if err != nil {
-		panic(err)
+	// If it's not a DryRun then we shouldn't post the error back to the pr
+	if o.DryRun {
+		err = o.Git.CommentOnPR(ctx, o.pr, "Error: "+err.Error())
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
