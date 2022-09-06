@@ -169,19 +169,26 @@ func (o *Options) Run() error {
 func (o *Options) SendMessages(messages []message.Message) error {
 	var errs []error
 	for _, m := range messages {
-		team := o.Config.GetTeamByName(m.TeamName)
-		err := o.Handlers[team.ContactType].Send(m.Content, team.Addresses)
+		err := o.sendMessage(m)
 		if err != nil {
-			err = errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
 			log.Logger().Error(err)
 			errs = append(errs, err)
 			continue
 		}
-		log.Logger().Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
 	}
 	if len(errs) > 0 {
 		return errors.New("failed to send messages")
 	}
+	return nil
+}
+
+func (o *Options) sendMessage(message message.Message) error {
+	team := o.Config.GetTeamByName(message.TeamName)
+	err := o.Handlers[team.ContactType].Send(message.Content, team.Addresses)
+	if err != nil {
+		return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
+	}
+	log.Logger().Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
 	return nil
 }
 
