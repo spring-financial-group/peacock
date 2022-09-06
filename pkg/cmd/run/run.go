@@ -103,7 +103,7 @@ func (o *Options) Run() error {
 	ctx := context.Background()
 	err = o.GetPullRequest(ctx)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get pull request %d", o.PRNumber)
+		return errors.Wrap(err, "failed to get pull request")
 	}
 
 	if o.Config == nil {
@@ -174,7 +174,12 @@ func (o *Options) GetPullRequest(ctx context.Context) (err error) {
 		o.pr, err = o.Git.GetPullRequestFromLastCommit(ctx)
 	}
 	if err != nil {
-		return errors.Wrapf(err, "failed to get pull request %d", o.PRNumber)
+		return errors.Wrap(err, "failed to get pull request")
+	}
+
+	// We should check whether this pr is usable
+	if o.pr.Body == nil {
+		return errors.New("no body found in pull request")
 	}
 	return nil
 }
@@ -259,7 +264,7 @@ func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 // and sets up the required clients
 func (o *Options) initialiseFlagsAndClients() (err error) {
 	// validate flags
-	if o.PRNumber == -1 {
+	if o.DryRun && o.PRNumber == -1 {
 		return errors.New("pr-number required")
 	}
 	if o.GitServerURL == "" {
