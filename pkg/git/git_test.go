@@ -15,7 +15,6 @@ import (
 
 type mockGitter struct {
 	mock.Mock
-	returnedSHA string
 }
 
 func (m *mockGitter) Command(dir string, args ...string) (string, error) {
