@@ -40,7 +40,50 @@ func NewClient(gitServerUrl, owner, repo, token string) (*Client, error) {
 	return w, nil
 }
 
-func (c *Client) GetPullRequest(ctx context.Context, prNumber int) (*github.PullRequest, error) {
+func (c *Client) GetPullRequestFromLastCommit(ctx context.Context) (*github.PullRequest, error) {
+	latest, err := gitclient.GetLatestCommitSha(c.gitter, "")
+	if err != nil {
+		return nil, err
+	}
+	log.Logger().Infof("Found latest commit at %s", latest)
+
+	prsWithCommit, r, err := c.github.PullRequests.ListPullRequestsWithCommit(ctx, c.owner, c.repo, latest, nil)
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("failed to get pull requests, %d code recieved", r.StatusCode)
+	}
+	if len(prsWithCommit) < 1 {
+		return nil, errors.New("no pull request found containing commit")
+	}
+	log.Logger().Infof("Found %d pull request(s) containing that commit", len(prsWithCommit))
+
+	// If there is only PR then that must be is
+	if len(prsWithCommit) == 1 {
+		return prsWithCommit[0], nil
+	}
+
+	return c.findPRByMergedTime(prsWithCommit), nil
+}
+
+func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.PullRequest {
+	var mostRecentPR int
+	for idx, pr := range pullRequests {
+		// The commit must have come from a merged PR
+		if !*pr.Merged {
+			continue
+		}
+
+		// We assume that it's the most recent PR that caused the release
+		if pr.MergedAt.Before(*pullRequests[mostRecentPR].MergedAt) {
+			mostRecentPR = idx
+		}
+	}
+	return pullRequests[mostRecentPR]
+}
+
+func (c *Client) GetPullRequestFromPRNumber(ctx context.Context, prNumber int) (*github.PullRequest, error) {
 	pr, resp, err := c.github.PullRequests.Get(ctx, c.owner, c.repo, prNumber)
 	if err != nil {
 		return nil, err

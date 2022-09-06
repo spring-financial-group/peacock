@@ -7,12 +7,13 @@ require (
 	github.com/google/go-github/v47 v47.0.0
 	github.com/ilyakaznacheev/cleanenv v1.3.0
 	github.com/jenkins-x/jx-helpers/v3 v3.4.0
+	github.com/jenkins-x/jx-logging/v3 v3.0.9
+	github.com/migueleliasweb/go-github-mock v0.0.12
 	github.com/pkg/errors v0.9.1
 	github.com/slack-go/slack v0.11.2
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spring-financial-group/mqa-helpers v0.0.0-20210207153409-87ea55a7a2e1
-	github.com/spring-financial-group/mqa-logging v0.0.0-20210207151406-ca7942a073d7
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	gopkg.in/mail.v2 v2.3.1
@@ -44,10 +45,12 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/google/go-github/v41 v41.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
+	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
@@ -56,7 +59,6 @@ require (
 	github.com/jenkins-x/go-scm v1.11.6 // indirect
 	github.com/jenkins-x/jx-api/v4 v4.5.1 // indirect
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.4 // indirect
-	github.com/jenkins-x/jx-logging/v3 v3.0.9 // indirect
 	github.com/jenkins-x/logrus-stackdriver-formatter v0.2.4 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -74,6 +76,7 @@ require (
 	github.com/shurcooL/githubv4 v0.0.0-20190718010115-4ba037080260 // indirect
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/spring-financial-group/mqa-logging v0.0.0-20210207151406-ca7942a073d7 // indirect
 	github.com/src-d/gcfg v1.4.0 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect

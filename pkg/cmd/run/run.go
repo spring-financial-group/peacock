@@ -79,7 +79,7 @@ func NewCmdRun() *cobra.Command {
 	cmd.Flags().StringVarP(&o.RepoName, "git-repo", "", "", "the name of the git repo to run on. If not specified it's loaded from the local git repo")
 
 	// Command specific flags
-	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and config, returning validation as a comment on the pr. Does not send messages. Default is false")
+	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and config, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
 
 	// Slack flags
 	cmd.Flags().StringVarP(&o.SlackToken, "slack-token", "", "", "the slack token used to send the messages to slack channels")
@@ -101,9 +101,7 @@ func (o *Options) Run() error {
 	}
 
 	ctx := context.Background()
-
-	log.Logger().Info("Getting pull request")
-	o.pr, err = o.Git.GetPullRequest(ctx, o.PRNumber)
+	err = o.GetPullRequest(ctx)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get pull request %d", o.PRNumber)
 	}
@@ -161,6 +159,22 @@ func (o *Options) Run() error {
 	err = o.SendMessages(messages)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (o *Options) GetPullRequest(ctx context.Context) (err error) {
+	if o.DryRun {
+		// If it's a dry run we need to be given the pr number that we're in
+		log.Logger().Info("Getting pull request from PR number")
+		o.pr, err = o.Git.GetPullRequestFromPRNumber(ctx, o.PRNumber)
+	} else {
+		// If not then we can get it from the last commit in the local instance
+		log.Logger().Info("Getting pull request from last commit")
+		o.pr, err = o.Git.GetPullRequestFromLastCommit(ctx)
+	}
+	if err != nil {
+		return errors.Wrapf(err, "failed to get pull request %d", o.PRNumber)
 	}
 	return nil
 }
