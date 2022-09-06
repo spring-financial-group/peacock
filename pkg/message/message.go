@@ -42,28 +42,37 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	}
 
 	messages := make([]Message, len(messageSplit))
+	log.Logger().Infof("Parsing messages")
 	for i, m := range messageSplit {
-		// Find the team name for this message
-		names := teamNameReg.FindAllStringSubmatch(m, -1)
-		if names == nil {
-			return nil, errors.Errorf("no teams found in message %d", i+1)
+		err = messages[i].ParseMessage(m, teamNameReg)
+		if err != nil {
+			return nil, errors.Errorf("failed to parse message %d", i+1)
 		}
-		if len(names) > 1 {
-			return nil, errors.Errorf("found %d teams in message %d, should only be 1", len(names), i+1)
-		}
-
-		// The actual team name is always the sub match, so it's the second element
-		teamName := strings.TrimSpace(names[0][1])
-		log.Logger().Infof("Found team \"%s\" in message %d\n", teamName, i+1)
-		messages[i].TeamName = teamName
-
-		// To find the content we can just remove the teamName heading
-		content := teamNameReg.ReplaceAllString(m, "")
-		messages[i].Content = strings.TrimSpace(content)
-		if len(messages[i].Content) < 1 {
-			return nil, errors.Errorf("no content found for message %d", i+1)
-		}
-		log.Logger().Infof("Found content for message %d\n", i+1)
 	}
 	return messages, nil
+}
+
+func (m *Message) ParseMessage(messageMD string, teamNameReg *regexp.Regexp) error {
+	// Find the team name for this message
+	names := teamNameReg.FindAllStringSubmatch(messageMD, -1)
+	if names == nil {
+		return errors.New("no teams found in message markdown")
+	}
+	if len(names) > 1 {
+		return errors.Errorf("found %d teams in message, should only be 1", len(names))
+	}
+
+	// The actual team name is always the sub match, so it's the second element
+	teamName := strings.TrimSpace(names[0][1])
+	log.Logger().Infof("Found team \"%s\" in message\n", teamName)
+	m.TeamName = teamName
+
+	// To find the content we can just remove the teamName heading
+	content := teamNameReg.ReplaceAllString(messageMD, "")
+	m.Content = strings.TrimSpace(content)
+	if len(m.Content) < 1 {
+		return errors.New("no content found for message")
+	}
+	log.Logger().Info("Found content for message\n")
+	return nil
 }
