@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras"
-	"github.com/spring-financial-group/mqa-logging/pkg/log"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/cmd/version"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"

@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"github.com/google/go-github/v47/github"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
+
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/git"
@@ -92,7 +94,7 @@ func NewCmdRun() *cobra.Command {
 }
 
 func (o *Options) Run() error {
-	fmt.Println("Initialising variables & clients")
+	log.Logger().Info("Initialising variables & clients")
 	err := o.initialiseFlagsAndClients()
 	if err != nil {
 		return errors.Wrap(err, "failed to validate input args & clients")
@@ -100,14 +102,14 @@ func (o *Options) Run() error {
 
 	ctx := context.Background()
 
-	fmt.Println("Getting pull request")
+	log.Logger().Info("Getting pull request")
 	o.pr, err = o.Git.GetPullRequest(ctx, o.PRNumber)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get pull request %d", o.PRNumber)
 	}
 
 	if o.Config == nil {
-		fmt.Println("Loading config from local instance")
+		log.Logger().Info("Loading config from local instance")
 		o.Config, err = config.LoadConfig()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load config")
@@ -117,7 +119,7 @@ func (o *Options) Run() error {
 	}
 
 	if o.Handlers == nil {
-		fmt.Println("Initialising message handlers")
+		log.Logger().Info("Initialising message handlers")
 		err = o.initialiseHandlers()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to init handlers")
@@ -126,7 +128,7 @@ func (o *Options) Run() error {
 		}
 	}
 
-	fmt.Println("Parsing messages from pull request body")
+	log.Logger().Info("Parsing messages from pull request body")
 	messages, err := message.ParseMessagesFromMarkdown(*o.pr.Body)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse messages from pull request")
@@ -134,7 +136,7 @@ func (o *Options) Run() error {
 		return err
 	}
 
-	fmt.Println("Validating messages")
+	log.Logger().Info("Validating messages")
 	err = o.ValidateMessagesWithConfig(messages)
 	if err != nil {
 		err = errors.Wrapf(err, "failed validate messages with config")
@@ -143,19 +145,19 @@ func (o *Options) Run() error {
 	}
 
 	if o.DryRun {
-		fmt.Println("Posting message breakdown to pull request")
+		log.Logger().Info("Posting message breakdown to pull request")
 		breakdown, err := o.GenerateMessageBreakdown(messages)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
 			o.PostErrorToPR(ctx, err)
 			return err
 		}
-		fmt.Println(breakdown)
+		log.Logger().Info(breakdown)
 		// Return before sending messages
 		return o.Git.CommentOnPR(ctx, o.pr, breakdown)
 	}
 
-	fmt.Println("Sending messages")
+	log.Logger().Info("Sending messages")
 	err = o.SendMessages(messages)
 	if err != nil {
 		return err
@@ -171,11 +173,11 @@ func (o *Options) SendMessages(messages []message.Message) error {
 		err := o.Handlers[team.ContactType].Send(m.Content, team.Addresses)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
-			fmt.Println(err)
+			log.Logger().Error(err)
 			errs = append(errs, err)
 			continue
 		}
-		fmt.Printf("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
+		log.Logger().Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
 	}
 	if len(errs) > 0 {
 		return errors.New("failed to send messages")

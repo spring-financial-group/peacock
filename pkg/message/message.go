@@ -1,7 +1,7 @@
 package message
 
 import (
-	"fmt"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"regexp"
 	"strings"
@@ -34,7 +34,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 
 	// Trim split to remove any text before the first message
 	messageSplit = messageSplit[1:]
-	fmt.Printf("Found %d message(s) in markdown\n", len(messageSplit))
+	log.Logger().Infof("Found %d message(s) in markdown\n", len(messageSplit))
 
 	teamNameReg, _ := regexp.Compile(teamNameHeaderRegex)
 	if err != nil {
@@ -54,7 +54,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 
 		// The actual team name is always the sub match, so it's the second element
 		teamName := strings.TrimSpace(names[0][1])
-		fmt.Printf("Found team \"%s\" in message %d\n", teamName, i+1)
+		log.Logger().Infof("Found team \"%s\" in message %d\n", teamName, i+1)
 		messages[i].TeamName = teamName
 
 		// To find the content we can just remove the teamName heading
@@ -63,7 +63,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 		if len(messages[i].Content) < 1 {
 			return nil, errors.Errorf("no content found for message %d", i+1)
 		}
-		fmt.Printf("Found content for message %d\n", i+1)
+		log.Logger().Infof("Found content for message %d\n", i+1)
 	}
 	return messages, nil
 }

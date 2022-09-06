@@ -2,12 +2,12 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"github.com/google/go-github/v47/github"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"net/http"
@@ -31,7 +31,7 @@ func NewClient(gitServerUrl, owner, repo, token string) (*Client, error) {
 		return nil, err
 	}
 	if owner == "" || repo == "" {
-		fmt.Println("No owner or repo names provided, getting info from local instance")
+		log.Logger().Info("No owner or repo names provided, getting info from local instance")
 		w.owner, w.repo, err = w.getOwnerAndRepo()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get owner & repo name")
