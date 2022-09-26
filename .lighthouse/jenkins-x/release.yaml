@@ -42,18 +42,7 @@ spec:
           script: |
             #!/bin/sh
             make release linux win darwin
-
             ./build/linux/peacock version
-        - image: ghcr.io/jenkins-x/jx-registry:0.1.1
-          name: check-registry
-        - image: gcr.io/kaniko-project/executor:debug-v1.3.0
-          name: build-container-build
-          resources: {}
-          script: |
-            #!/busybox/sh
-            source .jx/variables.sh
-            cp /tekton/creds-secrets/tekton-container-registry-auth/.dockerconfigjson /kaniko/.docker/config.json
-            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
         - image: ghcr.io/jenkins-x/jx-changelog:0.0.47
           name: promote-changelog
           script: |
@@ -72,6 +61,22 @@ spec:
 
             jx changelog create --version v${VERSION}
         - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: ghcr-token-export
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            jx gitops variables
+            kubectl get secret peacock-ghcr -n jx-staging -o jsonpath="{.data['token']}" | base64 -d > /workspace/source/ghcr-token.gt
+        - image: gcr.io/kaniko-project/executor:v1.6.0-debug
+          name: build-push-container
+          resources: {}
+          script: |
+            #!/busybox/sh
+            source .jx/variables.sh
+            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/ghcr-token.gt)\"}}}" > /kaniko/.docker/config.json
+            rm /workspace/source/ghcr-token.gt
+            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
           name: git-token-export
           resources: {}
           script: |
@@ -79,12 +84,13 @@ spec:
             jx gitops variables
             kubectl get secrets github-config -n jx-staging -o jsonpath={.data.github-token} | base64 -d > /workspace/source/gittoken.gt
         - image: tomhobson/github-cli:latest
-          name: push-relase
+          name: push-release
           script: |
             #!/usr/bin/env bash
             source .jx/variables.sh
 
             gh auth login --with-token < /workspace/source/gittoken.gt
+            rm /workspace/source/ghcr-token.gt
             echo "uploading to release v$VERSION"
             gh release upload v$VERSION ./build/linux/peacock
             gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
