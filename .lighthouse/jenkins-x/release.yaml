@@ -67,6 +67,18 @@ spec:
             #!/usr/bin/env sh
             jx gitops variables
             kubectl get secret peacock-ghcr -n jx-staging -o jsonpath="{.data['token']}" | base64 -d > /workspace/source/ghcr-token.gt
+        - image: tomhobson/github-cli:latest
+          name: push-release
+          script: |
+            #!/usr/bin/env bash
+            source .jx/variables.sh
+
+            gh auth login --with-token < /workspace/source/ghcr-token.gt
+            echo "uploading to release v$VERSION"
+            gh release upload v$VERSION ./build/linux/peacock
+            gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
+            mv ./build/darwin/peacock ./build/darwin/peacock-darwin
+            gh release upload v$VERSION ./build/darwin/peacock-darwin
         - image: gcr.io/kaniko-project/executor:v1.6.0-debug
           name: build-push-container
           resources: {}
@@ -76,26 +88,6 @@ spec:
             echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/ghcr-token.gt)\"}}}" > /kaniko/.docker/config.json
             rm /workspace/source/ghcr-token.gt
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: git-token-export
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            jx gitops variables
-            kubectl get secrets github-config -n jx-staging -o jsonpath={.data.github-token} | base64 -d > /workspace/source/gittoken.gt
-        - image: tomhobson/github-cli:latest
-          name: push-release
-          script: |
-            #!/usr/bin/env bash
-            source .jx/variables.sh
-
-            gh auth login --with-token < /workspace/source/gittoken.gt
-            rm /workspace/source/ghcr-token.gt
-            echo "uploading to release v$VERSION"
-            gh release upload v$VERSION ./build/linux/peacock
-            gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
-            mv ./build/darwin/peacock ./build/darwin/peacock-darwin
-            gh release upload v$VERSION ./build/darwin/peacock-darwin
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 12h0m0s
