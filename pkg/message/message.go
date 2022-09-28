@@ -8,18 +8,25 @@ import (
 )
 
 const (
+	peacockHeader       = "# Peacock\n"
 	messageHeaderRegex  = "## Message\\s*\\n"
-	teamNameHeaderRegex = "### Team: (.*)\\n"
+	teamNameHeaderRegex = "### Teams: (.*)\\n"
+	commaSeperated      = ", "
 )
 
 type Message struct {
-	TeamName string
-	Content  string
+	TeamNames []string
+	Content   string
 }
 
 func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	if markdown == "" {
 		return nil, errors.New("no text found in markdown")
+	}
+
+	if !strings.Contains(markdown, peacockHeader) {
+		log.Logger().Info("No Peacock header found in markdown, exiting\n")
+		return nil, nil
 	}
 
 	// Identify the messages using message header
@@ -46,7 +53,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	for i, m := range messageSplit {
 		err = messages[i].ParseMessage(m, teamNameReg)
 		if err != nil {
-			return nil, errors.Errorf("failed to parse message %d", i+1)
+			return nil, errors.Wrapf(err, "failed to parse message %d", i+1)
 		}
 	}
 	return messages, nil
@@ -63,9 +70,9 @@ func (m *Message) ParseMessage(messageMD string, teamNameReg *regexp.Regexp) err
 	}
 
 	// The actual team name is always the sub match, so it's the second element
-	teamName := strings.TrimSpace(names[0][1])
-	log.Logger().Infof("Found team \"%s\" in message\n", teamName)
-	m.TeamName = teamName
+	teamNameHeader := strings.TrimSpace(names[0][1])
+	m.TeamNames = strings.Split(teamNameHeader, commaSeperated)
+	log.Logger().Infof("Found teams \"%s\" in message\n", m.TeamNames)
 
 	// To find the content we can just remove the teamName heading
 	content := teamNameReg.ReplaceAllString(messageMD, "")

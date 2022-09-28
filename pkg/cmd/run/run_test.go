@@ -47,7 +47,7 @@ func TestOptions_Run(t *testing.T) {
 			},
 			pr: &github.PullRequest{
 				Body: utils.NewPtr(
-					"## Message\n### Team: infrastructure\nTest Content",
+					"# Peacock\n## Message\n### Teams: infrastructure\nTest Content",
 				),
 			},
 		},
@@ -73,7 +73,7 @@ func TestOptions_Run(t *testing.T) {
 			},
 			pr: &github.PullRequest{
 				Body: utils.NewPtr(
-					"## Message\n### Team: infrastructure\nTest Content",
+					"# Peacock\n## Message\n### Teams: infrastructure\nTest Content",
 				),
 			},
 		},
@@ -123,11 +123,11 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 			},
 			inputMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "New release of some infrastructure\nrelated things",
+					TeamNames: []string{"infrastructure"},
+					Content:   "New release of some infrastructure\nrelated things",
 				},
 			},
-			expectedBreakdown: "### Validation\nSuccessfully parsed 1 message(s)\n1/1 teams in config to notify\n***\n### Message [1/1]\n#### Team: infrastructure\n#### Contact Type: \n#### Content:\nNew release of some infrastructure\nrelated things",
+			expectedBreakdown: "### Validation\nSuccessfully parsed 1 message(s)\n1/1 teams in config to notify\n***\n### Message [1/1]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things",
 		},
 		{
 			name: "MultipleMessages&MultipleTeams",
@@ -141,15 +141,15 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 			},
 			inputMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "New release of some infrastructure\nrelated things",
+					TeamNames: []string{"infrastructure"},
+					Content:   "New release of some infrastructure\nrelated things",
 				},
 				{
-					TeamName: "ml",
-					Content:  "New release of some ml\nrelated things",
+					TeamNames: []string{"ml"},
+					Content:   "New release of some ml\nrelated things",
 				},
 			},
-			expectedBreakdown: "### Validation\nSuccessfully parsed 2 message(s)\n2/2 teams in config to notify\n***\n### Message [1/2]\n#### Team: infrastructure\n#### Contact Type: \n#### Content:\nNew release of some infrastructure\nrelated things\n***\n### Message [2/2]\n#### Team: ml\n#### Contact Type: \n#### Content:\nNew release of some ml\nrelated things",
+			expectedBreakdown: "### Validation\nSuccessfully parsed 2 message(s)\n2/2 teams in config to notify\n***\n### Message [1/2]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things\n***\n### Message [2/2]\n#### Teams: [ml]\n#### Contact Types: []\n#### Content:\nNew release of some ml\nrelated things",
 		},
 	}
 
@@ -181,8 +181,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			},
 			inputMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "some content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "some content",
 				},
 			},
 			shouldError: false,
@@ -199,8 +199,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			},
 			inputMessages: []message.Message{
 				{
-					TeamName: "ml",
-					Content:  "some content",
+					TeamNames: []string{"ml"},
+					Content:   "some content",
 				},
 			},
 			shouldError: true,
@@ -217,8 +217,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			},
 			inputMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "some content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "some content",
 				},
 			},
 			shouldError: true,

@@ -1,13 +1,12 @@
-# Peacock Release Format
-***
+# Peacock
 ## Message
-### Team: TeamName1
+### Teams: TeamName1, TeamName2
 Message Content
 
 ## Message
-### Team: TeamName2
+### Teams: TeamName2
 Other message content
 
 ## Message
-### Team: TeamName3
+### Teams: TeamName3
 Other more different message content

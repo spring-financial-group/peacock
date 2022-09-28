@@ -202,12 +202,14 @@ func (o *Options) SendMessages(messages []message.Message) error {
 }
 
 func (o *Options) sendMessage(message message.Message) error {
-	team := o.Config.GetTeamByName(message.TeamName)
-	err := o.Handlers[team.ContactType].Send(message.Content, team.Addresses)
-	if err != nil {
-		return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
+	teams := o.Config.GetTeamsByNames(message.TeamNames...)
+	for _, team := range teams {
+		err := o.Handlers[team.ContactType].Send(message.Content, team.Addresses)
+		if err != nil {
+			return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
+		}
+		log.Logger().Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
 	}
-	log.Logger().Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
 	return nil
 }
 
@@ -216,15 +218,19 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 	allTeamsInConfig := o.Config.GetAllTeamNames()
 	for _, m := range messages {
 		// Check the team name actually exists in config
-		exist := utils.ExistsInSlice(m.TeamName, allTeamsInConfig)
-		if !exist {
-			return errors.Errorf("Team %s does not exist in config.yaml:\n%v", m.TeamName, allTeamsInConfig)
+		for _, msgTeamName := range m.TeamNames {
+			exist := utils.ExistsInSlice(msgTeamName, allTeamsInConfig)
+			if !exist {
+				return errors.Errorf("Team %s does not exist in config.yaml:\n%v", msgTeamName, allTeamsInConfig)
+			}
 		}
 
 		// Check that the handler for the teams contact type is initialised
-		team := o.Config.GetTeamByName(m.TeamName)
-		if o.Handlers[team.ContactType] == nil {
-			return errors.Errorf("Team \"%s\" has contact type \"%s\", handler not initialised for this type - check input flags", m.TeamName, team.ContactType)
+		teams := o.Config.GetTeamsByNames(m.TeamNames...)
+		for _, team := range teams {
+			if o.Handlers[team.ContactType] == nil {
+				return errors.Errorf("Team \"%s\" has contact type \"%s\", handler not initialised for this type - check input flags", team.Name, team.ContactType)
+			}
 		}
 	}
 	return nil
@@ -239,10 +245,10 @@ func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, 
 	)
 
 	for i, m := range messages {
-		team := o.Config.GetTeamByName(m.TeamName)
+		contactTypes := o.Config.GetContactTypesByTeamNames(m.TeamNames...)
 		newMessage := fmt.Sprintf("***\n"+
-			"### Message [%d/%d]\n#### Team: %s\n#### Contact Type: %s\n#### Content:\n%s\n",
-			i+1, len(messages), m.TeamName, team.ContactType, m.Content,
+			"### Message [%d/%d]\n#### Teams: %s\n#### Contact Types: %s\n#### Content:\n%s\n",
+			i+1, len(messages), m.TeamNames, contactTypes, m.Content,
 		)
 		breakDown = breakDown + newMessage
 	}
