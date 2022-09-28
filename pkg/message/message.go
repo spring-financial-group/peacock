@@ -10,7 +10,7 @@ import (
 const (
 	peacockHeader       = "# Peacock\n"
 	messageHeaderRegex  = "## Message\\s*\\n"
-	teamNameHeaderRegex = "### Notify: (.*)\\n"
+	teamNameHeaderRegex = "### Notify (.*)\\n"
 	commaSeperated      = ", "
 )
 
