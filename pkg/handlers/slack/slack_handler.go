@@ -1,6 +1,7 @@
 package slack
 
 import (
+	git2slack "github.com/eritikass/githubmarkdownconvertergo"
 	"github.com/slack-go/slack"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 )
@@ -17,6 +18,11 @@ func NewSlackHandler(token string) (domain.MessageHandler, error) {
 }
 
 func (h *handler) Send(content string, addresses []string) error {
+	// GitHub markdown doesn't work in Slack, so we need to convert
+	content = git2slack.Slack(content, git2slack.SlackConvertOptions{
+		Headlines: true,
+	})
+
 	for _, address := range addresses {
 		_, _, err := h.slack.PostMessage(
 			address,
