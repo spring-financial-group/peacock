@@ -16,33 +16,33 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name:          "Passing",
-			inputMarkdown: "## Message\n### Team: infrastructure\nTest Content",
+			inputMarkdown: "# Peacock\n## Message\n### Teams: infrastructure\nTest Content",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "Test Content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "Test Content",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:          "HeadingsInContent",
-			inputMarkdown: "## Message\n### Team: infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
+			inputMarkdown: "# Peacock\n## Message\n### Teams: infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "### Test Content\nThis is some content with headers\n#### Another different header",
+					TeamNames: []string{"infrastructure"},
+					Content:   "### Test Content\nThis is some content with headers\n#### Another different header",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:          "PrefaceToMessages",
-			inputMarkdown: "# Peacock Release Format\n***\n## Message\n### Team: infrastructure\nTest Content",
+			inputMarkdown: "# Peacock\n# Peacock Release Format\n***\n## Message\n### Teams: infrastructure\nTest Content",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "Test Content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "Test Content",
 				},
 			},
 			shouldError: false,
@@ -55,101 +55,112 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:             "MoreTeamsThanMessages",
-			inputMarkdown:    "## Message\n### Team: infrastructure\n### Team: ml\nTest Content",
+			inputMarkdown:    "# Peacock\n## Message\n### Teams: infrastructure\n### Teams: ml\nTest Content",
 			expectedMessages: nil,
 			shouldError:      true,
 		},
 		{
 			name:             "NoMessages",
-			inputMarkdown:    "### Team: Team\n",
+			inputMarkdown:    "# Peacock\n### Teams: Team\n",
 			expectedMessages: nil,
 			shouldError:      true,
 		},
 		{
 			name:             "NoTeams",
-			inputMarkdown:    "## Message\nTest Content",
+			inputMarkdown:    "# Peacock\n## Message\nTest Content",
 			expectedMessages: nil,
 			shouldError:      true,
 		},
 		{
 			name:          "MultipleMessages",
-			inputMarkdown: "## Message\n### Team: infrastructure\nTest Content\n## Message\n### Team: ML\nMore test content",
+			inputMarkdown: "# Peacock\n## Message\n### Teams: infrastructure\nTest Content\n## Message\n### Teams: ML\nMore test content",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "Test Content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "Test Content",
 				},
 				{
-					TeamName: "ML",
-					Content:  "More test content",
+					TeamNames: []string{"ML"},
+					Content:   "More test content",
+				},
+			},
+			shouldError: false,
+		},
+		{
+			name:          "MultipleTeamsInOneMessage",
+			inputMarkdown: "# Peacock\n## Message\n### Teams: infrastructure, ml, allDevs\nTest Content\n",
+			expectedMessages: []message.Message{
+				{
+					TeamNames: []string{"infrastructure", "ml", "allDevs"},
+					Content:   "Test Content",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:          "AdditionalNewLines",
-			inputMarkdown: "\n\n\n## Message\n### Team: infrastructure\nTest Content\n\n\n",
+			inputMarkdown: "\n\n\n# Peacock\n## Message\n### Teams: infrastructure\nTest Content\n\n\n",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "Test Content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "Test Content",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:          "MultiLineContent",
-			inputMarkdown: "## Message\n### Team: infrastructure\nThis is an example\nThat runs\nAcross multiple\nlines",
+			inputMarkdown: "# Peacock\n## Message\n### Teams: infrastructure\nThis is an example\nThat runs\nAcross multiple\nlines",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "This is an example\nThat runs\nAcross multiple\nlines",
+					TeamNames: []string{"infrastructure"},
+					Content:   "This is an example\nThat runs\nAcross multiple\nlines",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:          "Lists",
-			inputMarkdown: "## Message\n### Team: infrastructure\nHere's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
+			inputMarkdown: "# Peacock\n## Message\n### Teams: infrastructure\nHere's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "Here's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
+					TeamNames: []string{"infrastructure"},
+					Content:   "Here's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:          "WhitespaceAfterTeamName",
-			inputMarkdown: "## Message\n### Team: infrastructure   \nTest Content",
+			inputMarkdown: "# Peacock\n## Message\n### Teams: infrastructure   \nTest Content",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "Test Content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "Test Content",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:             "NoWhitespaceBeforeTeamName",
-			inputMarkdown:    "## Message\n### Team:infrastructure\nTest Content",
+			inputMarkdown:    "# Peacock\n## Message\n### Teams:infrastructure\nTest Content",
 			expectedMessages: nil,
 			shouldError:      true,
 		},
 		{
 			name:          "WhitespaceAfterMessageHeader",
-			inputMarkdown: "## Message  \n### Team: infrastructure\nTest Content",
+			inputMarkdown: "# Peacock\n## Message  \n### Teams: infrastructure\nTest Content",
 			expectedMessages: []message.Message{
 				{
-					TeamName: "infrastructure",
-					Content:  "Test Content",
+					TeamNames: []string{"infrastructure"},
+					Content:   "Test Content",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:             "NoWhitespaceBeforeMessage",
-			inputMarkdown:    "##Message\n### Team: infrastructure\nTest Content",
+			inputMarkdown:    "# Peacock\n##Message\n### Teams: infrastructure\nTest Content",
 			expectedMessages: nil,
 			shouldError:      true,
 		},

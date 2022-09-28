@@ -193,46 +193,46 @@ func TestLoadConfig(t *testing.T) {
 	}
 }
 
-func TestGetTeamByName(t *testing.T) {
+func TestGetTeamsByNames(t *testing.T) {
 	testCases := []struct {
-		name          string
-		inputTeamName string
-		teams         []config.Team
-		expectedTeam  *config.Team
+		name           string
+		inputTeamNames []string
+		teams          []config.Team
+		expectedTeams  []config.Team
 	}{
 		{
-			name:          "Passing",
-			inputTeamName: "infrastructure",
+			name:           "Passing",
+			inputTeamNames: []string{"infrastructure"},
 			teams: []config.Team{
 				{Name: "infrastructure"},
 			},
-			expectedTeam: &config.Team{Name: "infrastructure"},
+			expectedTeams: []config.Team{{Name: "infrastructure"}},
 		},
 		{
-			name:          "MultipleTeams",
-			inputTeamName: "infrastructure",
-			teams: []config.Team{
-				{Name: "infrastructure"},
-				{Name: "ml"},
-				{Name: "allDevs"},
-			},
-			expectedTeam: &config.Team{Name: "infrastructure"},
-		},
-		{
-			name:          "NoTeamByThatName",
-			inputTeamName: "NoTeam",
+			name:           "MultipleTeams",
+			inputTeamNames: []string{"infrastructure"},
 			teams: []config.Team{
 				{Name: "infrastructure"},
 				{Name: "ml"},
 				{Name: "allDevs"},
 			},
-			expectedTeam: nil,
+			expectedTeams: []config.Team{{Name: "infrastructure"}},
 		},
 		{
-			name:          "NoTeams",
-			inputTeamName: "infrastructure",
-			teams:         []config.Team{},
-			expectedTeam:  nil,
+			name:           "NoTeamByThatName",
+			inputTeamNames: []string{"DS"},
+			teams: []config.Team{
+				{Name: "infrastructure"},
+				{Name: "ml"},
+				{Name: "allDevs"},
+			},
+			expectedTeams: []config.Team(nil),
+		},
+		{
+			name:           "NoTeams",
+			inputTeamNames: []string{"infrastructure"},
+			teams:          []config.Team{},
+			expectedTeams:  []config.Team(nil),
 		},
 	}
 
@@ -240,8 +240,8 @@ func TestGetTeamByName(t *testing.T) {
 		cfg := config.Config{Teams: tt.teams}
 
 		t.Run(tt.name, func(t *testing.T) {
-			actualTeam := cfg.GetTeamByName(tt.inputTeamName)
-			assert.Equal(t, tt.expectedTeam, actualTeam)
+			actualTeam := cfg.GetTeamsByNames(tt.inputTeamNames...)
+			assert.Equal(t, tt.expectedTeams, actualTeam)
 		})
 	}
 }

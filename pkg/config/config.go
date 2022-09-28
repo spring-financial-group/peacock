@@ -54,13 +54,16 @@ func (f *Config) validate() error {
 	return nil
 }
 
-func (f *Config) GetTeamByName(name string) *Team {
-	for _, t := range f.Teams {
-		if t.Name == name {
-			return &t
+func (f *Config) GetTeamsByNames(name ...string) []Team {
+	var teams []Team
+	for _, tName := range name {
+		for _, t := range f.Teams {
+			if t.Name == tName {
+				teams = append(teams, t)
+			}
 		}
 	}
-	return nil
+	return teams
 }
 
 func (f *Config) GetAllTeamNames() []string {
@@ -74,6 +77,14 @@ func (f *Config) GetAllTeamNames() []string {
 func (f *Config) GetAllContactTypes() []string {
 	var types []string
 	for _, t := range f.Teams {
+		types = append(types, t.ContactType)
+	}
+	return types
+}
+
+func (f *Config) GetContactTypesByTeamNames(names ...string) []string {
+	var types []string
+	for _, t := range f.GetTeamsByNames(names...) {
 		types = append(types, t.ContactType)
 	}
 	return types
