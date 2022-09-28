@@ -28,13 +28,14 @@ func TestOptions_Run(t *testing.T) {
 		{
 			name: "NonDryRun",
 			opts: &run.Options{
-				PRNumber:     1,
-				GitServerURL: "https://github.com",
-				GitToken:     "testGitToken",
-				DryRun:       false,
-				SlackToken:   "testSlackToken",
-				Git:          mockGit,
-				Handlers:     map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
+				PRNumber:          1,
+				GitServerURL:      "https://github.com",
+				GitToken:          "testGitToken",
+				DryRun:            false,
+				CommentValidation: true,
+				SlackToken:        "testSlackToken",
+				Git:               mockGit,
+				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
 				Config: &config.Config{
 					Teams: []config.Team{
 						{
@@ -54,13 +55,14 @@ func TestOptions_Run(t *testing.T) {
 		{
 			name: "DryRun",
 			opts: &run.Options{
-				PRNumber:     1,
-				GitServerURL: "https://github.com",
-				GitToken:     "testGitToken",
-				DryRun:       true,
-				SlackToken:   "testSlackToken",
-				Git:          mockGit,
-				Handlers:     map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
+				PRNumber:          1,
+				GitServerURL:      "https://github.com",
+				GitToken:          "testGitToken",
+				DryRun:            true,
+				CommentValidation: true,
+				SlackToken:        "testSlackToken",
+				Git:               mockGit,
+				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
 				Config: &config.Config{
 					Teams: []config.Team{
 						{

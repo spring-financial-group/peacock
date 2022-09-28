@@ -31,7 +31,8 @@ type Options struct {
 	Owner        string
 	RepoName     string
 
-	DryRun bool
+	DryRun            bool
+	CommentValidation bool
 
 	SlackToken string
 
@@ -80,6 +81,7 @@ func NewCmdRun() *cobra.Command {
 
 	// Command specific flags
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and config, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
+	cmd.Flags().BoolVarP(&o.CommentValidation, "comment-validation", "", false, "posts a comment to the pr with the validation results if successful. Default is false.")
 
 	// Slack flags
 	cmd.Flags().StringVarP(&o.SlackToken, "slack-token", "", "", "the slack token used to send the messages to slack channels")
@@ -152,7 +154,12 @@ func (o *Options) Run() error {
 		}
 		log.Logger().Info(breakdown)
 		// Return before sending messages
-		return o.Git.CommentOnPR(ctx, o.pr, breakdown)
+		if o.CommentValidation {
+			if err := o.Git.CommentOnPR(ctx, o.pr, breakdown); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	log.Logger().Info("Sending messages")
