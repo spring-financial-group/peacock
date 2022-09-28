@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/cpuguy83/go-md2man v1.0.10
+	github.com/eritikass/githubmarkdownconvertergo v0.1.7
 	github.com/google/go-github/v47 v47.0.0
 	github.com/ilyakaznacheev/cleanenv v1.3.0
 	github.com/jenkins-x/jx-helpers/v3 v3.4.0
