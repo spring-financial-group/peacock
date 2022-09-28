@@ -36,7 +36,11 @@ func NewClient(gitServerUrl, owner, repo, token string) (*Client, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get owner & repo name")
 		}
+	} else {
+		w.owner = owner
+		w.repo = repo
 	}
+
 	return w, nil
 }
 

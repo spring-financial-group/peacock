@@ -273,7 +273,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	// Init git clients
 	if o.Git == nil {
-		o.Git, err = git.NewClient(o.GitServerURL, o.GitToken, o.Owner, o.RepoName)
+		o.Git, err = git.NewClient(o.GitServerURL, o.Owner, o.RepoName, o.GitToken)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialise git clients")
 		}
