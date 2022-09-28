@@ -136,6 +136,11 @@ func (o *Options) Run() error {
 		return err
 	}
 
+	// If no messages then we should exit with 0 code
+	if messages == nil {
+		return nil
+	}
+
 	log.Logger().Info("Validating messages")
 	err = o.ValidateMessagesWithConfig(messages)
 	if err != nil {
