@@ -48,7 +48,7 @@ func TestOptions_Run(t *testing.T) {
 			},
 			pr: &github.PullRequest{
 				Body: utils.NewPtr(
-					"# Peacock\n## Message\n### Notify infrastructure\nTest Content",
+					"# Peacock\r\n## Message\n### Notify infrastructure\nTest Content",
 				),
 			},
 		},
@@ -75,7 +75,7 @@ func TestOptions_Run(t *testing.T) {
 			},
 			pr: &github.PullRequest{
 				Body: utils.NewPtr(
-					"# Peacock\n## Message\n### Notify infrastructure\nTest Content",
+					"# Peacock\r\n## Message\n### Notify infrastructure\nTest Content",
 				),
 			},
 		},
