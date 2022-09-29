@@ -3,10 +3,10 @@ kind: TriggerConfig
 spec:
   presubmits:
   - name: pc-verify
-    context: "peacock-verify.yaml"
+    context: "peacock-verify"
     always_run: true
     optional: false
-    source: "golint.yaml"
+    source: "peacock-verify.yaml"
   - name: gl
     context: "golint"
     always_run: true
