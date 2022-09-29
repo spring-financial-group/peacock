@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/google/go-github/v47/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
-	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
+	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/utils"
@@ -36,8 +36,8 @@ func TestOptions_Run(t *testing.T) {
 				SlackToken:        "testSlackToken",
 				Git:               mockGit,
 				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
-				Config: &config.Config{
-					Teams: []config.Team{
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
 						{
 							Name:        "infrastructure",
 							ContactType: handlers.Slack,
@@ -63,8 +63,8 @@ func TestOptions_Run(t *testing.T) {
 				SlackToken:        "testSlackToken",
 				Git:               mockGit,
 				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
-				Config: &config.Config{
-					Teams: []config.Team{
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
 						{
 							Name:        "infrastructure",
 							ContactType: handlers.Slack,
@@ -117,8 +117,8 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		{
 			name: "OneMessage",
 			opts: &run.Options{
-				Config: &config.Config{
-					Teams: []config.Team{
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
 						{Name: "infrastructure"},
 					},
 				},
@@ -129,13 +129,13 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some infrastructure\nrelated things",
 				},
 			},
-			expectedBreakdown: "### Validation\nSuccessfully parsed 1 message(s)\n1/1 teams in config to notify\n***\n### Message [1/1]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things",
+			expectedBreakdown: "### Validation\nSuccessfully parsed 1 message(s)\n1/1 teams in feathers to notify\n***\n### Message [1/1]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things",
 		},
 		{
 			name: "MultipleMessages&MultipleTeams",
 			opts: &run.Options{
-				Config: &config.Config{
-					Teams: []config.Team{
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
 						{Name: "infrastructure"},
 						{Name: "ml"},
 					},
@@ -151,7 +151,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some ml\nrelated things",
 				},
 			},
-			expectedBreakdown: "### Validation\nSuccessfully parsed 2 message(s)\n2/2 teams in config to notify\n***\n### Message [1/2]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things\n***\n### Message [2/2]\n#### Teams: [ml]\n#### Contact Types: []\n#### Content:\nNew release of some ml\nrelated things",
+			expectedBreakdown: "### Validation\nSuccessfully parsed 2 message(s)\n2/2 teams in feathers to notify\n***\n### Message [1/2]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things\n***\n### Message [2/2]\n#### Teams: [ml]\n#### Contact Types: []\n#### Content:\nNew release of some ml\nrelated things",
 		},
 	}
 
@@ -175,8 +175,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			name: "Passing",
 			opts: &run.Options{
 				Handlers: map[string]domain.MessageHandler{handlers.Slack: mocks.NewMessageHandler(t)},
-				Config: &config.Config{
-					Teams: []config.Team{
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
 						{Name: "infrastructure", ContactType: handlers.Slack},
 					},
 				},
@@ -193,8 +193,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			name: "TeamDoesNotExist",
 			opts: &run.Options{
 				Handlers: map[string]domain.MessageHandler{handlers.Slack: mocks.NewMessageHandler(t)},
-				Config: &config.Config{
-					Teams: []config.Team{
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
 						{Name: "infrastructure", ContactType: handlers.Slack},
 					},
 				},
@@ -211,8 +211,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			name: "HandlerDoesNotExist",
 			opts: &run.Options{
 				Handlers: map[string]domain.MessageHandler{},
-				Config: &config.Config{
-					Teams: []config.Team{
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
 						{Name: "infrastructure", ContactType: handlers.Slack},
 					},
 				},

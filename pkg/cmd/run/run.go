@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
-	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
+	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/handlers/email"
@@ -46,13 +46,13 @@ type Options struct {
 
 	Git      domain.Git
 	Handlers map[string]domain.MessageHandler
-	Config   *config.Config
+	Config   *feathers.Feathers
 }
 
 var (
 	longDesc = templates.LongDesc(`
 		run notifies teams of new release information. The messages are taken for the body of a pull request and the recipient
-		info is taken from a config file in the repository.
+		info is taken from the feathers file in the repository.
 `)
 
 	example = templates.Examples(`
@@ -78,7 +78,7 @@ func NewCmdRun() *cobra.Command {
 	helper.CheckErr(err)
 
 	// Command specific flags
-	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and config, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
+	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
 	cmd.Flags().BoolVarP(&o.CommentValidation, "comment-validation", "", false, "posts a comment to the pr with the validation results if successful. Default is false.")
 
 	// Email flags
@@ -140,10 +140,10 @@ func (o *Options) Run() error {
 	}
 
 	if o.Config == nil {
-		log.Logger().Info("Loading config from local instance")
-		o.Config, err = config.LoadConfig()
+		log.Logger().Info("Loading feathers from local instance")
+		o.Config, err = feathers.LoadConfig()
 		if err != nil {
-			err = errors.Wrapf(err, "failed to load config")
+			err = errors.Wrapf(err, "failed to load feathers")
 			o.PostErrorToPR(ctx, err)
 			return err
 		}
@@ -175,7 +175,7 @@ func (o *Options) Run() error {
 	log.Logger().Info("Validating messages")
 	err = o.ValidateMessagesWithConfig(messages)
 	if err != nil {
-		err = errors.Wrapf(err, "failed validate messages with config")
+		err = errors.Wrapf(err, "failed validate messages with feathers")
 		o.PostErrorToPR(ctx, err)
 		return err
 	}
@@ -256,15 +256,15 @@ func (o *Options) sendMessage(message message.Message) error {
 	return nil
 }
 
-// ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the config
+// ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers
 func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 	allTeamsInConfig := o.Config.GetAllTeamNames()
 	for _, m := range messages {
-		// Check the team name actually exists in config
+		// Check the team name actually exists in feathers
 		for _, msgTeamName := range m.TeamNames {
 			exist := utils.ExistsInSlice(msgTeamName, allTeamsInConfig)
 			if !exist {
-				return errors.Errorf("Team %s does not exist in config.yaml:\n%v", msgTeamName, allTeamsInConfig)
+				return errors.Errorf("Team %s does not exist in feathers.yaml:\n%v", msgTeamName, allTeamsInConfig)
 			}
 		}
 
@@ -283,7 +283,7 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
 	allTeamsInConfig := o.Config.GetAllTeamNames()
 	breakDown := fmt.Sprintf(
-		"### Validation\nSuccessfully parsed %d message(s)\n%d/%d teams in config to notify\n",
+		"### Validation\nSuccessfully parsed %d message(s)\n%d/%d teams in feathers to notify\n",
 		len(messages), len(messages), len(allTeamsInConfig),
 	)
 
@@ -331,7 +331,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 }
 
 // initialiseHandlers initialises the message handlers depending on the flags passed through to the command.
-// It then checks that all the handlers required by the config have been initialised.
+// It then checks that all the handlers required by the feathers have been initialised.
 func (o *Options) initialiseHandlers() (err error) {
 	o.Handlers = map[string]domain.MessageHandler{}
 	if o.SlackToken != "" {
@@ -347,11 +347,11 @@ func (o *Options) initialiseHandlers() (err error) {
 		}
 	}
 
-	// We should check that all the handlers required by the config have been initialised
+	// We should check that all the handlers required by the feathers have been initialised
 	for _, t := range o.Config.GetAllContactTypes() {
 		if o.Handlers[t] == nil {
 			return errors.Errorf(
-				"contact type \"%s\" found in config but no handler has been initialised, "+
+				"contact type \"%s\" found in feathers but no handler has been initialised, "+
 					"check required flags have been passed for this type", t)
 		}
 	}
