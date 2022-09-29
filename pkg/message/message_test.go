@@ -30,6 +30,17 @@ func TestParse(t *testing.T) {
 			shouldError: false,
 		},
 		{
+			name:          "CommaSeperatedVaryingWhiteSpace",
+			inputMarkdown: "### Notify infrastructure,devs, ml , product\nTest Content\n",
+			expectedMessages: []message.Message{
+				{
+					TeamNames: []string{"infrastructure", "devs", "ml", "product"},
+					Content:   "Test Content",
+				},
+			},
+			shouldError: false,
+		},
+		{
 			name:          "HeadingsInContent",
 			inputMarkdown: "### Notify infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
 			expectedMessages: []message.Message{

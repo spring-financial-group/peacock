@@ -9,7 +9,7 @@ import (
 
 const (
 	teamNameHeaderRegex = "### Notify(.*)\\n"
-	commaSeperated      = ", "
+	commaSeperated      = ","
 )
 
 type Message struct {
