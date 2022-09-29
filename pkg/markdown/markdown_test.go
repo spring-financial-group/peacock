@@ -45,8 +45,8 @@ func TestMarkdown_ConvertMarkdownToSlack(t *testing.T) {
 		},
 		{
 			name:          "URLReplacement",
-			inputMarkdown: "[test](URL)",
-			expectedSlack: "<test><URL>",
+			inputMarkdown: "[Some Text](https://github.com/spring-financial-group/peacock)",
+			expectedSlack: "<https://github.com/spring-financial-group/peacock|Some Text>",
 		},
 	}
 
