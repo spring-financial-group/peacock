@@ -30,5 +30,9 @@ func ConvertToSlack(markdown string) string {
 	// Convert headings to bold
 	regex = regexp.MustCompile(`(?m)((^\t? {0,15}#{1,4} +)(.+))`)
 	markdown = regex.ReplaceAllString(markdown, "*$3*")
+
+	// Convert URLs
+	regex = regexp.MustCompile(`\[([^]]+)]\(([^)]+)\)`)
+	markdown = regex.ReplaceAllString(markdown, "<$1><$2>")
 	return markdown
 }

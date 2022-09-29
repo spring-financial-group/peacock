@@ -43,6 +43,11 @@ func TestMarkdown_ConvertMarkdownToSlack(t *testing.T) {
 			inputMarkdown: "# Service Promotions\n\n**Promoted Services**\n\n_Which services are being promoted?_\n_eg._\n* Api Gateway\n* Questions Library\n\n**What functionality is being released?**\n_eg._\n* Questions Library initial release (but not connected to anything yet)\n\n**Risk Of Release**\nVery Low",
 			expectedSlack: "*Service Promotions*\n\n*Promoted Services*\n\n_Which services are being promoted?_\n_eg._\n• Api Gateway\n• Questions Library\n\n*What functionality is being released?*\n_eg._\n• Questions Library initial release (but not connected to anything yet)\n\n*Risk Of Release*\nVery Low",
 		},
+		{
+			name:          "URLReplacement",
+			inputMarkdown: "[test](URL)",
+			expectedSlack: "<test><URL>",
+		},
 	}
 
 	for _, tt := range testCases {
