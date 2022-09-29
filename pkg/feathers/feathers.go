@@ -1,4 +1,4 @@
-package config
+package feathers
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	configPath          = ".peacock/config.yaml"
+	configPath          = ".peacock/feathers.yaml"
 	slackChannelIDRegex = "^[A-Z0-9]{11}$"
 )
 
-type Config struct {
+type Feathers struct {
 	Teams []Team `yaml:"teams"`
 }
 
@@ -24,7 +24,7 @@ type Team struct {
 	Addresses   []string `yaml:"addresses"`
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig() (*Feathers, error) {
 	exists, err := utils.Exists(configPath)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func LoadConfig() (*Config, error) {
 		return nil, errors.Errorf("could not find %s", configPath)
 	}
 
-	cfg := new(Config)
+	cfg := new(Feathers)
 	err = cleanenv.ReadConfig(configPath, cfg)
 	if err != nil {
 		return nil, err
@@ -41,9 +41,9 @@ func LoadConfig() (*Config, error) {
 	return cfg, cfg.validate()
 }
 
-func (f *Config) validate() error {
+func (f *Feathers) validate() error {
 	if f.Teams == nil {
-		return errors.New("no teams found in config")
+		return errors.New("no teams found in feathers")
 	}
 	for _, team := range f.Teams {
 		err := team.validate()
@@ -54,7 +54,7 @@ func (f *Config) validate() error {
 	return nil
 }
 
-func (f *Config) GetTeamsByNames(name ...string) []Team {
+func (f *Feathers) GetTeamsByNames(name ...string) []Team {
 	var teams []Team
 	for _, tName := range name {
 		for _, t := range f.Teams {
@@ -66,7 +66,7 @@ func (f *Config) GetTeamsByNames(name ...string) []Team {
 	return teams
 }
 
-func (f *Config) GetAllTeamNames() []string {
+func (f *Feathers) GetAllTeamNames() []string {
 	var names []string
 	for _, t := range f.Teams {
 		names = append(names, t.Name)
@@ -74,7 +74,7 @@ func (f *Config) GetAllTeamNames() []string {
 	return names
 }
 
-func (f *Config) GetAllContactTypes() []string {
+func (f *Feathers) GetAllContactTypes() []string {
 	var types []string
 	for _, t := range f.Teams {
 		types = append(types, t.ContactType)
@@ -82,7 +82,7 @@ func (f *Config) GetAllContactTypes() []string {
 	return types
 }
 
-func (f *Config) GetContactTypesByTeamNames(names ...string) []string {
+func (f *Feathers) GetContactTypesByTeamNames(names ...string) []string {
 	var types []string
 	for _, t := range f.GetTeamsByNames(names...) {
 		types = append(types, t.ContactType)

@@ -1,7 +1,7 @@
-package config_test
+package feathers_test
 
 import (
-	"github.com/spring-financial-group/peacock/pkg/config"
+	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
@@ -13,13 +13,13 @@ import (
 func TestLoadConfig(t *testing.T) {
 	testCases := []struct {
 		name           string
-		expectedConfig config.Config
+		expectedConfig feathers.Feathers
 		shouldError    bool
 	}{
 		{
 			name: "Passing",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -31,8 +31,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "InvalidContactType",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "MorseCode",
@@ -44,8 +44,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "ValidEmailAddress",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "email",
@@ -57,8 +57,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "InvalidEmailAddress",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "email",
@@ -70,8 +70,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "SlackIDTooLong",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -83,8 +83,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "SlackIDTooShort",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -96,8 +96,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "SlackIDWithNonAlphanumerics",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -109,8 +109,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "NoTeamName",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						ContactType: "email",
 						Addresses:   []string{"sam.morse-dash.com"},
@@ -121,8 +121,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "NoContactType",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:      "infrastructure",
 						Addresses: []string{"sam.morse-dash.com"},
@@ -133,8 +133,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "MultipleTeams",
-			expectedConfig: config.Config{
-				Teams: []config.Team{
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -155,7 +155,7 @@ func TestLoadConfig(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	testPath := filepath.Join(fullPath, "config.yaml")
+	testPath := filepath.Join(fullPath, "feathers.yaml")
 	err = os.Chdir(baseDir)
 	if err != nil {
 		panic(err)
@@ -172,7 +172,7 @@ func TestLoadConfig(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			actualConfig, err := config.LoadConfig()
+			actualConfig, err := feathers.LoadConfig()
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
@@ -197,47 +197,47 @@ func TestGetTeamsByNames(t *testing.T) {
 	testCases := []struct {
 		name           string
 		inputTeamNames []string
-		teams          []config.Team
-		expectedTeams  []config.Team
+		teams          []feathers.Team
+		expectedTeams  []feathers.Team
 	}{
 		{
 			name:           "Passing",
 			inputTeamNames: []string{"infrastructure"},
-			teams: []config.Team{
+			teams: []feathers.Team{
 				{Name: "infrastructure"},
 			},
-			expectedTeams: []config.Team{{Name: "infrastructure"}},
+			expectedTeams: []feathers.Team{{Name: "infrastructure"}},
 		},
 		{
 			name:           "MultipleTeams",
 			inputTeamNames: []string{"infrastructure"},
-			teams: []config.Team{
+			teams: []feathers.Team{
 				{Name: "infrastructure"},
 				{Name: "ml"},
 				{Name: "allDevs"},
 			},
-			expectedTeams: []config.Team{{Name: "infrastructure"}},
+			expectedTeams: []feathers.Team{{Name: "infrastructure"}},
 		},
 		{
 			name:           "NoTeamByThatName",
 			inputTeamNames: []string{"DS"},
-			teams: []config.Team{
+			teams: []feathers.Team{
 				{Name: "infrastructure"},
 				{Name: "ml"},
 				{Name: "allDevs"},
 			},
-			expectedTeams: []config.Team(nil),
+			expectedTeams: []feathers.Team(nil),
 		},
 		{
 			name:           "NoTeams",
 			inputTeamNames: []string{"infrastructure"},
-			teams:          []config.Team{},
-			expectedTeams:  []config.Team(nil),
+			teams:          []feathers.Team{},
+			expectedTeams:  []feathers.Team(nil),
 		},
 	}
 
 	for _, tt := range testCases {
-		cfg := config.Config{Teams: tt.teams}
+		cfg := feathers.Feathers{Teams: tt.teams}
 
 		t.Run(tt.name, func(t *testing.T) {
 			actualTeam := cfg.GetTeamsByNames(tt.inputTeamNames...)
@@ -249,19 +249,19 @@ func TestGetTeamsByNames(t *testing.T) {
 func TestGetAllTeamNames(t *testing.T) {
 	testCases := []struct {
 		name          string
-		teams         []config.Team
+		teams         []feathers.Team
 		expectedNames []string
 	}{
 		{
 			name: "Passing",
-			teams: []config.Team{
+			teams: []feathers.Team{
 				{Name: "infrastructure"},
 			},
 			expectedNames: []string{"infrastructure"},
 		},
 		{
 			name: "MultipleTeams",
-			teams: []config.Team{
+			teams: []feathers.Team{
 				{Name: "infrastructure"},
 				{Name: "ml"},
 				{Name: "allDevs"},
@@ -271,7 +271,7 @@ func TestGetAllTeamNames(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		cfg := config.Config{Teams: tt.teams}
+		cfg := feathers.Feathers{Teams: tt.teams}
 
 		t.Run(tt.name, func(t *testing.T) {
 			actualNames := cfg.GetAllTeamNames()
