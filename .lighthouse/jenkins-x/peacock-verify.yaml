@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  creationTimestamp: null
+  name: peacock-verify
+spec:
+  pipelineSpec:
+    tasks:
+      - name: from-build-pack
+        resources: {}
+        taskSpec:
+          metadata: {}
+          steps:
+            - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
+              name: ""
+              resources: {}
+            - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+              name: token-export
+              resources: {}
+              script: |
+                #!/usr/bin/env sh
+                jx gitops variables
+                kubectl get secret peacock-slack -n jx-staging -o jsonpath="{.data['token']}" | base64 -d > /workspace/source/slack-token.gt
+            - image: ghcr.io/spring-financial-group/peacock:0.6.2
+              name: ""
+              resources: {}
+              script: |
+                export SLACK_TOKEN=$(cat /workspace/source/slack-token.gt)
+                rm slack-token.gt
+                
+                peacock run --dry-run
+              workingDir: /workspace/source
+  podTemplate: {}
+  serviceAccountName: tekton-bot
+  timeout: 1h0m0s
+status: {}
