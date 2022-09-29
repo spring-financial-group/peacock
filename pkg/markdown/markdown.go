@@ -33,6 +33,6 @@ func ConvertToSlack(markdown string) string {
 
 	// Convert URLs
 	regex = regexp.MustCompile(`\[([^]]+)]\(([^)]+)\)`)
-	markdown = regex.ReplaceAllString(markdown, "<$1><$2>")
+	markdown = regex.ReplaceAllString(markdown, "<$2|$1>")
 	return markdown
 }
