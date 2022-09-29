@@ -1,8 +1,18 @@
 package utils
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 func NewPtr[T any](obj T) *T { return &obj }
+
+func TrimSpaceInSlice(slice []string) []string {
+	for i, val := range slice {
+		slice[i] = strings.TrimSpace(val)
+	}
+	return slice
+}
 
 // ExistsInSlice ranges over a slice returning true if the input exists in the slice
 func ExistsInSlice(a string, b []string) bool {

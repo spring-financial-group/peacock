@@ -2,15 +2,13 @@ package message
 
 import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+	"github.com/spring-financial-group/peacock/pkg/utils"
 	"regexp"
 	"strings"
 )
 
 const (
-	peacockHeader       = "# Peacock\r\n"
-	messageHeaderRegex  = "## Message\\s*\\n"
-	teamNameHeaderRegex = "### Notify (.*)\\n"
+	teamNameHeaderRegex = "### Notify(.*)\\n"
 	commaSeperated      = ", "
 )
 
@@ -20,66 +18,45 @@ type Message struct {
 }
 
 func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
-	if markdown == "" {
-		return nil, errors.New("no text found in markdown")
+	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
+	if err != nil {
+		return nil, err
 	}
 
-	if !strings.Contains(markdown, peacockHeader) {
-		log.Logger().Info("No Peacock header found in markdown, exiting\n")
+	log.Logger().Infof("Parsing messages")
+	teamsInMessages := ParseTeamNames(teamNameReg, markdown)
+	if len(teamsInMessages) < 1 {
+		log.Logger().Info("No Peacock messages found in markdown, exiting")
 		return nil, nil
 	}
+	log.Logger().Infof("%d messages found in markdown", len(teamsInMessages))
 
-	// Identify the messages using message header
-	messageReg, err := regexp.Compile(messageHeaderRegex)
-	if err != nil {
-		return nil, err
-	}
-	messageSplit := messageReg.Split(markdown, -1)
-	if len(messageSplit) < 2 {
-		return nil, errors.Errorf("no messages found in markdown")
-	}
+	// Get the contents for each message & trim to remove any text before the first message
+	contents := teamNameReg.Split(markdown, -1)
+	contents = contents[1:]
 
-	// Trim split to remove any text before the first message
-	messageSplit = messageSplit[1:]
-	log.Logger().Infof("Found %d message(s) in markdown\n", len(messageSplit))
-
-	teamNameReg, _ := regexp.Compile(teamNameHeaderRegex)
-	if err != nil {
-		return nil, err
-	}
-
-	messages := make([]Message, len(messageSplit))
-	log.Logger().Infof("Parsing messages")
-	for i, m := range messageSplit {
-		err = messages[i].ParseMessage(m, teamNameReg)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse message %d", i+1)
-		}
+	messages := make([]Message, len(contents))
+	for i, m := range contents {
+		messages[i].Content = strings.TrimSpace(m)
+		messages[i].TeamNames = teamsInMessages[i]
+		log.Logger().Infof("Found %d team(s) to notify in message %d\n", len(messages[i].TeamNames), i+1)
 	}
 	return messages, nil
 }
 
-func (m *Message) ParseMessage(messageMD string, teamNameReg *regexp.Regexp) error {
-	// Find the team name for this message
-	names := teamNameReg.FindAllStringSubmatch(messageMD, -1)
-	if names == nil {
-		return errors.New("no teams found in message markdown")
-	}
-	if len(names) > 1 {
-		return errors.Errorf("found %d teams in message, should only be 1", len(names))
+func ParseTeamNames(teamNameReg *regexp.Regexp, markdown string) [][]string {
+	// Find all the notify headers
+	notifyHeaders := teamNameReg.FindAllStringSubmatch(markdown, -1)
+	if len(notifyHeaders) < 1 {
+		return nil
 	}
 
-	// The actual team name is always the sub match, so it's the second element
-	teamNameHeader := strings.TrimSpace(names[0][1])
-	m.TeamNames = strings.Split(teamNameHeader, commaSeperated)
-	log.Logger().Infof("Found teams \"%s\" in message\n", m.TeamNames)
-
-	// To find the content we can just remove the teamName heading
-	content := teamNameReg.ReplaceAllString(messageMD, "")
-	m.Content = strings.TrimSpace(content)
-	if len(m.Content) < 1 {
-		return errors.New("no content found for message")
+	teamsInMessages := make([][]string, len(notifyHeaders))
+	for i, header := range notifyHeaders {
+		// The actual team name is always the sub match, so it's the second element
+		teamNames := strings.Split(header[1], commaSeperated)
+		teamNames = utils.TrimSpaceInSlice(teamNames)
+		teamsInMessages[i] = teamNames
 	}
-	log.Logger().Info("Found content for message\n")
-	return nil
+	return teamsInMessages
 }

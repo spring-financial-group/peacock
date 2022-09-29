@@ -16,18 +16,22 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name:          "Passing",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notify infrastructure\nTest Content",
+			inputMarkdown: "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
 			expectedMessages: []message.Message{
 				{
-					TeamNames: []string{"infrastructure"},
+					TeamNames: []string{"infrastructure", "devs"},
 					Content:   "Test Content",
+				},
+				{
+					TeamNames: []string{"ml"},
+					Content:   "More Test Content",
 				},
 			},
 			shouldError: false,
 		},
 		{
 			name:          "HeadingsInContent",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notify infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
+			inputMarkdown: "### Notify infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -38,7 +42,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "PrefaceToMessages",
-			inputMarkdown: "# Peacock\r\n# Peacock Release Format\n***\n## Message\n### Notify infrastructure\nTest Content",
+			inputMarkdown: "# Title to the PR\nSome information about the pr\n### Notify infrastructure\nTest Content",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -51,29 +55,23 @@ func TestParse(t *testing.T) {
 			name:             "NoInputMarkdown",
 			inputMarkdown:    "",
 			expectedMessages: nil,
-			shouldError:      true,
-		},
-		{
-			name:             "MoreTeamsThanMessages",
-			inputMarkdown:    "# Peacock\r\n## Message\n### Notify infrastructure\n### Notify ml\nTest Content",
-			expectedMessages: nil,
-			shouldError:      true,
+			shouldError:      false,
 		},
 		{
 			name:             "NoMessages",
-			inputMarkdown:    "# Peacock\r\n### Notify Team\n",
+			inputMarkdown:    "# Title to the PR\nSome information about the pr\n",
 			expectedMessages: nil,
-			shouldError:      true,
+			shouldError:      false,
 		},
 		{
 			name:             "NoTeams",
-			inputMarkdown:    "# Peacock\r\n## Message\nTest Content",
+			inputMarkdown:    "### Notify ",
 			expectedMessages: nil,
-			shouldError:      true,
+			shouldError:      false,
 		},
 		{
 			name:          "MultipleMessages",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notify infrastructure\nTest Content\n## Message\n### Notify ML\nMore test content",
+			inputMarkdown: "### Notify infrastructure\nTest Content\n### Notify ML\nMore test content\n",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -88,7 +86,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "MultipleTeamsInOneMessage",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notify infrastructure, ml, allDevs\nTest Content\n",
+			inputMarkdown: "### Notify infrastructure, ml, allDevs\nTest Content\n",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure", "ml", "allDevs"},
@@ -99,7 +97,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "AdditionalNewLines",
-			inputMarkdown: "\n\n\n# Peacock\r\n## Message\n### Notify infrastructure\nTest Content\n\n\n",
+			inputMarkdown: "\n\n### Notify infrastructure\nTest Content\n\n\n",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -110,7 +108,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "MultiLineContent",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notify infrastructure\nThis is an example\nThat runs\nAcross multiple\nlines",
+			inputMarkdown: "### Notify infrastructure\nThis is an example\nThat runs\nAcross multiple\nlines",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -121,7 +119,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "Lists",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notify infrastructure\nHere's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
+			inputMarkdown: "### Notify infrastructure\nHere's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -132,7 +130,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "WhitespaceAfterTeamName",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notify infrastructure   \nTest Content",
+			inputMarkdown: "\n### Notify infrastructure   \nTest Content",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -142,14 +140,19 @@ func TestParse(t *testing.T) {
 			shouldError: false,
 		},
 		{
-			name:             "NoWhitespaceBeforeTeamName",
-			inputMarkdown:    "# Peacock\r\n## Message\n### Notifyinfrastructure\nTest Content",
-			expectedMessages: nil,
-			shouldError:      true,
+			name:          "ExtraWhitespaceBetweenTeamNames",
+			inputMarkdown: "\n### Notify infrastructure   ,    ml ,   product\nTest Content",
+			expectedMessages: []message.Message{
+				{
+					TeamNames: []string{"infrastructure", "ml", "product"},
+					Content:   "Test Content",
+				},
+			},
+			shouldError: false,
 		},
 		{
-			name:          "WhitespaceAfterMessageHeader",
-			inputMarkdown: "# Peacock\r\n## Message  \n### Notify infrastructure\nTest Content",
+			name:          "NoWhitespaceBeforeTeamName",
+			inputMarkdown: "# Peacock\r\n## Message\n### Notifyinfrastructure\nTest Content",
 			expectedMessages: []message.Message{
 				{
 					TeamNames: []string{"infrastructure"},
@@ -157,12 +160,6 @@ func TestParse(t *testing.T) {
 				},
 			},
 			shouldError: false,
-		},
-		{
-			name:             "NoWhitespaceBeforeMessage",
-			inputMarkdown:    "# Peacock\r\n##Message\n### Notify infrastructure\nTest Content",
-			expectedMessages: nil,
-			shouldError:      true,
 		},
 	}
 
