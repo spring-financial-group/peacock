@@ -90,7 +90,7 @@ func NewCmdRun() *cobra.Command {
 	return cmd
 }
 
-// ParseEnvVars uses the flags passed to the command to overwrite then default environment variable keys. Then loads the
+// ParseEnvVars uses the flags passed to the command to overwrite the default environment variable keys. Then loads the
 // environment variables.
 func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	keys := struct {
