@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
 	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
-
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
@@ -20,6 +19,8 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
+	"os"
+	"strconv"
 	"strings"
 )
 
@@ -27,14 +28,14 @@ import (
 type Options struct {
 	PRNumber     int
 	GitServerURL string
-	GitToken     string
-	Owner        string
+	GitHubToken  string
+	RepoOwner    string
 	RepoName     string
+
+	SlackToken string
 
 	DryRun            bool
 	CommentValidation bool
-
-	SlackToken string
 
 	SmtpHost     string
 	SmtpUsername string
@@ -72,19 +73,13 @@ func NewCmdRun() *cobra.Command {
 			helper.CheckErr(err)
 		},
 	}
-	// Git flags
-	cmd.Flags().StringVarP(&o.GitServerURL, "git-server", "", "", fmt.Sprintf("the git server URL to create the scm client. Default is %s", giturl.GitHubURL))
-	cmd.Flags().IntVarP(&o.PRNumber, "pr-number", "p", -1, "github auth token")
-	cmd.Flags().StringVarP(&o.GitToken, "git-token", "", "", "the git token used to operate on the git repository. If not specified it's loaded from the git credentials file")
-	cmd.Flags().StringVarP(&o.Owner, "git-owner", "", "", "the owner of the git repository. If not specified it's loaded from the local git repo")
-	cmd.Flags().StringVarP(&o.RepoName, "git-repo", "", "", "the name of the git repo to run on. If not specified it's loaded from the local git repo")
+
+	err := o.ParseEnvVars(cmd)
+	helper.CheckErr(err)
 
 	// Command specific flags
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
 	cmd.Flags().BoolVarP(&o.CommentValidation, "comment-validation", "", false, "posts a comment to the pr with the validation results if successful. Default is false.")
-
-	// Slack flags
-	cmd.Flags().StringVarP(&o.SlackToken, "slack-token", "", "", "the slack token used to send the messages to slack channels")
 
 	// Email flags
 	cmd.Flags().StringVarP(&o.SmtpHost, "smtp-host", "", "", "the host SMTP server")
@@ -93,6 +88,42 @@ func NewCmdRun() *cobra.Command {
 	cmd.Flags().IntVarP(&o.SmtpPort, "smtp-port", "", -1, "the port of the SMTP server")
 
 	return cmd
+}
+
+// ParseEnvVars uses the flags passed to the command to overwrite the default environment variable keys. Then loads the
+// environment variables.
+func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
+	keys := struct {
+		PRNumberKey     string
+		GitServerURLKey string
+		GitHubKey       string
+		RepoOwnerKey    string
+		RepoNameKey     string
+		SlackTokenKey   string
+	}{}
+
+	// Flags to overwrite default environment variable keys
+	cmd.Flags().StringVarP(&keys.GitServerURLKey, "git-server-key", "", "GIT_SERVER", fmt.Sprintf("the environment variable key for the git server URL. If no env var is passed then default is %s", giturl.GitHubURL))
+	cmd.Flags().StringVarP(&keys.PRNumberKey, "pr-number-key", "p", "PULL_NUMBER", "the environment variable key for the pull request number that peacock is running on.")
+	cmd.Flags().StringVarP(&keys.GitHubKey, "git-token-key", "", "GITHUB_TOKEN", "the environment variable key for the git token used to operate on the git repository.")
+	cmd.Flags().StringVarP(&keys.RepoOwnerKey, "git-owner-key", "", "REPO_OWNER", "the environment variable key for the owner of the git repository.")
+	cmd.Flags().StringVarP(&keys.RepoNameKey, "git-repo-key", "", "REPO_NAME", "the environment variable key for the name of the git repo to run on.")
+	cmd.Flags().StringVarP(&keys.SlackTokenKey, "slack-token-key", "", "SLACK_TOKEN", "the environment variable key for the slack token used to send the messages to slack channels")
+
+	o.PRNumber = -1
+	if prNumber := os.Getenv(keys.PRNumberKey); prNumber != "" {
+		o.PRNumber, err = strconv.Atoi(prNumber)
+		if err != nil {
+			return err
+		}
+	}
+
+	o.GitServerURL = os.Getenv(keys.GitServerURLKey)
+	o.GitHubToken = os.Getenv(keys.GitHubKey)
+	o.RepoOwner = os.Getenv(keys.RepoOwnerKey)
+	o.RepoName = os.Getenv(keys.RepoNameKey)
+	o.SlackToken = os.Getenv(keys.SlackTokenKey)
+	return nil
 }
 
 func (o *Options) Run() error {
@@ -291,7 +322,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	// Init git clients
 	if o.Git == nil {
-		o.Git, err = git.NewClient(o.GitServerURL, o.Owner, o.RepoName, o.GitToken)
+		o.Git, err = git.NewClient(o.GitServerURL, o.RepoOwner, o.RepoName, o.GitHubToken)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialise git clients")
 		}

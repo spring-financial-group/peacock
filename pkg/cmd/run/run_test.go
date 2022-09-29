@@ -30,7 +30,7 @@ func TestOptions_Run(t *testing.T) {
 			opts: &run.Options{
 				PRNumber:          1,
 				GitServerURL:      "https://github.com",
-				GitToken:          "testGitToken",
+				GitHubToken:       "testGitToken",
 				DryRun:            false,
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
@@ -57,7 +57,7 @@ func TestOptions_Run(t *testing.T) {
 			opts: &run.Options{
 				PRNumber:          1,
 				GitServerURL:      "https://github.com",
-				GitToken:          "testGitToken",
+				GitHubToken:       "testGitToken",
 				DryRun:            true,
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
