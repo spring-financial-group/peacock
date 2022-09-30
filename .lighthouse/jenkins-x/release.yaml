@@ -88,6 +88,9 @@ spec:
             echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/ghcr-token.gt)\"}}}" > /kaniko/.docker/config.json
             rm /workspace/source/ghcr-token.gt
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
+        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
+          name: ""
+          resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 12h0m0s
