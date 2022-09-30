@@ -14,7 +14,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
-	"github.com/spring-financial-group/peacock/pkg/handlers/email"
 	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
@@ -36,11 +35,6 @@ type Options struct {
 
 	DryRun            bool
 	CommentValidation bool
-
-	SmtpHost     string
-	SmtpUsername string
-	SmtpPassword string
-	SmtpPort     int
 
 	pr *github.PullRequest
 
@@ -80,12 +74,6 @@ func NewCmdRun() *cobra.Command {
 	// Command specific flags
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
 	cmd.Flags().BoolVarP(&o.CommentValidation, "comment-validation", "", false, "posts a comment to the pr with the validation results if successful. Default is false.")
-
-	// Email flags
-	cmd.Flags().StringVarP(&o.SmtpHost, "smtp-host", "", "", "the host SMTP server")
-	cmd.Flags().StringVarP(&o.SmtpUsername, "smtp-username", "", "", "the username to connect to the SMTP server")
-	cmd.Flags().StringVarP(&o.SmtpPassword, "smtp-password", "", "", "the password to connect to the SMTP server")
-	cmd.Flags().IntVarP(&o.SmtpPort, "smtp-port", "", -1, "the port of the SMTP server")
 
 	return cmd
 }
@@ -338,12 +326,6 @@ func (o *Options) initialiseHandlers() (err error) {
 		o.Handlers[handlers.Slack], err = slack.NewSlackHandler(o.SlackToken)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialise Slack handler")
-		}
-	}
-	if o.SmtpHost != "" && o.SmtpUsername != "" && o.SmtpPassword != "" && o.SmtpPort != -1 {
-		o.Handlers[handlers.Email], err = email.NewEmailHandler(o.SmtpPort, o.SmtpHost, o.SmtpUsername, o.SmtpPassword)
-		if err != nil {
-			return errors.Wrap(err, "failed to initialise Email handler")
 		}
 	}
 
