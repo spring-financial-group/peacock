@@ -48,32 +48,6 @@ func TestLoadConfig(t *testing.T) {
 			shouldError: true,
 		},
 		{
-			name: "ValidEmailAddress",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
-					{
-						Name:        "infrastructure",
-						ContactType: "email",
-						Addresses:   []string{"sam.morse@dash.com"},
-					},
-				},
-			},
-			shouldError: false,
-		},
-		{
-			name: "InvalidEmailAddress",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
-					{
-						Name:        "infrastructure",
-						ContactType: "email",
-						Addresses:   []string{"sam.morse-dash.com"},
-					},
-				},
-			},
-			shouldError: true,
-		},
-		{
 			name: "SlackIDTooLong",
 			expectedConfig: feathers.Feathers{
 				Teams: []feathers.Team{

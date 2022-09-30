@@ -17,9 +17,8 @@ func NewSlackHandler(token string) (domain.MessageHandler, error) {
 	return h, nil
 }
 
-func (h *handler) Send(content string, addresses []string) error {
+func (h *handler) Send(content, _ string, addresses []string) error {
 	content = markdown.ConvertToSlack(content)
-
 	for _, address := range addresses {
 		_, _, err := h.slack.PostMessage(
 			address,

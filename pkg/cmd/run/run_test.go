@@ -91,7 +91,7 @@ func TestOptions_Run(t *testing.T) {
 
 		for _, team := range tt.opts.Config.Teams {
 			if !tt.opts.DryRun {
-				mockSlackHander.On("Send", "Test Content", team.Addresses).Return(nil).Once()
+				mockSlackHander.On("Send", "Test Content", "New Release Notes for ", team.Addresses).Return(nil).Once()
 			}
 		}
 

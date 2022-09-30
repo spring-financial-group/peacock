@@ -5,7 +5,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/utils"
-	"net/mail"
 	"regexp"
 )
 
@@ -119,11 +118,6 @@ func (t *Team) validate() error {
 	}
 	for _, address := range t.Addresses {
 		switch t.ContactType {
-		case handlers.Email:
-			_, err := mail.ParseAddress(address)
-			if err != nil {
-				return errors.Wrapf(err, "failed to parse email address \"%s\" for team \"%s\"", address, t.Name)
-			}
 		case handlers.Slack:
 			match := slackRegex.MatchString(address)
 			if !match {

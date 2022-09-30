@@ -1,8 +1,8 @@
 package handlers
 
 const (
-	Slack = "slack"
-	Email = "email"
+	Slack   = "slack"
+	Webhook = "webhook"
 )
 
-var Valid = []string{Slack, Email}
+var Valid = []string{Slack, Webhook}
