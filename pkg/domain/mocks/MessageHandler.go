@@ -9,13 +9,13 @@ type MessageHandler struct {
 	mock.Mock
 }
 
-// Send provides a mock function with given fields: content, addresses
-func (_m *MessageHandler) Send(content string, addresses []string) error {
-	ret := _m.Called(content, addresses)
+// Send provides a mock function with given fields: content, subject, addresses
+func (_m *MessageHandler) Send(content string, subject string, addresses []string) error {
+	ret := _m.Called(content, subject, addresses)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, []string) error); ok {
-		r0 = rf(content, addresses)
+	if rf, ok := ret.Get(0).(func(string, string, []string) error); ok {
+		r0 = rf(content, subject, addresses)
 	} else {
 		r0 = ret.Error(0)
 	}

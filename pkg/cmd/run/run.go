@@ -15,6 +15,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/git"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
+	"github.com/spring-financial-group/peacock/pkg/handlers/webhook"
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
@@ -33,8 +34,12 @@ type Options struct {
 
 	SlackToken string
 
+	WebhookURL   string
+	WebhookToken string
+
 	DryRun            bool
 	CommentValidation bool
+	Subject           string
 
 	pr *github.PullRequest
 
@@ -74,6 +79,7 @@ func NewCmdRun() *cobra.Command {
 	// Command specific flags
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
 	cmd.Flags().BoolVarP(&o.CommentValidation, "comment-validation", "", false, "posts a comment to the pr with the validation results if successful. Default is false.")
+	cmd.Flags().StringVarP(&o.Subject, "subject", "", "", "a subject to add to the messages for the handlers that require it. If empty then a subject will be generated.")
 
 	return cmd
 }
@@ -82,35 +88,41 @@ func NewCmdRun() *cobra.Command {
 // environment variables.
 func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	keys := struct {
-		PRNumberKey     string
-		GitServerURLKey string
-		GitHubKey       string
-		RepoOwnerKey    string
-		RepoNameKey     string
-		SlackTokenKey   string
+		PRNumber     string
+		GitServerURL string
+		GitHubToken  string
+		RepoOwner    string
+		RepoName     string
+		SlackToken   string
+		WebhookURL   string
+		WebhookToken string
 	}{}
 
 	// Flags to overwrite default environment variable keys
-	cmd.Flags().StringVarP(&keys.GitServerURLKey, "git-server-key", "", "GIT_SERVER", fmt.Sprintf("the environment variable key for the git server URL. If no env var is passed then default is %s", giturl.GitHubURL))
-	cmd.Flags().StringVarP(&keys.PRNumberKey, "pr-number-key", "p", "PULL_NUMBER", "the environment variable key for the pull request number that peacock is running on.")
-	cmd.Flags().StringVarP(&keys.GitHubKey, "git-token-key", "", "GITHUB_TOKEN", "the environment variable key for the git token used to operate on the git repository.")
-	cmd.Flags().StringVarP(&keys.RepoOwnerKey, "git-owner-key", "", "REPO_OWNER", "the environment variable key for the owner of the git repository.")
-	cmd.Flags().StringVarP(&keys.RepoNameKey, "git-repo-key", "", "REPO_NAME", "the environment variable key for the name of the git repo to run on.")
-	cmd.Flags().StringVarP(&keys.SlackTokenKey, "slack-token-key", "", "SLACK_TOKEN", "the environment variable key for the slack token used to send the messages to slack channels")
+	cmd.Flags().StringVarP(&keys.GitServerURL, "git-server-key", "", "GIT_SERVER", fmt.Sprintf("the environment variable key for the git server URL. If no env var is passed then default is %s", giturl.GitHubURL))
+	cmd.Flags().StringVarP(&keys.PRNumber, "pr-number-key", "p", "PULL_NUMBER", "the environment variable key for the pull request number that peacock is running on.")
+	cmd.Flags().StringVarP(&keys.GitHubToken, "git-token-key", "", "GITHUB_TOKEN", "the environment variable key for the git token used to operate on the git repository.")
+	cmd.Flags().StringVarP(&keys.RepoOwner, "git-owner-key", "", "REPO_OWNER", "the environment variable key for the owner of the git repository.")
+	cmd.Flags().StringVarP(&keys.RepoName, "git-repo-key", "", "REPO_NAME", "the environment variable key for the name of the git repo to run on.")
+	cmd.Flags().StringVarP(&keys.SlackToken, "slack-token-key", "", "SLACK_TOKEN", "the environment variable key for the slack token used to send the messages to slack channels")
+	cmd.Flags().StringVarP(&keys.WebhookURL, "webhook-URL-key", "", "WEBHOOK_URL", "the environment variable key for the webhook URL")
+	cmd.Flags().StringVarP(&keys.WebhookToken, "webhook-token-key", "", "WEBHOOK_TOKEN", "the environment variable key for the webhook token")
 
 	o.PRNumber = -1
-	if prNumber := os.Getenv(keys.PRNumberKey); prNumber != "" {
+	if prNumber := os.Getenv(keys.PRNumber); prNumber != "" {
 		o.PRNumber, err = strconv.Atoi(prNumber)
 		if err != nil {
 			return err
 		}
 	}
 
-	o.GitServerURL = os.Getenv(keys.GitServerURLKey)
-	o.GitHubToken = os.Getenv(keys.GitHubKey)
-	o.RepoOwner = os.Getenv(keys.RepoOwnerKey)
-	o.RepoName = os.Getenv(keys.RepoNameKey)
-	o.SlackToken = os.Getenv(keys.SlackTokenKey)
+	o.GitServerURL = os.Getenv(keys.GitServerURL)
+	o.GitHubToken = os.Getenv(keys.GitHubToken)
+	o.RepoOwner = os.Getenv(keys.RepoOwner)
+	o.RepoName = os.Getenv(keys.RepoName)
+	o.SlackToken = os.Getenv(keys.SlackToken)
+	o.WebhookURL = os.Getenv(keys.WebhookURL)
+	o.WebhookToken = os.Getenv(keys.WebhookToken)
 	return nil
 }
 
@@ -186,6 +198,11 @@ func (o *Options) Run() error {
 		return nil
 	}
 
+	// Some message handlers use subjects, if one isn't passed then we should generate it
+	if o.Subject == "" {
+		o.GenerateSubject()
+	}
+
 	log.Logger().Info("Sending messages")
 	err = o.SendMessages(messages)
 	if err != nil {
@@ -215,6 +232,10 @@ func (o *Options) GetPullRequest(ctx context.Context) (err error) {
 	return nil
 }
 
+func (o *Options) GenerateSubject() {
+	o.Subject = fmt.Sprintf("New Release Notes for %s", o.RepoName)
+}
+
 // SendMessages send the messages using the message handlers
 func (o *Options) SendMessages(messages []message.Message) error {
 	var errs []error
@@ -235,7 +256,7 @@ func (o *Options) SendMessages(messages []message.Message) error {
 func (o *Options) sendMessage(message message.Message) error {
 	teams := o.Config.GetTeamsByNames(message.TeamNames...)
 	for _, team := range teams {
-		err := o.Handlers[team.ContactType].Send(message.Content, team.Addresses)
+		err := o.Handlers[team.ContactType].Send(message.Content, o.Subject, team.Addresses)
 		if err != nil {
 			return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
 		}
@@ -327,6 +348,10 @@ func (o *Options) initialiseHandlers() (err error) {
 		if err != nil {
 			return errors.Wrap(err, "failed to initialise Slack handler")
 		}
+	}
+
+	if o.WebhookURL != "" {
+		o.Handlers[handlers.Webhook] = webhook.NewWebHookHandler(o.WebhookURL, o.WebhookToken)
 	}
 
 	// We should check that all the handlers required by the feathers have been initialised
