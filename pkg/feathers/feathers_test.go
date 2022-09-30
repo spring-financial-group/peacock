@@ -23,7 +23,12 @@ func TestLoadConfig(t *testing.T) {
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
-						Addresses:   []string{"C02BA9QHMD0"},
+						Addresses:   []string{"C02BA9FHMD0"},
+					},
+					{
+						Name:        "AllDevs",
+						ContactType: "slack",
+						Addresses:   []string{"CLHLDNT9Q"},
 					},
 				},
 			},
@@ -75,7 +80,20 @@ func TestLoadConfig(t *testing.T) {
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
-						Addresses:   []string{"C02BA9QHMD023"},
+						Addresses:   []string{"C02DA9QHMD023"},
+					},
+				},
+			},
+			shouldError: true,
+		},
+		{
+			name: "LowerCaseInSlackID",
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
+					{
+						Name:        "infrastructure",
+						ContactType: "slack",
+						Addresses:   []string{"C02BA9QhMD"},
 					},
 				},
 			},
@@ -88,7 +106,7 @@ func TestLoadConfig(t *testing.T) {
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
-						Addresses:   []string{"C02BA9QHM"},
+						Addresses:   []string{"C02BA9QH"},
 					},
 				},
 			},

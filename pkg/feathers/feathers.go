@@ -11,7 +11,7 @@ import (
 
 const (
 	configPath          = ".peacock/feathers.yaml"
-	slackChannelIDRegex = "^[A-Z0-9]{11}$"
+	slackChannelIDRegex = "^[A-Z0-9]{9,11}$"
 )
 
 type Feathers struct {
