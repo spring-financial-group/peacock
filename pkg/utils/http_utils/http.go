@@ -2,6 +2,9 @@ package http_utils
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"github.com/pkg/errors"
 	"net/http"
@@ -15,6 +18,14 @@ const (
 	Authorization   = "Authorization"
 )
 
+// SignMessage uses HMAC & SHA256 hashing to sign a message
+func SignMessage(msg []byte, secret string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(msg)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// DoRequestAndCatchUnsuccessful sends a http request. If the response code != 200 then it returns an error.
 func DoRequestAndCatchUnsuccessful(request *http.Request) (*http.Response, error) {
 	client := &http.Client{}
 	resp, err := client.Do(request)
@@ -28,8 +39,7 @@ func DoRequestAndCatchUnsuccessful(request *http.Request) (*http.Response, error
 	return resp, nil
 }
 
-// GeneratePostRequest creates a POST http.Request. If a token is passed then it is added to the
-// Authorization header.
+// GeneratePostRequest creates a POST http.Request adding the token to the Authorization header
 func GeneratePostRequest(url, token string, body []byte) (*http.Request, error) {
 	// create the request
 	req, err := http.NewRequest(POST, url, bytes.NewBuffer(body))
@@ -38,8 +48,6 @@ func GeneratePostRequest(url, token string, body []byte) (*http.Request, error) 
 	}
 	// add content type
 	req.Header.Add(ContentType, ApplicationJSON)
-	if token != "" {
-		req.Header.Add(Authorization, token)
-	}
+	req.Header.Add(Authorization, token)
 	return req, nil
 }
