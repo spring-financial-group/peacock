@@ -1,0 +1,5 @@
+teams:
+  - name: Infrastructure
+    contactType: slack
+    addresses:
+      - C02BA9QHMD0

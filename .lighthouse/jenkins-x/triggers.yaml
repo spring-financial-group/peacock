@@ -2,6 +2,16 @@ apiVersion: config.lighthouse.jenkins-x.io/v1alpha1
 kind: TriggerConfig
 spec:
   presubmits:
+  - name: peacock-verify
+    context: "peacock-verify"
+    always_run: true
+    optional: false
+    source: "peacock/verify.yaml"
+  - name: peacock-release-test
+    context: "peacock-release-test"
+    always_run: false
+    optional: true
+    source: "peacock/release.yaml"
   - name: gl
     context: "golint"
     always_run: true
@@ -23,6 +33,12 @@ spec:
     optional: false
     source: "tests.yaml"
   postsubmits:
+  - name: peacock-release
+    context: "peacock-release"
+    source: "peacock/release.yaml"
+    branches:
+      - ^main$
+      - ^master$
   - name: release
     context: "release"
     source: "release.yaml"
