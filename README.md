@@ -1,18 +1,127 @@
-# Peacock
-### `peacock` is a ci/cd tool for telling your users what you're up to
-<img src="./images/peacock.png" width="400" height="auto">
+<p align="center">
+  <img alt="peacock logo" src="images/peacock.png" height="300" />
+  <h1 align="center">Peacock</h1>
+  <p align="center"><B>Show off with minimal effort</B></p>
+</p>
 
-## Within pipelines
+`peacock` is a simple CI/CD tool for telling your users what you're up to. It integrates with existing pipelines to
+fire out notifications to your users without having to collate and write release notes.
 
-Peacock can integrate into your existing ci/cd pipelines to fire out notifications (emails/slack/teams?) to your users without having to collate and write release notes.
+# Overview
+Peacock works by parsing the contents of the description of a Pull Request and converting that into notifications to
+be sent to users - making it easy for developers to communicate release information. Peacock supports sending multiple
+messages to different teams allowing you to curate your release notes based on the audience.
 
-integrate it with `peacock command tbc here`
+* Easy to set up and integrate
+* Supports multiple methods of communications
+* Can send multiple messages to multiple teams all from one PR
 
-## As a service
+# Installation
+## Local
+To run Peacock on your local machine:
+```bash
+git clone https://github.com/spring-financial-group/peacock.git
+make install
+```
+## CI/CD
 
-`peacock` can be a stateful service that you can query to show the new features and fixes since the user has last been on your system.
+To run Peacock in a CI/CD pipeline:
+```yaml
+- image: ghcr.io/spring-financial-group/peacock:latest
+```
+Checkout [our pipeline definitions](https://github.com/spring-financial-group/peacock/tree/main/.lighthouse/jenkins-x/peacock)
+for an example of how it can be used.
 
-It's configurable, you can take the latest update, the last 5, whatever you fancy.
+## Configuration
+### Feathers
+Peacock's feathers are each way that you'd like to communicate with your users. These are stored in `.peacock/feathers.yaml`
+in the repository that you'd like Peacock to run in.
 
-## Setting up your feathers
-`feathers` are each way you'd like to communicate with your users.
+Each team in the feathers needs to have a `contactType` and some `addresses` which define how your users will be contacted.
+See [Communication Methods](#communication-methods) for all the methods supported by Peacock.
+
+```yaml
+teams:
+  - name: QA
+    contactType: slack
+    addresses:
+    - C56H7G209DF
+  - name: FrontEnd
+    contactType: slack
+    addresses:
+      - C56H7G209DF
+  - name: BackEnd
+    contactType: slack
+    addresses:
+      - C56H7G209DF
+  - name: Business
+    contactType: slack
+    addresses:
+      - C56H7G209DF
+```
+
+### Environment Variables
+Environment variables are used configure Peacock in a pipeline. For integrating into different CI/CD tools the keys for
+these variables can be overridden using flags for each command.
+
+# Usage
+Peacock uses Notify headers (`### Notify`) in the description of a PR to identify messages and teams to contact.
+Additional information about the PR can be added as long as it is above the first Notify header - otherwise it will be
+included in one of the messages.
+
+Example PR description:
+```markdown
+# Production Release PR
+Here is some text that won't be sent in any of the messages.
+
+### Notify QA, FrontEnd, BackEnd
+# Service Promotions
+
+**Services Being Promoted**
+* Peacock
+
+**What functionality is being released?**
+* A really cool dev tool that lets you communicate release notes to your users more easily
+
+**Risk Of Release**
+Low
+
+### Notify Business
+# New Software Release
+We have just promoted a new tool that will let us more easily inform you of any future releases that we make.
+
+We will be using this from now on to communicate any really cool features that we add to the platform.
+```
+
+**Pre-submission**
+
+Use the command `peacock run --dry-run` pre-submission to validate the messages and check that all the right
+information was supplied for Peacock to run. Adding the `--comment-validation` flag means that Peacock will post a breakdown of the
+messages back to the PR as a comment.
+
+The Pull Request number needs to be provided for Peacock to run pre-submission.
+
+**Post-submission**
+
+Use the command `peacock run` post-submission to actually send the messages to the different teams.
+
+## User Guide
+1. Open a PR in repository as normal and add a Notify header to the PR description containing the teams you would like
+   to notify (comma separated). The teams you can choose from, and their method of contact, are stored in
+   `.peacock/feathers.yaml` in the repository.
+2. Underneath the Notify header add the content of the message you would like to send. Keep in mind that some methods
+   of contact support only a limited form of markdown - Slack.
+3. Once opened, the peacock dry run pipeline will run. This parses and validates the teams & messages, posting an
+   explanation back to the PR if it fails.
+4. Once the PR merges the peacock release pipeline starts. This is the pipeline that actually sends the notifications.
+
+## Communication Methods
+### Slack
+To use Slack as a method of communication a Slack app will need to be setup for your organisation with the minimum
+scope of `chat:write`. It's important to remember that for private channels your app will need to be invited for Peacock
+to post messages.
+
+Although Peacock does convert Markdown to Slack's implementation, due to Slack only supporting a mild version of Markdown
+this conversion is limited.
+    
+
