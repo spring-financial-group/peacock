@@ -138,6 +138,11 @@ func (o *Options) Run() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get pull request")
 	}
+	// We should check that the body actually exists
+	if o.pr.Body == nil {
+		log.Logger().Infof("No Body found for PR%d, exiting", o.PRNumber)
+		return nil
+	}
 
 	if o.Config == nil {
 		log.Logger().Info("Loading feathers from local instance")
@@ -166,9 +171,9 @@ func (o *Options) Run() error {
 		o.PostErrorToPR(ctx, err)
 		return err
 	}
-
 	// If no messages then we should exit with 0 code
 	if messages == nil {
+		log.Logger().Info("No messages found in markdown, exiting")
 		return nil
 	}
 
@@ -223,11 +228,6 @@ func (o *Options) GetPullRequest(ctx context.Context) (err error) {
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to get pull request")
-	}
-
-	// We should check whether this pr is usable
-	if o.pr.Body == nil {
-		return errors.New("no body found in pull request")
 	}
 	return nil
 }

@@ -26,7 +26,6 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	log.Logger().Infof("Parsing messages")
 	teamsInMessages := ParseTeamNames(teamNameReg, markdown)
 	if len(teamsInMessages) < 1 {
-		log.Logger().Info("No Peacock messages found in markdown, exiting")
 		return nil, nil
 	}
 	log.Logger().Infof("%d messages found in markdown", len(teamsInMessages))
