@@ -34,8 +34,9 @@ type Options struct {
 
 	SlackToken string
 
-	WebhookURL   string
-	WebhookToken string
+	WebhookURL    string
+	WebhookToken  string
+	WebhookSecret string
 
 	DryRun            bool
 	CommentValidation bool
@@ -88,14 +89,15 @@ func NewCmdRun() *cobra.Command {
 // environment variables.
 func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	keys := struct {
-		PRNumber     string
-		GitServerURL string
-		GitHubToken  string
-		RepoOwner    string
-		RepoName     string
-		SlackToken   string
-		WebhookURL   string
-		WebhookToken string
+		PRNumber         string
+		GitServerURL     string
+		GitHubToken      string
+		RepoOwner        string
+		RepoName         string
+		SlackToken       string
+		WebhookURL       string
+		WebhookAuthToken string
+		WebhookSecret    string
 	}{}
 
 	// Flags to overwrite default environment variable keys
@@ -106,7 +108,8 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	cmd.Flags().StringVarP(&keys.RepoName, "git-repo-key", "", "REPO_NAME", "the environment variable key for the name of the git repo to run on.")
 	cmd.Flags().StringVarP(&keys.SlackToken, "slack-token-key", "", "SLACK_TOKEN", "the environment variable key for the slack token used to send the messages to slack channels")
 	cmd.Flags().StringVarP(&keys.WebhookURL, "webhook-URL-key", "", "WEBHOOK_URL", "the environment variable key for the webhook URL")
-	cmd.Flags().StringVarP(&keys.WebhookToken, "webhook-token-key", "", "WEBHOOK_TOKEN", "the environment variable key for the webhook token")
+	cmd.Flags().StringVarP(&keys.WebhookAuthToken, "webhook-auth-token-key", "", "WEBHOOK_AUTH_TOKEN", "the environment variable key for the webhook auth token")
+	cmd.Flags().StringVarP(&keys.WebhookSecret, "webhook-HMAC-secret-key", "", "WEBHOOK_SECRET", "the environment variable key for the webhook HMAC secret")
 
 	o.PRNumber = -1
 	if prNumber := os.Getenv(keys.PRNumber); prNumber != "" {
@@ -122,7 +125,8 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	o.RepoName = os.Getenv(keys.RepoName)
 	o.SlackToken = os.Getenv(keys.SlackToken)
 	o.WebhookURL = os.Getenv(keys.WebhookURL)
-	o.WebhookToken = os.Getenv(keys.WebhookToken)
+	o.WebhookToken = os.Getenv(keys.WebhookAuthToken)
+	o.WebhookSecret = os.Getenv(keys.WebhookSecret)
 	return nil
 }
 
@@ -351,7 +355,7 @@ func (o *Options) initialiseHandlers() (err error) {
 	}
 
 	if o.WebhookURL != "" {
-		o.Handlers[handlers.Webhook] = webhook.NewWebHookHandler(o.WebhookURL, o.WebhookToken)
+		o.Handlers[handlers.Webhook] = webhook.NewWebHookHandler(o.WebhookURL, o.WebhookToken, o.WebhookSecret)
 	}
 
 	// We should check that all the handlers required by the feathers have been initialised

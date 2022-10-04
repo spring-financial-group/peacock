@@ -8,14 +8,16 @@ import (
 )
 
 type handler struct {
-	url   string
-	token string
+	url    string
+	token  string
+	secret string
 }
 
-func NewWebHookHandler(url, token string) domain.MessageHandler {
+func NewWebHookHandler(url, authToken, secret string) domain.MessageHandler {
 	return &handler{
-		url:   url,
-		token: token,
+		url:    url,
+		token:  authToken,
+		secret: secret,
 	}
 }
 
@@ -35,7 +37,10 @@ func (h *handler) Send(content, subject string, addresses []string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http_utils.GeneratePostRequest(h.url, h.token, data)
+
+	hash := http_utils.SignMessage(data, h.secret)
+
+	req, err := http_utils.GeneratePostRequest(h.url, h.token, []byte(hash))
 	if err != nil {
 		return err
 	}
