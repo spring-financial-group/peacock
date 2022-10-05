@@ -40,7 +40,7 @@ func (h *handler) Send(content, subject string, addresses []string) error {
 
 	hash := http_utils.SignMessage(data, h.secret)
 
-	req, err := http_utils.GeneratePostRequest(h.url, h.token, []byte(hash))
+	req, err := http_utils.GenerateAuthenticatedPostRequest(h.url, h.token, hash, data)
 	if err != nil {
 		return err
 	}
