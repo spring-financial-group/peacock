@@ -22,16 +22,16 @@ func NewWebHookHandler(url, authToken, secret string) domain.MessageHandler {
 }
 
 type postRequest struct {
-	Body        string
-	Subject     string
-	ToAddresses []string
+	Body      string   `json:"body"`
+	Subject   string   `json:"subject"`
+	Addresses []string `json:"addresses"`
 }
 
 func (h *handler) Send(content, subject string, addresses []string) error {
 	postReq := postRequest{
-		Body:        content,
-		Subject:     subject,
-		ToAddresses: addresses,
+		Body:      content,
+		Subject:   subject,
+		Addresses: addresses,
 	}
 	data, err := json.Marshal(postReq)
 	if err != nil {
