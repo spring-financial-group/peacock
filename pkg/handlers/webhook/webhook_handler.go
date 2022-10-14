@@ -2,9 +2,11 @@ package webhook
 
 import (
 	"encoding/json"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/utils/http_utils"
+	"gitlab.com/golang-commonmark/markdown"
 )
 
 type handler struct {
@@ -29,7 +31,7 @@ type postRequest struct {
 
 func (h *handler) Send(content, subject string, addresses []string) error {
 	postReq := postRequest{
-		Body:      content,
+		Body:      h.convertMarkdownToHTML(content),
 		Subject:   subject,
 		Addresses: addresses,
 	}
@@ -38,9 +40,7 @@ func (h *handler) Send(content, subject string, addresses []string) error {
 		return err
 	}
 
-	hash := http_utils.SignMessage(data, h.secret)
-
-	req, err := http_utils.GenerateAuthenticatedPostRequest(h.url, h.token, hash, data)
+	req, err := http_utils.GenerateAuthenticatedPostRequest(h.url, h.token, http_utils.SignMessage(data, h.secret), data)
 	if err != nil {
 		return err
 	}
@@ -49,4 +49,10 @@ func (h *handler) Send(content, subject string, addresses []string) error {
 		return errors.Wrap(err, "failed to post messages")
 	}
 	return nil
+}
+
+func (h *handler) convertMarkdownToHTML(md string) string {
+	mdParser := markdown.New(markdown.HTML(true))
+	unsafeHTML := mdParser.RenderToString([]byte(md))
+	return bluemonday.UGCPolicy().Sanitize(unsafeHTML)
 }
