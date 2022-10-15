@@ -3,7 +3,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v47/github"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
@@ -13,6 +12,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
+	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
 	"github.com/spring-financial-group/peacock/pkg/handlers/webhook"
@@ -42,11 +42,10 @@ type Options struct {
 	CommentValidation bool
 	Subject           string
 
-	pr *github.PullRequest
-
-	Git      domain.Git
-	Handlers map[string]domain.MessageHandler
-	Config   *feathers.Feathers
+	GitServerClient domain.GitServer
+	Git             domain.Git
+	Handlers        map[string]domain.MessageHandler
+	Config          *feathers.Feathers
 }
 
 var (
@@ -138,12 +137,12 @@ func (o *Options) Run() error {
 	}
 
 	ctx := context.Background()
-	err = o.GetPullRequest(ctx)
+	prBody, err := o.GetPullRequestBody(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to get pull request")
 	}
 	// We should check that the body actually exists
-	if o.pr.Body == nil {
+	if prBody == nil {
 		log.Logger().Infof("No Body found for PR%d, exiting", o.PRNumber)
 		return nil
 	}
@@ -169,7 +168,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Logger().Info("Parsing messages from pull request body")
-	messages, err := message.ParseMessagesFromMarkdown(*o.pr.Body)
+	messages, err := message.ParseMessagesFromMarkdown(*prBody)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse messages from pull request")
 		o.PostErrorToPR(ctx, err)
@@ -200,7 +199,7 @@ func (o *Options) Run() error {
 		log.Logger().Info(breakdown)
 		// Return before sending messages
 		if o.CommentValidation {
-			if err := o.Git.CommentOnPR(ctx, o.pr, breakdown); err != nil {
+			if err := o.GitServerClient.CommentOnPR(ctx, o.PRNumber, breakdown); err != nil {
 				return err
 			}
 		}
@@ -220,20 +219,26 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) GetPullRequest(ctx context.Context) (err error) {
+func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
+	var err error
+	var body *string
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
 		log.Logger().Info("Getting pull request from PR number")
-		o.pr, err = o.Git.GetPullRequestFromPRNumber(ctx, o.PRNumber)
+		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.PRNumber)
 	} else {
 		// If not then we can get it from the last commit in the local instance
 		log.Logger().Info("Getting pull request from last commit")
-		o.pr, err = o.Git.GetPullRequestFromLastCommit(ctx)
+		sha, err := o.Git.GetLatestCommitSHA()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get latest commit sha")
+		}
+		body, err = o.GitServerClient.GetPullRequestBodyFromCommit(ctx, sha)
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to get pull request")
+		return nil, errors.Wrap(err, "failed to get pull request")
 	}
-	return nil
+	return body, nil
 }
 
 func (o *Options) GenerateSubject() {
@@ -315,7 +320,7 @@ func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, 
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
-		err = o.Git.CommentOnPR(ctx, o.pr, "Error: "+err.Error())
+		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, "Error: "+err.Error())
 		if err != nil {
 			panic(err)
 		}
@@ -335,10 +340,10 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	// Init git clients
 	if o.Git == nil {
-		o.Git, err = git.NewClient(o.GitServerURL, o.RepoOwner, o.RepoName, o.GitHubToken)
-		if err != nil {
-			return errors.Wrap(err, "failed to initialise git clients")
-		}
+		o.Git = git.NewClient()
+	}
+	if o.GitServerClient == nil {
+		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitHubToken)
 	}
 	return nil
 }

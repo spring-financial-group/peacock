@@ -2,13 +2,19 @@ package domain
 
 import (
 	"context"
-	"github.com/google/go-github/v47/github"
 )
 
 type Git interface {
-	GetPullRequestFromLastCommit(ctx context.Context) (*github.PullRequest, error)
-	// GetPullRequestFromPRNumber returns a github.PullRequest from pr number
-	GetPullRequestFromPRNumber(ctx context.Context, prNumber int) (*github.PullRequest, error)
-	// CommentOnPR posts a comment to a given pull request
-	CommentOnPR(ctx context.Context, pullRequest *github.PullRequest, body string) error
+	// GetLatestCommitSHA gets the SHA of the latest commit from the local env
+	GetLatestCommitSHA() (string, error)
+	// GetRepoOwnerAndName gets the owner and name of the repos from the local env
+	GetRepoOwnerAndName() (string, string, error)
+}
+
+type GitServer interface {
+	GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*string, error)
+	// GetPullRequestBodyFromPRNumber returns the body of a pull request from pr number
+	GetPullRequestBodyFromPRNumber(ctx context.Context, prNumber int) (*string, error)
+	// CommentOnPR posts a comment on a pull request given the pr number
+	CommentOnPR(ctx context.Context, prNumber int, body string) error
 }
