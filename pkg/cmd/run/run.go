@@ -3,8 +3,8 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
@@ -128,7 +128,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 }
 
 func (o *Options) Run() error {
-	log.Logger().Info("Initialising variables & clients")
+	log.Info("Initialising variables & clients")
 	err := o.initialiseFlagsAndClients()
 	if err != nil {
 		return errors.Wrap(err, "failed to validate input args & clients")
@@ -141,12 +141,12 @@ func (o *Options) Run() error {
 	}
 	// We should check that the body actually exists
 	if prBody == nil {
-		log.Logger().Infof("No Body found for PR%d, exiting", o.PRNumber)
+		log.Infof("No Body found for PR%d, exiting", o.PRNumber)
 		return nil
 	}
 
 	if o.Config == nil {
-		log.Logger().Info("Loading feathers from local instance")
+		log.Info("Loading feathers from local instance")
 		o.Config, err = feathers.LoadConfig()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
@@ -156,7 +156,7 @@ func (o *Options) Run() error {
 	}
 
 	if o.Handlers == nil {
-		log.Logger().Info("Initialising message handlers")
+		log.Info("Initialising message handlers")
 		err = o.initialiseHandlers()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to init handlers")
@@ -165,7 +165,7 @@ func (o *Options) Run() error {
 		}
 	}
 
-	log.Logger().Info("Parsing messages from pull request body")
+	log.Info("Parsing messages from pull request body")
 	messages, err := message.ParseMessagesFromMarkdown(*prBody)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse messages from pull request")
@@ -174,11 +174,11 @@ func (o *Options) Run() error {
 	}
 	// If no messages then we should exit with 0 code
 	if messages == nil {
-		log.Logger().Info("No messages found in markdown, exiting")
+		log.Info("No messages found in markdown, exiting")
 		return nil
 	}
 
-	log.Logger().Info("Validating messages")
+	log.Info("Validating messages")
 	err = o.ValidateMessagesWithConfig(messages)
 	if err != nil {
 		err = errors.Wrapf(err, "failed validate messages with feathers")
@@ -187,14 +187,14 @@ func (o *Options) Run() error {
 	}
 
 	if o.DryRun {
-		log.Logger().Info("Posting message breakdown to pull request")
+		log.Info("Posting message breakdown to pull request")
 		breakdown, err := o.GenerateMessageBreakdown(messages)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
 			o.PostErrorToPR(ctx, err)
 			return err
 		}
-		log.Logger().Info(breakdown)
+		log.Info(breakdown)
 		// Return before sending messages
 		if o.CommentValidation {
 			if err := o.GitServerClient.CommentOnPR(ctx, o.PRNumber, breakdown); err != nil {
@@ -209,7 +209,7 @@ func (o *Options) Run() error {
 		o.GenerateSubject()
 	}
 
-	log.Logger().Info("Sending messages")
+	log.Info("Sending messages")
 	err = o.SendMessages(messages)
 	if err != nil {
 		return err
@@ -222,11 +222,11 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	var body *string
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
-		log.Logger().Info("Getting pull request from PR number")
+		log.Info("Getting pull request from PR number")
 		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.PRNumber)
 	} else {
 		// If not then we can get it from the last commit in the local instance
-		log.Logger().Info("Getting pull request from last commit")
+		log.Info("Getting pull request from last commit")
 		sha, err := o.Git.GetLatestCommitSHA()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get latest commit sha")
@@ -249,7 +249,7 @@ func (o *Options) SendMessages(messages []message.Message) error {
 	for _, m := range messages {
 		err := o.sendMessage(m)
 		if err != nil {
-			log.Logger().Error(err)
+			log.Error(err)
 			errs = append(errs, err)
 			continue
 		}
@@ -267,7 +267,7 @@ func (o *Options) sendMessage(message message.Message) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
 		}
-		log.Logger().Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
+		log.Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
 	}
 	return nil
 }

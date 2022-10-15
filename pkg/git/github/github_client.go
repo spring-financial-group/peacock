@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/google/go-github/v47/github"
 	"github.com/pkg/errors"
-	"github.com/spring-financial-group/mqa-logging/pkg/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"golang.org/x/oauth2"
 	"net/http"
@@ -41,7 +41,7 @@ func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (
 	if len(prsWithCommit) < 1 {
 		return nil, errors.New("no pull request found containing commit")
 	}
-	log.Logger().Infof("Found %d pull request(s) containing that commit", len(prsWithCommit))
+	log.Infof("Found %d pull request(s) containing that commit", len(prsWithCommit))
 
 	// If there is only one PR then that must be is
 	if len(prsWithCommit) == 1 {

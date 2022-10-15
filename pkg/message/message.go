@@ -1,7 +1,7 @@
 package message
 
 import (
-	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"regexp"
 	"strings"
@@ -23,12 +23,12 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 		return nil, err
 	}
 
-	log.Logger().Infof("Parsing messages")
+	log.Infof("Parsing messages")
 	teamsInMessages := ParseTeamNames(teamNameReg, markdown)
 	if len(teamsInMessages) < 1 {
 		return nil, nil
 	}
-	log.Logger().Infof("%d messages found in markdown", len(teamsInMessages))
+	log.Infof("%d messages found in markdown", len(teamsInMessages))
 
 	// Get the contents for each message & trim to remove any text before the first message
 	contents := teamNameReg.Split(markdown, -1)
@@ -38,7 +38,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	for i, m := range contents {
 		messages[i].Content = strings.TrimSpace(m)
 		messages[i].TeamNames = teamsInMessages[i]
-		log.Logger().Infof("Found %d team(s) to notify in message %d\n", len(messages[i].TeamNames), i+1)
+		log.Infof("Found %d team(s) to notify in message %d\n", len(messages[i].TeamNames), i+1)
 	}
 	return messages, nil
 }
