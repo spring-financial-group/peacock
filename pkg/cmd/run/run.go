@@ -6,8 +6,6 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
-	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
@@ -18,6 +16,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
+	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
 	"strconv"
 	"strings"
@@ -68,12 +67,12 @@ func NewCmdRun() *cobra.Command {
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
-			helper.CheckErr(err)
+			utils.CheckErr(err)
 		},
 	}
 
 	err := o.ParseEnvVars(cmd)
-	helper.CheckErr(err)
+	utils.CheckErr(err)
 
 	// Command specific flags
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
