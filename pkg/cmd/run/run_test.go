@@ -2,7 +2,6 @@ package run_test
 
 import (
 	"fmt"
-	"github.com/google/go-github/v47/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
@@ -16,13 +15,14 @@ import (
 )
 
 func TestOptions_Run(t *testing.T) {
-	mockGit := mocks.NewGit(t)
+	mockGitServer := mocks.NewGitServer(t)
+	mockGitClient := mocks.NewGit(t)
 	mockSlackHander := mocks.NewMessageHandler(t)
 
 	testCases := []struct {
 		name        string
 		opts        *run.Options
-		pr          *github.PullRequest
+		prBody      *string
 		shouldError bool
 	}{
 		{
@@ -34,7 +34,8 @@ func TestOptions_Run(t *testing.T) {
 				DryRun:            false,
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
-				Git:               mockGit,
+				Git:               mockGitClient,
+				GitServerClient:   mockGitServer,
 				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
@@ -46,11 +47,7 @@ func TestOptions_Run(t *testing.T) {
 					},
 				},
 			},
-			pr: &github.PullRequest{
-				Body: utils.NewPtr(
-					"# Peacock\r\n## Message\n### Notify infrastructure\nTest Content",
-				),
-			},
+			prBody: utils.NewPtr("# Peacock\r\n## Message\n### Notify infrastructure\nTest Content"),
 		},
 		{
 			name: "DryRun",
@@ -61,7 +58,8 @@ func TestOptions_Run(t *testing.T) {
 				DryRun:            true,
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
-				Git:               mockGit,
+				Git:               mockGitClient,
+				GitServerClient:   mockGitServer,
 				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
@@ -73,20 +71,17 @@ func TestOptions_Run(t *testing.T) {
 					},
 				},
 			},
-			pr: &github.PullRequest{
-				Body: utils.NewPtr(
-					"# Peacock\r\n## Message\n### Notify infrastructure\nTest Content",
-				),
-			},
+			prBody: utils.NewPtr("# Peacock\r\n## Message\n### Notify infrastructure\nTest Content"),
 		},
 	}
 
 	for _, tt := range testCases {
 		if tt.opts.DryRun {
-			mockGit.On("GetPullRequestFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(tt.pr, nil).Once()
-			mockGit.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), mock.AnythingOfType("*github.PullRequest"), mock.AnythingOfType("string")).Return(nil).Once()
+			mockGitServer.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(tt.prBody, nil).Once()
+			mockGitServer.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber, mock.AnythingOfType("string")).Return(nil).Once()
 		} else {
-			mockGit.On("GetPullRequestFromLastCommit", mock.AnythingOfType("*context.emptyCtx")).Return(tt.pr, nil).Once()
+			mockGitClient.On("GetLatestCommitSHA").Return("SHA", nil)
+			mockGitServer.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
 		}
 
 		for _, team := range tt.opts.Config.Teams {
