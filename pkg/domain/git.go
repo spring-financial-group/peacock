@@ -4,6 +4,10 @@ import (
 	"context"
 )
 
+const (
+	GitHubURL = "https://github.com"
+)
+
 type Git interface {
 	// GetLatestCommitSHA gets the SHA of the latest commit from the local env
 	GetLatestCommitSHA() (string, error)

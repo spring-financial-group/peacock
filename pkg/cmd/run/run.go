@@ -3,7 +3,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -100,7 +99,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	}{}
 
 	// Flags to overwrite default environment variable keys
-	cmd.Flags().StringVarP(&keys.GitServerURL, "git-server-key", "", "GIT_SERVER", fmt.Sprintf("the environment variable key for the git server URL. If no env var is passed then default is %s", giturl.GitHubURL))
+	cmd.Flags().StringVarP(&keys.GitServerURL, "git-server-key", "", "GIT_SERVER", fmt.Sprintf("the environment variable key for the git server URL. If no env var is passed then default is %s", domain.GitHubURL))
 	cmd.Flags().StringVarP(&keys.PRNumber, "pr-number-key", "p", "PULL_NUMBER", "the environment variable key for the pull request number that peacock is running on.")
 	cmd.Flags().StringVarP(&keys.GitHubToken, "git-token-key", "", "GITHUB_TOKEN", "the environment variable key for the git token used to operate on the git repository.")
 	cmd.Flags().StringVarP(&keys.RepoOwner, "git-owner-key", "", "REPO_OWNER", "the environment variable key for the owner of the git repository.")
@@ -335,7 +334,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 		return errors.New("pr-number required")
 	}
 	if o.GitServerURL == "" {
-		o.GitServerURL = giturl.GitHubURL
+		o.GitServerURL = domain.GitHubURL
 	}
 
 	// Init git clients
