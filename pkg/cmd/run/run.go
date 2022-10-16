@@ -220,6 +220,7 @@ func (o *Options) Run() error {
 func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	var err error
 	var body *string
+	var sha string
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
 		log.Info("Getting pull request from PR number")
@@ -227,7 +228,7 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	} else {
 		// If not then we can get it from the last commit in the local instance
 		log.Info("Getting pull request from last commit")
-		sha, err := o.Git.GetLatestCommitSHA()
+		sha, err = o.Git.GetLatestCommitSHA()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get latest commit sha")
 		}
