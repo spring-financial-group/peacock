@@ -2,9 +2,11 @@ package webhook
 
 import (
 	"encoding/json"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/utils/http_utils"
+	"gitlab.com/golang-commonmark/markdown"
 )
 
 type handler struct {
@@ -22,25 +24,23 @@ func NewWebHookHandler(url, authToken, secret string) domain.MessageHandler {
 }
 
 type postRequest struct {
-	Body        string
-	Subject     string
-	ToAddresses []string
+	Body      string   `json:"body"`
+	Subject   string   `json:"subject"`
+	Addresses []string `json:"addresses"`
 }
 
 func (h *handler) Send(content, subject string, addresses []string) error {
 	postReq := postRequest{
-		Body:        content,
-		Subject:     subject,
-		ToAddresses: addresses,
+		Body:      h.convertMarkdownToHTML(content),
+		Subject:   subject,
+		Addresses: addresses,
 	}
 	data, err := json.Marshal(postReq)
 	if err != nil {
 		return err
 	}
 
-	hash := http_utils.SignMessage(data, h.secret)
-
-	req, err := http_utils.GeneratePostRequest(h.url, h.token, []byte(hash))
+	req, err := http_utils.GenerateAuthenticatedPostRequest(h.url, h.token, http_utils.SignMessage(data, h.secret), data)
 	if err != nil {
 		return err
 	}
@@ -49,4 +49,10 @@ func (h *handler) Send(content, subject string, addresses []string) error {
 		return errors.Wrap(err, "failed to post messages")
 	}
 	return nil
+}
+
+func (h *handler) convertMarkdownToHTML(md string) string {
+	mdParser := markdown.New(markdown.HTML(true))
+	unsafeHTML := mdParser.RenderToString([]byte(md))
+	return bluemonday.UGCPolicy().Sanitize(unsafeHTML)
 }

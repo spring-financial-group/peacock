@@ -15,7 +15,9 @@ const (
 
 	ContentType     = "Content-Type"
 	ApplicationJSON = "application/json"
-	Authorization   = "Authorization"
+
+	AuthorizationHeader = "Authorization"
+	SignatureHeader     = "X-Signature-256"
 )
 
 // SignMessage uses HMAC & SHA256 hashing to sign a message
@@ -39,8 +41,9 @@ func DoRequestAndCatchUnsuccessful(request *http.Request) (*http.Response, error
 	return resp, nil
 }
 
-// GeneratePostRequest creates a POST http.Request adding the token to the Authorization header
-func GeneratePostRequest(url, token string, body []byte) (*http.Request, error) {
+// GenerateAuthenticatedPostRequest creates a POST http.Request adding a token to the AuthorizationHeader header
+// and hash to the SignatureHeader
+func GenerateAuthenticatedPostRequest(url, authToken, hash string, body []byte) (*http.Request, error) {
 	// create the request
 	req, err := http.NewRequest(POST, url, bytes.NewBuffer(body))
 	if err != nil {
@@ -48,6 +51,7 @@ func GeneratePostRequest(url, token string, body []byte) (*http.Request, error) 
 	}
 	// add content type
 	req.Header.Add(ContentType, ApplicationJSON)
-	req.Header.Add(Authorization, token)
+	req.Header.Add(AuthorizationHeader, authToken)
+	req.Header.Add(SignatureHeader, hash)
 	return req, nil
 }
