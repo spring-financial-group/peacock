@@ -31,6 +31,8 @@ func TestOptions_Run(t *testing.T) {
 				PRNumber:          1,
 				GitServerURL:      "https://github.com",
 				GitHubToken:       "testGitToken",
+				RepoOwner:         "spring-financial-group",
+				RepoName:          "peacock",
 				DryRun:            false,
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
@@ -55,6 +57,8 @@ func TestOptions_Run(t *testing.T) {
 				PRNumber:          1,
 				GitServerURL:      "https://github.com",
 				GitHubToken:       "testGitToken",
+				RepoOwner:         "spring-financial-group",
+				RepoName:          "peacock",
 				DryRun:            true,
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
@@ -86,7 +90,7 @@ func TestOptions_Run(t *testing.T) {
 
 		for _, team := range tt.opts.Config.Teams {
 			if !tt.opts.DryRun {
-				mockSlackHander.On("Send", "Test Content", "New Release Notes for ", team.Addresses).Return(nil).Once()
+				mockSlackHander.On("Send", "Test Content", "New Release Notes for peacock", team.Addresses).Return(nil).Once()
 			}
 		}
 
