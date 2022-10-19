@@ -47,9 +47,10 @@ teams:
     addresses:
     - C56H7G209DF
   - name: FrontEnd
-    contactType: slack
+    contactType: webhook
     addresses:
-      - C56H7G209DF
+      - john.smith@google.com
+      - tom.allen@github.com
   - name: BackEnd
     contactType: slack
     addresses:
@@ -63,6 +64,43 @@ teams:
 ### Environment Variables
 Environment variables are used configure Peacock in a pipeline. For integrating into different CI/CD tools the keys for
 these variables can be overridden using flags for each command.
+
+| Variable         | Description                                     | Required                                                              | Overwrite Flag            |
+|------------------|-------------------------------------------------|-----------------------------------------------------------------------|---------------------------|
+| `PR_NUMBER`      | The number of the Pull Request.                 | Required when using `--dry-run`                                       | `pr-number-key`           |
+| `GITHUB_TOKEN`   | The token to use for authentication with GitHub | Always                                                                | `git-token-key`           |
+| `REPO_OWNER`     | The owner of the repository                     | If not passed then value is retrieved from the local git instance     | `git-owner-key`           |
+| `REPO_NAME`      | The name of the repository                      | If not passed then value is retrieved from the local git instance     | `git-repo-key`            |
+| `GIT_SERVER`     | The domain of the git server                    | Default is https://github.com                                         | `git-server-key`          |
+| `SLACK_TOKEN`    | The token used to authenticate with Slack       | Only if the `slack` communication method is defined in the feathers   | `slack-token-key`         |
+| `WEBHOOK_URL`    | The URL that Peacock will post to               | Only if the `webhook` communication method is defined in the feathers | `webhook-URL-key`         |
+| `WEBHOOK_SECRET` | The secret used to authenticate Peacock         | Only if the `webhook` communication method is defined in the feathers | `webhook-HMAC-secret-key` |
+
+## Communication Methods
+### Slack
+To use Slack as a method of communication a Slack app will need to be setup for your organisation with the minimum
+scope of `chat:write`. It's important to remember that for private channels your app will need to be invited for Peacock
+to post messages.
+
+Although Peacock does convert Markdown to Slack's implementation, due to Slack only supporting a mild version of Markdown
+this conversion is limited.
+
+### Webhook
+Peacock offers a webhook so that it can be intergrated with your own communication method. When a notification is sent
+peacock will send an HTTP POST request to the configured webhook URL with the following JSON body:
+```json
+{
+   "body": "string",
+   "subject": "string",
+   "addresses": [
+      "string"
+   ]
+}
+```
+To authenticate the request Peacock sends a `X-Signature-256` header with the request. This is a HMAC digest of the request
+body using the SHA-256 hash function and the webhook secret as the key.
+
+Peacock converts the GitHub markdown to HTML before sending the request.
 
 # Usage
 Peacock uses Notify headers (`### Notify`) in the description of a PR to identify messages and teams to contact.
@@ -114,14 +152,3 @@ Use the command `peacock run` post-submission to actually send the messages to t
 3. Once opened, the peacock dry run pipeline will run. This parses and validates the teams & messages, posting an
    explanation back to the PR if it fails.
 4. Once the PR merges the peacock release pipeline starts. This is the pipeline that actually sends the notifications.
-
-## Communication Methods
-### Slack
-To use Slack as a method of communication a Slack app will need to be setup for your organisation with the minimum
-scope of `chat:write`. It's important to remember that for private channels your app will need to be invited for Peacock
-to post messages.
-
-Although Peacock does convert Markdown to Slack's implementation, due to Slack only supporting a mild version of Markdown
-this conversion is limited.
-    
-
