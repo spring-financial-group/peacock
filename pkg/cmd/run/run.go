@@ -3,22 +3,20 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v47/github"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
-	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
-	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
+	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
 	"github.com/spring-financial-group/peacock/pkg/handlers/webhook"
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
+	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
 	"strconv"
 	"strings"
@@ -42,11 +40,10 @@ type Options struct {
 	CommentValidation bool
 	Subject           string
 
-	pr *github.PullRequest
-
-	Git      domain.Git
-	Handlers map[string]domain.MessageHandler
-	Config   *feathers.Feathers
+	GitServerClient domain.GitServer
+	Git             domain.Git
+	Handlers        map[string]domain.MessageHandler
+	Config          *feathers.Feathers
 }
 
 var (
@@ -70,12 +67,12 @@ func NewCmdRun() *cobra.Command {
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
-			helper.CheckErr(err)
+			utils.CheckErr(err)
 		},
 	}
 
 	err := o.ParseEnvVars(cmd)
-	helper.CheckErr(err)
+	utils.CheckErr(err)
 
 	// Command specific flags
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
@@ -101,7 +98,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	}{}
 
 	// Flags to overwrite default environment variable keys
-	cmd.Flags().StringVarP(&keys.GitServerURL, "git-server-key", "", "GIT_SERVER", fmt.Sprintf("the environment variable key for the git server URL. If no env var is passed then default is %s", giturl.GitHubURL))
+	cmd.Flags().StringVarP(&keys.GitServerURL, "git-server-key", "", "GIT_SERVER", fmt.Sprintf("the environment variable key for the git server URL. If no env var is passed then default is %s", domain.GitHubURL))
 	cmd.Flags().StringVarP(&keys.PRNumber, "pr-number-key", "p", "PULL_NUMBER", "the environment variable key for the pull request number that peacock is running on.")
 	cmd.Flags().StringVarP(&keys.GitHubToken, "git-token-key", "", "GITHUB_TOKEN", "the environment variable key for the git token used to operate on the git repository.")
 	cmd.Flags().StringVarP(&keys.RepoOwner, "git-owner-key", "", "REPO_OWNER", "the environment variable key for the owner of the git repository.")
@@ -131,25 +128,25 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 }
 
 func (o *Options) Run() error {
-	log.Logger().Info("Initialising variables & clients")
+	log.Info("Initialising variables & clients")
 	err := o.initialiseFlagsAndClients()
 	if err != nil {
 		return errors.Wrap(err, "failed to validate input args & clients")
 	}
 
 	ctx := context.Background()
-	err = o.GetPullRequest(ctx)
+	prBody, err := o.GetPullRequestBody(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to get pull request")
+		return err
 	}
 	// We should check that the body actually exists
-	if o.pr.Body == nil {
-		log.Logger().Infof("No Body found for PR%d, exiting", o.PRNumber)
+	if prBody == nil {
+		log.Infof("No Body found for PR%d, exiting", o.PRNumber)
 		return nil
 	}
 
 	if o.Config == nil {
-		log.Logger().Info("Loading feathers from local instance")
+		log.Info("Loading feathers from local instance")
 		o.Config, err = feathers.LoadConfig()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
@@ -159,7 +156,7 @@ func (o *Options) Run() error {
 	}
 
 	if o.Handlers == nil {
-		log.Logger().Info("Initialising message handlers")
+		log.Info("Initialising message handlers")
 		err = o.initialiseHandlers()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to init handlers")
@@ -168,8 +165,8 @@ func (o *Options) Run() error {
 		}
 	}
 
-	log.Logger().Info("Parsing messages from pull request body")
-	messages, err := message.ParseMessagesFromMarkdown(*o.pr.Body)
+	log.Info("Parsing messages from pull request body")
+	messages, err := message.ParseMessagesFromMarkdown(*prBody)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse messages from pull request")
 		o.PostErrorToPR(ctx, err)
@@ -177,11 +174,11 @@ func (o *Options) Run() error {
 	}
 	// If no messages then we should exit with 0 code
 	if messages == nil {
-		log.Logger().Info("No messages found in markdown, exiting")
+		log.Info("No messages found in markdown, exiting")
 		return nil
 	}
 
-	log.Logger().Info("Validating messages")
+	log.Info("Validating messages")
 	err = o.ValidateMessagesWithConfig(messages)
 	if err != nil {
 		err = errors.Wrapf(err, "failed validate messages with feathers")
@@ -190,17 +187,17 @@ func (o *Options) Run() error {
 	}
 
 	if o.DryRun {
-		log.Logger().Info("Posting message breakdown to pull request")
+		log.Info("Posting message breakdown to pull request")
 		breakdown, err := o.GenerateMessageBreakdown(messages)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
 			o.PostErrorToPR(ctx, err)
 			return err
 		}
-		log.Logger().Info(breakdown)
+		log.Info(breakdown)
 		// Return before sending messages
 		if o.CommentValidation {
-			if err := o.Git.CommentOnPR(ctx, o.pr, breakdown); err != nil {
+			if err := o.GitServerClient.CommentOnPR(ctx, o.PRNumber, breakdown); err != nil {
 				return err
 			}
 		}
@@ -212,7 +209,7 @@ func (o *Options) Run() error {
 		o.GenerateSubject()
 	}
 
-	log.Logger().Info("Sending messages")
+	log.Info("Sending messages")
 	err = o.SendMessages(messages)
 	if err != nil {
 		return err
@@ -220,20 +217,27 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) GetPullRequest(ctx context.Context) (err error) {
+func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
+	var err error
+	var body *string
+	var sha string
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
-		log.Logger().Info("Getting pull request from PR number")
-		o.pr, err = o.Git.GetPullRequestFromPRNumber(ctx, o.PRNumber)
+		log.Info("Getting pull request from PR number")
+		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.PRNumber)
 	} else {
 		// If not then we can get it from the last commit in the local instance
-		log.Logger().Info("Getting pull request from last commit")
-		o.pr, err = o.Git.GetPullRequestFromLastCommit(ctx)
+		log.Info("Getting pull request from last commit")
+		sha, err = o.Git.GetLatestCommitSHA()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get latest commit sha")
+		}
+		body, err = o.GitServerClient.GetPullRequestBodyFromCommit(ctx, sha)
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to get pull request")
+		return nil, errors.Wrap(err, "failed to get pull request")
 	}
-	return nil
+	return body, nil
 }
 
 func (o *Options) GenerateSubject() {
@@ -246,7 +250,7 @@ func (o *Options) SendMessages(messages []message.Message) error {
 	for _, m := range messages {
 		err := o.sendMessage(m)
 		if err != nil {
-			log.Logger().Error(err)
+			log.Error(err)
 			errs = append(errs, err)
 			continue
 		}
@@ -264,7 +268,7 @@ func (o *Options) sendMessage(message message.Message) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
 		}
-		log.Logger().Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
+		log.Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
 	}
 	return nil
 }
@@ -315,7 +319,7 @@ func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, 
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
-		err = o.Git.CommentOnPR(ctx, o.pr, "Error: "+err.Error())
+		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, "Error: "+err.Error())
 		if err != nil {
 			panic(err)
 		}
@@ -330,15 +334,24 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 		return errors.New("pr-number required")
 	}
 	if o.GitServerURL == "" {
-		o.GitServerURL = giturl.GitHubURL
+		o.GitServerURL = domain.GitHubURL
 	}
 
 	// Init git clients
 	if o.Git == nil {
-		o.Git, err = git.NewClient(o.GitServerURL, o.RepoOwner, o.RepoName, o.GitHubToken)
+		o.Git = git.NewClient()
+	}
+
+	if o.RepoOwner == "" || o.RepoName == "" {
+		log.Info("No one repo owner or name provided, getting from git")
+		o.RepoOwner, o.RepoName, err = o.Git.GetRepoOwnerAndName()
 		if err != nil {
-			return errors.Wrap(err, "failed to initialise git clients")
+			return errors.Wrap(err, "failed to get repo owner and name")
 		}
+	}
+
+	if o.GitServerClient == nil {
+		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitHubToken)
 	}
 	return nil
 }

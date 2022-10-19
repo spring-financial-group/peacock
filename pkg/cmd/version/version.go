@@ -3,10 +3,10 @@ package version
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/helper"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
+	"github.com/spring-financial-group/peacock/pkg/utils"
 
-	"github.com/spring-financial-group/mqa-helpers/pkg/cobras/templates"
+	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 )
 
 // Options for triggering
@@ -25,7 +25,7 @@ const (
 
 var (
 	createLong = templates.LongDesc(`
-		Shows the version of mqa
+		Shows the version of peacock
 `)
 
 	createExample = templates.Examples(`
@@ -49,7 +49,7 @@ func NewCmdVersion() (*cobra.Command, *Options) {
 			o.Cmd = cmd
 			o.Args = args
 			err := o.Run()
-			helper.CheckErr(err)
+			utils.CheckErr(err)
 		},
 	}
 	o.Cmd = cmd
@@ -60,7 +60,6 @@ func NewCmdVersion() (*cobra.Command, *Options) {
 
 func (o *Options) Run() error {
 	fmt.Println(GetVersion())
-
 	return nil
 }
 
