@@ -39,7 +39,7 @@ func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (
 		return nil, errors.Errorf("failed to get pull requests, %d code recieved", r.StatusCode)
 	}
 	if len(prsWithCommit) < 1 {
-		return nil, errors.New("no pull request found containing commit")
+		return nil, errors.Errorf("no pull request found containing commit %s", sha)
 	}
 	log.Infof("Found %d pull request(s) containing that commit", len(prsWithCommit))
 

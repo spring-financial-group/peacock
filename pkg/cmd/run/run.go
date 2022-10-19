@@ -137,7 +137,7 @@ func (o *Options) Run() error {
 	ctx := context.Background()
 	prBody, err := o.GetPullRequestBody(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to get pull request")
+		return err
 	}
 	// We should check that the body actually exists
 	if prBody == nil {
@@ -341,6 +341,15 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 	if o.Git == nil {
 		o.Git = git.NewClient()
 	}
+
+	if o.RepoOwner == "" || o.RepoName == "" {
+		log.Info("No one repo owner or name provided, getting from git")
+		o.RepoOwner, o.RepoName, err = o.Git.GetRepoOwnerAndName()
+		if err != nil {
+			return errors.Wrap(err, "failed to get repo owner and name")
+		}
+	}
+
 	if o.GitServerClient == nil {
 		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitHubToken)
 	}
