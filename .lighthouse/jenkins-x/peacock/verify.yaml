@@ -20,6 +20,7 @@ spec:
               script: |
                 #!/usr/bin/env sh
                 jx gitops variables --commit=false
+                echo "export GITHUB_TOKEN=\"$(kubectl get secret github-config -n jx-staging -o jsonpath="{.data['github-token']}" | base64 -d)\"" >> .jx/variables.sh
                 echo "export SLACK_TOKEN=\"$(kubectl get secret peacock-slack -n jx-staging -o jsonpath="{.data['token']}" | base64 -d)\"" >> .jx/variables.sh
               workingDir: /workspace/source
             - image: golang:1.18
@@ -29,7 +30,7 @@ spec:
                 #!/usr/bin/env sh
                 source .jx/variables.sh
                 make install
-                peacock run --dry-run --comment-validation --git-token-key="GIT_TOKEN"
+                peacock run --dry-run --comment-validation
               workingDir: /workspace/source
   podTemplate: {}
   serviceAccountName: tekton-bot
