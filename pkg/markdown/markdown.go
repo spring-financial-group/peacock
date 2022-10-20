@@ -15,6 +15,16 @@ func ConvertToSlack(markdown string) string {
 	regex = regexp.MustCompile(`(^|\n)\*\s`)
 	markdown = regex.ReplaceAllString(markdown, "$1• ")
 
+	// Convert headings to bold
+	regex = regexp.MustCompile(`(?m)((^\t? {0,15}#{1,4} +)(.+))`)
+	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
+		// In case someone decides to use a heading with emboldening we should strip the **
+		r := regexp.MustCompile(`(?miU)((\*\*)(.+)(\*\*))`)
+		return r.ReplaceAllString(s, "$3")
+	})
+	// Then we can remove the headers
+	markdown = regex.ReplaceAllString(markdown, "*$3*")
+
 	// Convert bold (**)
 	regex = regexp.MustCompile(`(?miU)((\*\*).+(\*\*))`)
 	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
@@ -26,10 +36,6 @@ func ConvertToSlack(markdown string) string {
 	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
 		return strings.ReplaceAll(s, "__", "*")
 	})
-
-	// Convert headings to bold
-	regex = regexp.MustCompile(`(?m)((^\t? {0,15}#{1,4} +)(.+))`)
-	markdown = regex.ReplaceAllString(markdown, "*$3*")
 
 	// Convert URLs
 	regex = regexp.MustCompile(`\[([^]]+)]\(([^)]+)\)`)
