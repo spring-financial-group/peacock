@@ -330,8 +330,11 @@ func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 // and sets up the required clients
 func (o *Options) initialiseFlagsAndClients() (err error) {
 	// validate flags
+	if o.GitHubToken == "" {
+		return errors.New("github token is required")
+	}
 	if o.DryRun && o.PRNumber == -1 {
-		return errors.New("pr-number required")
+		return errors.New("pr-number is required")
 	}
 	if o.GitServerURL == "" {
 		o.GitServerURL = domain.GitHubURL
