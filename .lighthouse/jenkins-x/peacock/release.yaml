@@ -27,7 +27,7 @@ spec:
               name: peacock-run
               resources: {}
               script: |
-                #!/usr/bin/env sh
+                #!/usr/bin/env bash
                 source .jx/variables.sh
                 make install
                 peacock run
