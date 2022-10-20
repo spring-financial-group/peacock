@@ -14,6 +14,11 @@ func TestMarkdown_ConvertMarkdownToSlack(t *testing.T) {
 		shouldError   bool
 	}{
 		{
+			name:          "HeaderAndEmbolden",
+			inputMarkdown: "### **Promoted Services**",
+			expectedSlack: "*Promoted Services*",
+		},
+		{
 			name:          "CarriageReturn",
 			inputMarkdown: "First Sentence\r\nSecond Sentence\r\n",
 			expectedSlack: "First Sentence\nSecond Sentence\n",
@@ -47,6 +52,11 @@ func TestMarkdown_ConvertMarkdownToSlack(t *testing.T) {
 			name:          "URLReplacement",
 			inputMarkdown: "[Some Text](https://github.com/spring-financial-group/peacock)",
 			expectedSlack: "<https://github.com/spring-financial-group/peacock|Some Text>",
+		},
+		{
+			name:          "Full",
+			inputMarkdown: "### **Promoted Services**\n_Which services are being promoted?_\n* Peacock \n\n### **What functionality is being released?**\n_What features/bug fixes are present?_\n\n* All the features\n* All the bugs\n",
+			expectedSlack: "*Promoted Services*\n_Which services are being promoted?_\n• Peacock \n\n*What functionality is being released?*\n_What features/bug fixes are present?_\n\n• All the features\n• All the bugs\n",
 		},
 	}
 
