@@ -22,12 +22,13 @@ spec:
                 jx gitops variables --commit=false
                 echo "export SLACK_TOKEN=\"$(kubectl get secret peacock-slack -n jx-staging -o jsonpath="{.data['token']}" | base64 -d)\"" >> .jx/variables.sh
               workingDir: /workspace/source
-            - image: ghcr.io/spring-financial-group/peacock:latest
+            - image: golang:1.18
               name: peacock-run
               resources: {}
               script: |
                 #!/usr/bin/env sh
                 source .jx/variables.sh
+                make install
                 peacock run
               workingDir: /workspace/source
   podTemplate: {}
