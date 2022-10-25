@@ -32,8 +32,14 @@ func TestMarkdown_Converters(t *testing.T) {
 			expectedHTML:  "<h1>Heading</h1>\n<h2>Subheading</h2>\n",
 		},
 		{
-			name:          "BulletReplacement",
+			name:          "BulletReplacement(*)",
 			inputMarkdown: "* Bullet One\n* Bullet2",
+			expectedSlack: "• Bullet One\n• Bullet2",
+			expectedHTML:  "<ul>\n<li>Bullet One</li>\n<li>Bullet2</li>\n</ul>\n",
+		},
+		{
+			name:          "BulletReplacement(-)",
+			inputMarkdown: "- Bullet One\n- Bullet2",
 			expectedSlack: "• Bullet One\n• Bullet2",
 			expectedHTML:  "<ul>\n<li>Bullet One</li>\n<li>Bullet2</li>\n</ul>\n",
 		},
