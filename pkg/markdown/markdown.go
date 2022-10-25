@@ -1,6 +1,8 @@
 package markdown
 
 import (
+	"github.com/microcosm-cc/bluemonday"
+	md "gitlab.com/golang-commonmark/markdown"
 	"regexp"
 	"strings"
 )
@@ -41,4 +43,11 @@ func ConvertToSlack(markdown string) string {
 	regex = regexp.MustCompile(`\[([^]]+)]\(([^)]+)\)`)
 	markdown = regex.ReplaceAllString(markdown, "<$2|$1>")
 	return markdown
+}
+
+// ConvertToHTML converts the Markdown syntax into HTML and sanitises the result.
+func ConvertToHTML(markdown string) string {
+	mdParser := md.New(md.HTML(true))
+	unsafeHTML := mdParser.RenderToString([]byte(markdown))
+	return bluemonday.UGCPolicy().Sanitize(unsafeHTML)
 }
