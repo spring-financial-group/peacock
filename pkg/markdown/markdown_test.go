@@ -17,7 +17,7 @@ func TestMarkdown_Converters(t *testing.T) {
 			name:          "HeaderAndEmbolden",
 			inputMarkdown: "### **Promoted Services**",
 			expectedSlack: "*Promoted Services*",
-			expectedHTML:  "<h3><strong>Promoted Services</strong></h3>\n",
+			expectedHTML:  "<header><strong>Promoted Services</strong></header>\n",
 		},
 		{
 			name:          "CarriageReturn",
@@ -29,7 +29,7 @@ func TestMarkdown_Converters(t *testing.T) {
 			name:          "HeadingReplacement",
 			inputMarkdown: "# Heading\n## Subheading\n",
 			expectedSlack: "*Heading*\n*Subheading*\n",
-			expectedHTML:  "<h1>Heading</h1>\n<h2>Subheading</h2>\n",
+			expectedHTML:  "<header>Heading</header>\n<header>Subheading</header>\n",
 		},
 		{
 			name:          "BulletReplacement(*)",
@@ -65,7 +65,7 @@ func TestMarkdown_Converters(t *testing.T) {
 			name:          "TestPRTemplate",
 			inputMarkdown: "### **Promoted Services**\n_Which services are being promoted?_\n* Peacock \n\n### **What functionality is being released?**\n_What features/bug fixes are present?_\n\n* All the features\n* All the bugs\n",
 			expectedSlack: "*Promoted Services*\n_Which services are being promoted?_\n• Peacock \n\n*What functionality is being released?*\n_What features/bug fixes are present?_\n\n• All the features\n• All the bugs\n",
-			expectedHTML:  "<h3><strong>Promoted Services</strong></h3>\n<p><em>Which services are being promoted?</em></p>\n<ul>\n<li>Peacock</li>\n</ul>\n<h3><strong>What functionality is being released?</strong></h3>\n<p><em>What features/bug fixes are present?</em></p>\n<ul>\n<li>All the features</li>\n<li>All the bugs</li>\n</ul>\n",
+			expectedHTML:  "<header><strong>Promoted Services</strong></header>\n<p><em>Which services are being promoted?</em></p>\n<ul>\n<li>Peacock</li>\n</ul>\n<header><strong>What functionality is being released?</strong></header>\n<p><em>What features/bug fixes are present?</em></p>\n<ul>\n<li>All the features</li>\n<li>All the bugs</li>\n</ul>\n",
 		},
 	}
 

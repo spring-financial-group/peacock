@@ -53,5 +53,10 @@ func ConvertToSlack(markdown string) string {
 func ConvertToHTML(markdown string) string {
 	mdParser := md.New(md.HTML(true))
 	unsafeHTML := mdParser.RenderToString([]byte(markdown))
-	return bluemonday.UGCPolicy().Sanitize(unsafeHTML)
+	safeHTML := bluemonday.UGCPolicy().Sanitize(unsafeHTML)
+
+	// the parser converts headers to <h1> tags, but we want <header> tags to make the
+	// notifications consistent
+	regex := regexp.MustCompile(`(?miU)((<h\d>)(.+)(</h\d>))`)
+	return regex.ReplaceAllString(safeHTML, "<header>$3</header>")
 }
