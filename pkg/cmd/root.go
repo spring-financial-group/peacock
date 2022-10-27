@@ -18,6 +18,11 @@ func Main() *cobra.Command {
 			utils.CheckErr(err)
 		},
 	}
+	// Initialise logger
+	var isVerbose bool
+	cmd.PersistentFlags().BoolVarP(&isVerbose, "verbose", "v", false, "verbose output")
+	utils.InitLogger(isVerbose)
+
 	cmd.AddCommand(run.NewCmdRun())
 	cmd.AddCommand(utils.SplitCommand(version.NewCmdVersion()))
 	return cmd

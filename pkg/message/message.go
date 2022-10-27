@@ -18,12 +18,12 @@ type Message struct {
 }
 
 func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
+	log.Info("Parsing messages from pull request body")
 	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Infof("Parsing messages")
 	teamsInMessages := ParseTeamNames(teamNameReg, markdown)
 	if len(teamsInMessages) < 1 {
 		return nil, nil

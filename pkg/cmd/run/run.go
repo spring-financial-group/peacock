@@ -128,7 +128,6 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 }
 
 func (o *Options) Run() error {
-	log.Info("Initialising variables & clients")
 	err := o.initialiseFlagsAndClients()
 	if err != nil {
 		return errors.Wrap(err, "failed to validate input args & clients")
@@ -146,7 +145,6 @@ func (o *Options) Run() error {
 	}
 
 	if o.Config == nil {
-		log.Info("Loading feathers from local instance")
 		o.Config, err = feathers.LoadConfig()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
@@ -156,7 +154,6 @@ func (o *Options) Run() error {
 	}
 
 	if o.Handlers == nil {
-		log.Info("Initialising message handlers")
 		err = o.initialiseHandlers()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to init handlers")
@@ -165,7 +162,6 @@ func (o *Options) Run() error {
 		}
 	}
 
-	log.Info("Parsing messages from pull request body")
 	messages, err := message.ParseMessagesFromMarkdown(*prBody)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse messages from pull request")
@@ -178,7 +174,6 @@ func (o *Options) Run() error {
 		return nil
 	}
 
-	log.Info("Validating messages")
 	err = o.ValidateMessagesWithConfig(messages)
 	if err != nil {
 		err = errors.Wrapf(err, "failed validate messages with feathers")
@@ -187,7 +182,6 @@ func (o *Options) Run() error {
 	}
 
 	if o.DryRun {
-		log.Info("Posting message breakdown to pull request")
 		breakdown, err := o.GenerateMessageBreakdown(messages)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
@@ -209,7 +203,6 @@ func (o *Options) Run() error {
 		o.GenerateSubject()
 	}
 
-	log.Info("Sending messages")
 	err = o.SendMessages(messages)
 	if err != nil {
 		return err
@@ -223,7 +216,6 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	var sha string
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
-		log.Info("Getting pull request from PR number")
 		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.PRNumber)
 	} else {
 		// If not then we can get it from the last commit in the local instance
@@ -246,6 +238,7 @@ func (o *Options) GenerateSubject() {
 
 // SendMessages send the messages using the message handlers
 func (o *Options) SendMessages(messages []message.Message) error {
+	log.Info("Sending messages")
 	var errs []error
 	for _, m := range messages {
 		err := o.sendMessage(m)
@@ -275,6 +268,7 @@ func (o *Options) sendMessage(message message.Message) error {
 
 // ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers
 func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
+	log.Info("Validating messages")
 	allTeamsInConfig := o.Config.GetAllTeamNames()
 	for _, m := range messages {
 		// Check the team name actually exists in feathers
@@ -298,6 +292,7 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 
 // GenerateMessageBreakdown creates a breakdown of the messages found in the pr description
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
+	log.Info("Generating message breakdown")
 	allTeamsInConfig := o.Config.GetAllTeamNames()
 	breakDown := fmt.Sprintf(
 		"### Validation\nSuccessfully parsed %d message(s)\n%d/%d teams in feathers to notify\n",
@@ -329,6 +324,7 @@ func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 // initialiseFlagsAndClients checks that all the variables required to run the command are set up correctly
 // and sets up the required clients
 func (o *Options) initialiseFlagsAndClients() (err error) {
+	log.Info("Initialising variables & clients")
 	// validate flags
 	if o.GitHubToken == "" {
 		return errors.New("github token is required")
@@ -362,6 +358,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 // initialiseHandlers initialises the message handlers depending on the flags passed through to the command.
 // It then checks that all the handlers required by the feathers have been initialised.
 func (o *Options) initialiseHandlers() (err error) {
+	log.Info("Initialising message handlers")
 	o.Handlers = map[string]domain.MessageHandler{}
 	if o.SlackToken != "" {
 		o.Handlers[handlers.Slack], err = slack.NewSlackHandler(o.SlackToken)

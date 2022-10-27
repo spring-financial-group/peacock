@@ -3,6 +3,7 @@ package feathers
 import (
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"regexp"
@@ -24,6 +25,7 @@ type Team struct {
 }
 
 func LoadConfig() (*Feathers, error) {
+	log.Info("Loading feathers from local instance")
 	exists, err := utils.Exists(configPath)
 	if err != nil {
 		return nil, err
