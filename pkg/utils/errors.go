@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net/url"
 	"os"
 	"strings"
@@ -37,7 +38,7 @@ func Fatal(msg string, code int) {
 		if !strings.HasSuffix(msg, "\n") {
 			msg += "\n"
 		}
-		_, _ = fmt.Fprint(os.Stderr, msg)
+		log.Error(msg)
 	}
 	os.Exit(code)
 }
