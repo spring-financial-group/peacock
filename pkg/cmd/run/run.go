@@ -312,12 +312,22 @@ type breakdown struct {
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
 	allTeamsInConfig := o.Config.GetAllTeamNames()
 
+	bdString := `[Peacock Validation] Successfully parsed {{ len .messages }} message(s).
+---
+{{ range $idx, $val := .messages -}}
+Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
+<details open>
+<summary>Message Breakdown</summary>
+{{ $val.Content }}
+</details>
+{{- end }}`
+
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
 		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
 	}
 
-	tpl, err := template.New(filepath.Base(breakdownPath)).Funcs(tmplFuncs).ParseFiles(breakdownPath)
+	tpl, err := template.New(filepath.Base(breakdownPath)).Funcs(tmplFuncs).Parse(bdString)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse template")
 	}
