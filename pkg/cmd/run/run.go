@@ -316,7 +316,7 @@ func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, 
 ---
 {{ range $idx, $val := .messages -}}
 Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
-<details open>
+<details>
 <summary>Message Breakdown</summary>
 {{ $val.Content }}
 </details>
