@@ -303,19 +303,14 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 	return nil
 }
 
-type breakdown struct {
-	messages []message.Message
-	teams    []*feathers.Team
-}
-
 // GenerateMessageBreakdown creates a breakdown of the messages found in the pr description
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
 	allTeamsInConfig := o.Config.GetAllTeamNames()
 
-	bdString := `[Peacock Validation] Successfully parsed {{ len .messages }} message(s).
----
+	bdString := `[Peacock] Successfully validated {{ len .messages }} message(s).
+
 {{ range $idx, $val := .messages -}}
-Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
+Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames -}}
 <details>
 <summary>Message Breakdown</summary>
 {{ $val.Content }}
@@ -347,7 +342,8 @@ Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
-		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, "Error: "+err.Error())
+		errorMsg := fmt.Sprintf("[Peacock] Validation Failed:\n%s", err.Error())
+		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, errorMsg)
 		if err != nil {
 			panic(err)
 		}
