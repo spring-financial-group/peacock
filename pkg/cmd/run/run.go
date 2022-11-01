@@ -310,12 +310,13 @@ func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, 
 	bdString := `[Peacock] Successfully validated {{ len .messages }} message(s).
 
 {{ range $idx, $val := .messages -}}
-Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames -}}
+Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 <details>
 <summary>Message Breakdown</summary>
 {{ $val.Content }}
 </details>
-{{- end }}`
+
+{{ end -}}`
 
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
