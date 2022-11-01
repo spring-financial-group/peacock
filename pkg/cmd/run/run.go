@@ -1,6 +1,7 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
@@ -18,9 +19,13 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"text/template"
 )
+
+const breakdownPath = "../../resources/breakdown.md"
 
 // Options for the run command
 type Options struct {
@@ -55,6 +60,8 @@ var (
 	example = templates.Examples(`
 		%s run [flags]
 	`)
+
+	breakdownTmpl = ""
 )
 
 func NewCmdRun() *cobra.Command {
@@ -296,23 +303,34 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 	return nil
 }
 
+type breakdown struct {
+	messages []message.Message
+	teams    []*feathers.Team
+}
+
 // GenerateMessageBreakdown creates a breakdown of the messages found in the pr description
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
 	allTeamsInConfig := o.Config.GetAllTeamNames()
-	breakDown := fmt.Sprintf(
-		"### Validation\nSuccessfully parsed %d message(s)\n%d/%d teams in feathers to notify\n",
-		len(messages), len(messages), len(allTeamsInConfig),
-	)
 
-	for i, m := range messages {
-		contactTypes := o.Config.GetContactTypesByTeamNames(m.TeamNames...)
-		newMessage := fmt.Sprintf("***\n"+
-			"### Message [%d/%d]\n#### Teams: %s\n#### Contact Types: %s\n#### Content:\n%s\n",
-			i+1, len(messages), m.TeamNames, contactTypes, m.Content,
-		)
-		breakDown = breakDown + newMessage
+	tmplFuncs := template.FuncMap{
+		"inc":      func(i int) int { return i + 1 },
+		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
 	}
-	return strings.TrimSpace(breakDown), nil
+
+	tpl, err := template.New(filepath.Base(breakdownPath)).Funcs(tmplFuncs).ParseFiles(breakdownPath)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse template")
+	}
+
+	var buf bytes.Buffer
+	err = tpl.Execute(&buf, map[string]any{
+		"totalTeams": len(allTeamsInConfig),
+		"messages":   messages,
+	})
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(buf.String()), nil
 }
 
 // PostErrorToPR posts an error to the pull request as a comment

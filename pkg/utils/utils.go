@@ -1,9 +1,21 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
+
+func CommaSeperated[T any](slice []T) (commaSep string) {
+	for i, val := range slice {
+		if i == 0 {
+			commaSep = fmt.Sprintf("%v", val)
+		} else {
+			commaSep = fmt.Sprintf("%v, %v", commaSep, val)
+		}
+	}
+	return
+}
 
 func NewPtr[T any](obj T) *T { return &obj }
 
