@@ -304,7 +304,8 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 // GenerateMessageBreakdown creates a breakdown of the messages found in the pr description
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
 	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
-{{ range $idx, $val := .messages -}}
+***
+{{ range $idx, $val := .messages }}
 Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 <details>
 <summary>Message Breakdown</summary>
