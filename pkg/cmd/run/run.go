@@ -60,8 +60,6 @@ var (
 	example = templates.Examples(`
 		%s run [flags]
 	`)
-
-	breakdownTmpl = ""
 )
 
 func NewCmdRun() *cobra.Command {
@@ -305,32 +303,31 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 
 // GenerateMessageBreakdown creates a breakdown of the messages found in the pr description
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
-	allTeamsInConfig := o.Config.GetAllTeamNames()
-
-	bdString := `[Peacock] Successfully validated {{ len .messages }} message(s).
-
+	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
 {{ range $idx, $val := .messages -}}
 Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 <details>
 <summary>Message Breakdown</summary>
+
 {{ $val.Content }}
+
 </details>
 
-{{ end -}}`
+{{ end }}`
 
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
 		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
 	}
 
-	tpl, err := template.New(filepath.Base(breakdownPath)).Funcs(tmplFuncs).Parse(bdString)
+	tpl, err := template.New(filepath.Base(breakdownPath)).Funcs(tmplFuncs).Parse(breakdownTmpl)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse template")
 	}
 
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, map[string]any{
-		"totalTeams": len(allTeamsInConfig),
+		"totalTeams": len(o.Config.GetAllTeamNames()),
 		"messages":   messages,
 	})
 	if err != nil {
