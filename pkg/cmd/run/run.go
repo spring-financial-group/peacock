@@ -19,7 +19,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -319,7 +318,7 @@ Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
 	}
 
-	tpl, err := template.New(filepath.Base(breakdownPath)).Funcs(tmplFuncs).Parse(breakdownTmpl)
+	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTmpl)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse template")
 	}
