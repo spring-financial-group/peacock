@@ -25,8 +25,6 @@ import (
 	"text/template"
 )
 
-const breakdownPath = "../../resources/breakdown.md"
-
 // Options for the run command
 type Options struct {
 	PRNumber     int
