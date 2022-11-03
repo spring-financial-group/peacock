@@ -3,6 +3,9 @@ package run
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -19,6 +22,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -189,16 +193,15 @@ func (o *Options) Run() error {
 	}
 
 	if o.DryRun {
-		log.Info("Posting message breakdown to pull request")
-		breakdown, err := o.GenerateMessageBreakdown(messages)
+		log.Info("Generating message breakdown")
+		breakdown, err := o.GetMessageBreakdown(ctx, messages)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
 			o.PostErrorToPR(ctx, err)
 			return err
 		}
-		log.Info(breakdown)
 		// Return before sending messages
-		if o.CommentValidation {
+		if o.CommentValidation && breakdown != "" {
 			if err := o.GitServerClient.CommentOnPR(ctx, o.PRNumber, breakdown); err != nil {
 				return err
 			}
@@ -298,8 +301,70 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 	return nil
 }
 
-// GenerateMessageBreakdown creates a breakdown of the messages found in the pr description
-func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
+// GetMessageBreakdown creates a breakdown of the messages found in the pr description if the messages have changed
+// since the last run
+func (o *Options) GetMessageBreakdown(ctx context.Context, messages []message.Message) (string, error) {
+	changed, hash, err := o.HaveMessagesChanged(ctx, messages)
+	if err != nil {
+		return "", err
+	}
+	if !changed {
+		return "", nil
+	}
+	return o.generateBreakdown(messages, hash)
+}
+
+// HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR
+func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Message) (bool, string, error) {
+	log.Info("Checking if messages have changed")
+	currentHash, err := o.generateMessageHash(messages)
+	if err != nil {
+		return false, "", err
+	}
+
+	comments, err := o.GitServerClient.GetPRComments(ctx, o.PRNumber)
+	if err != nil {
+		return false, "", err
+	}
+	if len(comments) < 1 {
+		log.Info("No comments found on PR")
+		return true, currentHash, nil
+	}
+
+	var previousHash string
+	for _, c := range comments {
+		// Comments sorted by most recent first, so the first matching comment
+		// was the last one posted by the bot
+		previousHash = o.getHashFromComment(*c.Body)
+		if previousHash != "" {
+			log.Info("Found previous hash in comment")
+			break
+		}
+	}
+
+	if previousHash == "" {
+		log.Info("No previous hash found in comments")
+		return true, currentHash, nil
+	}
+
+	if previousHash == currentHash {
+		log.Info("Previous hash matches current hash, messages have not changed")
+		return false, "", nil
+	}
+	log.Info("Previous hash does not match current hash, messages have changed")
+	return true, currentHash, nil
+}
+
+func (o *Options) getHashFromComment(comment string) string {
+	re := regexp.MustCompile(`(?m)<!-- hash: ([a-zA-Z0-9]+) -->`)
+	matches := re.FindStringSubmatch(comment)
+	if len(matches) != 2 {
+		return ""
+	}
+	return matches[1]
+}
+
+func (o *Options) generateBreakdown(messages []message.Message, hash string) (string, error) {
 	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
 {{ range $idx, $val := .messages }}
 ***
@@ -311,7 +376,8 @@ Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 
 </details>
 
-{{ end }}`
+{{ end -}}
+<!-- hash: {{ .hash }} -->`
 
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
@@ -327,11 +393,22 @@ Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 	err = tpl.Execute(&buf, map[string]any{
 		"totalTeams": len(o.Config.GetAllTeamNames()),
 		"messages":   messages,
+		"hash":       hash,
 	})
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(buf.String()), nil
+}
+
+func (o *Options) generateMessageHash(messages []message.Message) (string, error) {
+	data, err := json.Marshal(messages)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.New()
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // PostErrorToPR posts an error to the pull request as a comment

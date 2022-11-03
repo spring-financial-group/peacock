@@ -1,7 +1,9 @@
 package run_test
 
 import (
+	"context"
 	"fmt"
+	"github.com/google/go-github/v47/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
@@ -13,6 +15,157 @@ import (
 	"github.com/stretchr/testify/mock"
 	"testing"
 )
+
+func TestOptions_HaveMessagesChanged(t *testing.T) {
+	mockGitServer := mocks.NewGitServer(t)
+	// Comments returned from the GitHub API are sorted by most recent first
+	testCases := []struct {
+		name             string
+		inputMessages    []message.Message
+		returnedComments []*github.IssueComment
+		expectedHash     string
+		expectedChanged  bool
+	}{
+		{
+			name: "OneCommentSameHash",
+			inputMessages: []message.Message{
+				{
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			returnedComments: []*github.IssueComment{
+				{
+					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
+				},
+			},
+			expectedHash:    "",
+			expectedChanged: false,
+		},
+		{
+			name: "OneCommentDifferentHash",
+			inputMessages: []message.Message{
+				{
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			returnedComments: []*github.IssueComment{
+				{
+					Body: utils.NewPtr("<!-- hash: SomeOtherHash -->"),
+				},
+			},
+			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedChanged: true,
+		},
+		{
+			name: "MultipleCommentsDifferentHashes",
+			inputMessages: []message.Message{
+				{
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			returnedComments: []*github.IssueComment{
+				{
+					Body: utils.NewPtr("<!-- hash: SomeOtherHash -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: AnotherHash -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: HashingHel -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: AllTheHashes -->"),
+				},
+			},
+			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedChanged: true,
+		},
+		{
+			name: "MostRecentCommentSameHash",
+			inputMessages: []message.Message{
+				{
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			returnedComments: []*github.IssueComment{
+				{
+					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: AnotherHash -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: HashingHel -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: AllTheHashes -->"),
+				},
+			},
+			expectedHash:    "",
+			expectedChanged: false,
+		},
+		{
+			name: "MostRecentCommentDifferentHash",
+			inputMessages: []message.Message{
+				{
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			returnedComments: []*github.IssueComment{
+				{
+					Body: utils.NewPtr("<!-- hash: AnotherHash -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: HashingHel -->"),
+				},
+				{
+					Body: utils.NewPtr("<!-- hash: AllTheHashes -->"),
+				},
+			},
+			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedChanged: true,
+		},
+		{
+			name: "NoCommentsContainingMetadata",
+			inputMessages: []message.Message{
+				{
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			returnedComments: []*github.IssueComment{
+				{
+					Body: utils.NewPtr("Comment from someone else"),
+				},
+				{
+					Body: utils.NewPtr("Comment from someone else"),
+				},
+				{
+					Body: utils.NewPtr("Really different comment"),
+				},
+			},
+			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedChanged: true,
+		},
+	}
+
+	opts := &run.Options{
+		GitServerClient: mockGitServer,
+	}
+
+	for _, tt := range testCases {
+		mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), opts.PRNumber).Return(tt.returnedComments, nil).Once()
+
+		t.Run(tt.name, func(t *testing.T) {
+			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedChanged, actualChanged)
+			assert.Equal(t, tt.expectedHash, actualHash)
+		})
+	}
+}
 
 func TestOptions_Run(t *testing.T) {
 	mockGitServer := mocks.NewGitServer(t)
@@ -83,6 +236,7 @@ func TestOptions_Run(t *testing.T) {
 		if tt.opts.DryRun {
 			mockGitServer.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(tt.prBody, nil).Once()
 			mockGitServer.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber, mock.AnythingOfType("string")).Return(nil).Once()
+			mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(nil, nil)
 		} else {
 			mockGitClient.On("GetLatestCommitSHA").Return("SHA", nil)
 			mockGitServer.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
@@ -107,6 +261,8 @@ func TestOptions_Run(t *testing.T) {
 }
 
 func TestOptions_GenerateMessageBreakdown(t *testing.T) {
+	mockGitServer := mocks.NewGitServer(t)
+
 	testCases := []struct {
 		name              string
 		opts              *run.Options
@@ -116,6 +272,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		{
 			name: "OneMessage",
 			opts: &run.Options{
+				GitServerClient: mockGitServer,
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{Name: "infrastructure"},
@@ -128,11 +285,12 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some infrastructure\nrelated things",
 				},
 			},
-			expectedBreakdown: "[Peacock] Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>",
+			expectedBreakdown: "[Peacock] Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 -->",
 		},
 		{
 			name: "MultipleMessages&MultipleTeams",
 			opts: &run.Options{
+				GitServerClient: mockGitServer,
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{Name: "infrastructure"},
@@ -150,13 +308,16 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some ml\nrelated things",
 				},
 			},
-			expectedBreakdown: "[Peacock] Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>",
+			expectedBreakdown: "[Peacock] Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 -->",
 		},
 	}
 
+	mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), 0).Return(nil, nil)
+
 	for _, tt := range testCases {
+
 		t.Run(tt.name, func(t *testing.T) {
-			actualBreakdown, err := tt.opts.GenerateMessageBreakdown(tt.inputMessages)
+			actualBreakdown, err := tt.opts.GetMessageBreakdown(context.Background(), tt.inputMessages)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedBreakdown, actualBreakdown)
 		})
