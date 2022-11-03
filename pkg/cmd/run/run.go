@@ -1,6 +1,7 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
@@ -20,6 +21,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
 // Options for the run command
@@ -298,28 +300,46 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 
 // GenerateMessageBreakdown creates a breakdown of the messages found in the pr description
 func (o *Options) GenerateMessageBreakdown(messages []message.Message) (string, error) {
-	allTeamsInConfig := o.Config.GetAllTeamNames()
-	breakDown := fmt.Sprintf(
-		"### Validation\nSuccessfully parsed %d message(s)\n%d/%d teams in feathers to notify\n",
-		len(messages), len(messages), len(allTeamsInConfig),
-	)
+	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
+{{ range $idx, $val := .messages }}
+***
+Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
+<details>
+<summary>Message Breakdown</summary>
 
-	for i, m := range messages {
-		contactTypes := o.Config.GetContactTypesByTeamNames(m.TeamNames...)
-		newMessage := fmt.Sprintf("***\n"+
-			"### Message [%d/%d]\n#### Teams: %s\n#### Contact Types: %s\n#### Content:\n%s\n",
-			i+1, len(messages), m.TeamNames, contactTypes, m.Content,
-		)
-		breakDown = breakDown + newMessage
+{{ $val.Content }}
+
+</details>
+
+{{ end }}`
+
+	tmplFuncs := template.FuncMap{
+		"inc":      func(i int) int { return i + 1 },
+		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
 	}
-	return strings.TrimSpace(breakDown), nil
+
+	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTmpl)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse template")
+	}
+
+	var buf bytes.Buffer
+	err = tpl.Execute(&buf, map[string]any{
+		"totalTeams": len(o.Config.GetAllTeamNames()),
+		"messages":   messages,
+	})
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(buf.String()), nil
 }
 
 // PostErrorToPR posts an error to the pull request as a comment
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
-		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, "Error: "+err.Error())
+		errorMsg := fmt.Sprintf("[Peacock] Validation Failed:\n%s", err.Error())
+		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, errorMsg)
 		if err != nil {
 			panic(err)
 		}

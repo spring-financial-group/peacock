@@ -128,7 +128,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some infrastructure\nrelated things",
 				},
 			},
-			expectedBreakdown: "### Validation\nSuccessfully parsed 1 message(s)\n1/1 teams in feathers to notify\n***\n### Message [1/1]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things",
+			expectedBreakdown: "[Peacock] Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>",
 		},
 		{
 			name: "MultipleMessages&MultipleTeams",
@@ -150,7 +150,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some ml\nrelated things",
 				},
 			},
-			expectedBreakdown: "### Validation\nSuccessfully parsed 2 message(s)\n2/2 teams in feathers to notify\n***\n### Message [1/2]\n#### Teams: [infrastructure]\n#### Contact Types: []\n#### Content:\nNew release of some infrastructure\nrelated things\n***\n### Message [2/2]\n#### Teams: [ml]\n#### Contact Types: []\n#### Content:\nNew release of some ml\nrelated things",
+			expectedBreakdown: "[Peacock] Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>",
 		},
 	}
 
