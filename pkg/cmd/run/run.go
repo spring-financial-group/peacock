@@ -193,7 +193,7 @@ func (o *Options) Run() error {
 	}
 
 	if o.DryRun {
-		log.Info("Posting message breakdown to pull request")
+		log.Info("Generating message breakdown")
 		breakdown, err := o.GetMessageBreakdown(ctx, messages)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
@@ -333,11 +333,11 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Me
 
 	var previousHash string
 	for _, c := range comments {
-		// GitHub returns the comments sorted by most recent first, so the first matching comment
+		// Comments sorted by most recent first, so the first matching comment
 		// was the last one posted by the bot
 		previousHash = o.getHashFromComment(*c.Body)
 		if previousHash != "" {
-			log.Info("Found previous previous hash in comment")
+			log.Info("Found previous hash in comment")
 			break
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"golang.org/x/oauth2"
+	"sort"
 )
 
 type Client struct {
@@ -78,10 +79,14 @@ func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.
 	return pullRequests[mostRecentPR]
 }
 
-func (c *Client) GetPRComments(ctx context.Context, prNumber int) ([]*github.PullRequestComment, error) {
-	comments, _, err := c.Github.PullRequests.ListComments(ctx, c.Owner, c.Repo, prNumber, &github.PullRequestListCommentsOptions{Sort: "created_at", Direction: "desc"})
+func (c *Client) GetPRComments(ctx context.Context, prNumber int) ([]*github.IssueComment, error) {
+	comments, _, err := c.Github.Issues.ListComments(ctx, c.Owner, c.Repo, prNumber, nil)
 	if err != nil {
 		return nil, err
 	}
+	// Issue comments are returned sorted by ID, but we want them sorted by created time
+	sort.Slice(comments, func(i, j int) bool {
+		return comments[i].CreatedAt.After(*comments[j].CreatedAt)
+	})
 	return comments, nil
 }

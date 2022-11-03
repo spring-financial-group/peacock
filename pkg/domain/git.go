@@ -22,6 +22,6 @@ type GitServer interface {
 	GetPullRequestBodyFromPRNumber(ctx context.Context, prNumber int) (*string, error)
 	// CommentOnPR posts a comment on a pull request given the pr number
 	CommentOnPR(ctx context.Context, prNumber int, body string) error
-	// GetPRComments returns all comments on a pull request given the pr number
-	GetPRComments(ctx context.Context, prNumber int) ([]*github.PullRequestComment, error)
+	// GetPRComments returns all comments on a pull request given the pr number sorted by most recent comment first
+	GetPRComments(ctx context.Context, prNumber int) ([]*github.IssueComment, error)
 }
