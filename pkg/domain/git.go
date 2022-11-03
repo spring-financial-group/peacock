@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"github.com/google/go-github/v47/github"
 )
 
 const (
@@ -21,4 +22,6 @@ type GitServer interface {
 	GetPullRequestBodyFromPRNumber(ctx context.Context, prNumber int) (*string, error)
 	// CommentOnPR posts a comment on a pull request given the pr number
 	CommentOnPR(ctx context.Context, prNumber int, body string) error
+	// GetPRComments returns all comments on a pull request given the pr number
+	GetPRComments(ctx context.Context, prNumber int) ([]*github.PullRequestComment, error)
 }

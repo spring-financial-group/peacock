@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"golang.org/x/oauth2"
-	"net/http"
 )
 
 type Client struct {
@@ -31,12 +30,9 @@ func NewClient(owner, repo, token string) domain.GitServer {
 }
 
 func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*string, error) {
-	prsWithCommit, r, err := c.Github.PullRequests.ListPullRequestsWithCommit(ctx, c.Owner, c.Repo, sha, nil)
+	prsWithCommit, _, err := c.Github.PullRequests.ListPullRequestsWithCommit(ctx, c.Owner, c.Repo, sha, nil)
 	if err != nil {
 		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("failed to get pull requests, %d code recieved", r.StatusCode)
 	}
 	if len(prsWithCommit) < 1 {
 		return nil, errors.Errorf("no pull request found containing commit %s", sha)
@@ -51,23 +47,17 @@ func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (
 }
 
 func (c *Client) GetPullRequestBodyFromPRNumber(ctx context.Context, prNumber int) (*string, error) {
-	pr, resp, err := c.Github.PullRequests.Get(ctx, c.Owner, c.Repo, prNumber)
+	pr, _, err := c.Github.PullRequests.Get(ctx, c.Owner, c.Repo, prNumber)
 	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("failed to get pull request %d code recieved", resp.StatusCode)
 	}
 	return pr.Body, nil
 }
 
 func (c *Client) CommentOnPR(ctx context.Context, prNumber int, body string) error {
-	_, r, err := c.Github.Issues.CreateComment(ctx, c.Owner, c.Repo, prNumber, &github.IssueComment{Body: &body})
+	_, _, err := c.Github.Issues.CreateComment(ctx, c.Owner, c.Repo, prNumber, &github.IssueComment{Body: &body})
 	if err != nil {
 		return err
-	}
-	if r.StatusCode != http.StatusCreated {
-		return errors.Errorf("github response code %d", r.StatusCode)
 	}
 	return nil
 }
@@ -86,4 +76,12 @@ func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.
 		}
 	}
 	return pullRequests[mostRecentPR]
+}
+
+func (c *Client) GetPRComments(ctx context.Context, prNumber int) ([]*github.PullRequestComment, error) {
+	comments, _, err := c.Github.PullRequests.ListComments(ctx, c.Owner, c.Repo, prNumber, &github.PullRequestListCommentsOptions{Sort: "created_at", Direction: "desc"})
+	if err != nil {
+		return nil, err
+	}
+	return comments, nil
 }
