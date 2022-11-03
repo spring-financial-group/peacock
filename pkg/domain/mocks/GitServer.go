@@ -5,6 +5,8 @@ package mocks
 import (
 	context "context"
 
+	github "github.com/google/go-github/v47/github"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -25,6 +27,29 @@ func (_m *GitServer) CommentOnPR(ctx context.Context, prNumber int, body string)
 	}
 
 	return r0
+}
+
+// GetPRComments provides a mock function with given fields: ctx, prNumber
+func (_m *GitServer) GetPRComments(ctx context.Context, prNumber int) ([]*github.PullRequestComment, error) {
+	ret := _m.Called(ctx, prNumber)
+
+	var r0 []*github.PullRequestComment
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*github.PullRequestComment); ok {
+		r0 = rf(ctx, prNumber)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*github.PullRequestComment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, prNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetPullRequestBodyFromCommit provides a mock function with given fields: ctx, sha
