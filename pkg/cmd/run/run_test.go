@@ -22,7 +22,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 	testCases := []struct {
 		name             string
 		inputMessages    []message.Message
-		returnedComments []*github.PullRequestComment
+		returnedComments []*github.IssueComment
 		expectedHash     string
 		expectedChanged  bool
 	}{
@@ -33,7 +33,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Content: "New release of some infrastructure\nrelated things",
 				},
 			},
-			returnedComments: []*github.PullRequestComment{
+			returnedComments: []*github.IssueComment{
 				{
 					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
 				},
@@ -48,7 +48,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Content: "New release of some infrastructure\nrelated things",
 				},
 			},
-			returnedComments: []*github.PullRequestComment{
+			returnedComments: []*github.IssueComment{
 				{
 					Body: utils.NewPtr("<!-- hash: SomeOtherHash -->"),
 				},
@@ -63,7 +63,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Content: "New release of some infrastructure\nrelated things",
 				},
 			},
-			returnedComments: []*github.PullRequestComment{
+			returnedComments: []*github.IssueComment{
 				{
 					Body: utils.NewPtr("<!-- hash: SomeOtherHash -->"),
 				},
@@ -87,7 +87,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Content: "New release of some infrastructure\nrelated things",
 				},
 			},
-			returnedComments: []*github.PullRequestComment{
+			returnedComments: []*github.IssueComment{
 				{
 					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
 				},
@@ -111,7 +111,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Content: "New release of some infrastructure\nrelated things",
 				},
 			},
-			returnedComments: []*github.PullRequestComment{
+			returnedComments: []*github.IssueComment{
 				{
 					Body: utils.NewPtr("<!-- hash: AnotherHash -->"),
 				},
@@ -135,7 +135,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Content: "New release of some infrastructure\nrelated things",
 				},
 			},
-			returnedComments: []*github.PullRequestComment{
+			returnedComments: []*github.IssueComment{
 				{
 					Body: utils.NewPtr("Comment from someone else"),
 				},
