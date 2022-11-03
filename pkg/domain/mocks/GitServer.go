@@ -30,15 +30,15 @@ func (_m *GitServer) CommentOnPR(ctx context.Context, prNumber int, body string)
 }
 
 // GetPRComments provides a mock function with given fields: ctx, prNumber
-func (_m *GitServer) GetPRComments(ctx context.Context, prNumber int) ([]*github.PullRequestComment, error) {
+func (_m *GitServer) GetPRComments(ctx context.Context, prNumber int) ([]*github.IssueComment, error) {
 	ret := _m.Called(ctx, prNumber)
 
-	var r0 []*github.PullRequestComment
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*github.PullRequestComment); ok {
+	var r0 []*github.IssueComment
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*github.IssueComment); ok {
 		r0 = rf(ctx, prNumber)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*github.PullRequestComment)
+			r0 = ret.Get(0).([]*github.IssueComment)
 		}
 	}
 
