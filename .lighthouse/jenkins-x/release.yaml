@@ -85,7 +85,7 @@ spec:
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/bot-token.gt)\"}}}" > /kaniko/.docker/config.json
+            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$(cat /workspace/source/bot-token.gt)\"}}}" > /kaniko/.docker/config.json
             rm /workspace/source/bot-token.gt
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
   podTemplate: {}
