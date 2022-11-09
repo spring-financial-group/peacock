@@ -41,15 +41,15 @@ spec:
           script: |
             #!/usr/bin/env sh
             jx gitops variables
-            kubectl get secret peacock-ghcr -n jx-staging -o jsonpath="{.data['token']}" | base64 -d > /workspace/source/ghcr-token.gt
+            kubectl get secret peacock -n jx-staging -o jsonpath="{.data['gh-bot-token']}" | base64 -d > /workspace/source/bot-token.gt
         - image: gcr.io/kaniko-project/executor:v1.6.0-debug
           name: build-push-container
           resources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/ghcr-token.gt)\"}}}" > /kaniko/.docker/config.json
-            rm /workspace/source/ghcr-token.gt
+            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/bot-token.gt)\"}}}" > /kaniko/.docker/config.json
+            rm /workspace/source/bot-token.gt
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
   podTemplate: {}
   serviceAccountName: tekton-bot

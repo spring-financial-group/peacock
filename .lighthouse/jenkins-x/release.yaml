@@ -66,14 +66,14 @@ spec:
           script: |
             #!/usr/bin/env sh
             jx gitops variables
-            kubectl get secret peacock-ghcr -n jx-staging -o jsonpath="{.data['token']}" | base64 -d > /workspace/source/ghcr-token.gt
+            kubectl get secret peacock -n jx-staging -o jsonpath="{.data['gh-bot-token']}" | base64 -d > /workspace/source/bot-token.gt
         - image: tomhobson/github-cli:latest
           name: push-release
           script: |
             #!/usr/bin/env bash
             source .jx/variables.sh
 
-            gh auth login --with-token < /workspace/source/ghcr-token.gt
+            gh auth login --with-token < /workspace/source/bot-token.gt
             echo "uploading to release v$VERSION"
             gh release upload v$VERSION ./build/linux/peacock
             gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
@@ -85,8 +85,8 @@ spec:
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/ghcr-token.gt)\"}}}" > /kaniko/.docker/config.json
-            rm /workspace/source/ghcr-token.gt
+            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"mqube-bot\",\"password\":\"$(cat /workspace/source/bot-token.gt)\"}}}" > /kaniko/.docker/config.json
+            rm /workspace/source/bot-token.gt
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
   podTemplate: {}
   serviceAccountName: tekton-bot
