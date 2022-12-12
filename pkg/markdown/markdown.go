@@ -14,12 +14,16 @@ func ConvertToSlack(markdown string) string {
 
 	var regex *regexp.Regexp
 	// Convert bullets (* -> •)
-	regex = regexp.MustCompile(`(^|\n)\*\s`)
-	markdown = regex.ReplaceAllString(markdown, "$1• ")
+	regex = regexp.MustCompile(`(^|\n)(|\s+)\*\s`)
+	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
+		return strings.ReplaceAll(s, "*", "•")
+	})
 
 	// Convert bullets (- -> •)
-	regex = regexp.MustCompile(`(^|\n)-\s`)
-	markdown = regex.ReplaceAllString(markdown, "$1• ")
+	regex = regexp.MustCompile(`(^|\n)(|\s+)-\s`)
+	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
+		return strings.ReplaceAll(s, "-", "•")
+	})
 
 	// Convert headings to bold (## -> *)
 	regex = regexp.MustCompile(`(?m)((^\t? {0,15}#{1,4} +)(.+))`)
