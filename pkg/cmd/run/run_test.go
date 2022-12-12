@@ -399,3 +399,46 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestOptions_SendMessage(t *testing.T) {
+	slackHandler := mocks.NewMessageHandler(t)
+	webhookHandler := mocks.NewMessageHandler(t)
+
+	testCases := []struct {
+		name         string
+		opts         *run.Options
+		inputMessage message.Message
+	}{
+		{
+			name: "Default",
+			opts: &run.Options{
+				Handlers: map[string]domain.MessageHandler{
+					handlers.Slack:   slackHandler,
+					handlers.Webhook: webhookHandler,
+				},
+				Config: &feathers.Feathers{
+					Teams: []feathers.Team{
+						{Name: "Infrastructure", ContactType: handlers.Slack, Addresses: []string{"#SlackAdd1", "#SlackAdd2"}},
+						{Name: "AllDevs", ContactType: handlers.Slack, Addresses: []string{"#SlackAdd3", "#SlackAdd4"}},
+						{Name: "Product", ContactType: handlers.Webhook, Addresses: []string{"Webhook1", "Webhook2"}},
+						{Name: "Support", ContactType: handlers.Webhook, Addresses: []string{"Webhook3", "Webhook4"}},
+					},
+				},
+			},
+			inputMessage: message.Message{
+				TeamNames: []string{"Infrastructure", "AllDevs", "Product", "Support"},
+				Content:   "Test message content",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			slackHandler.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2", "#SlackAdd3", "#SlackAdd4"}).Return(nil)
+			webhookHandler.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2", "Webhook3", "Webhook4"}).Return(nil)
+
+			err := tc.opts.SendMessage(tc.inputMessage)
+			assert.NoError(t, err)
+		})
+	}
+}

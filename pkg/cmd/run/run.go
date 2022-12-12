@@ -84,7 +84,6 @@ func NewCmdRun() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
 	cmd.Flags().BoolVarP(&o.CommentValidation, "comment-validation", "", false, "posts a comment to the pr with the validation results if successful. Default is false.")
 	cmd.Flags().StringVarP(&o.Subject, "subject", "", "", "a subject to add to the messages for the handlers that require it. If empty then a subject will be generated.")
-
 	return cmd
 }
 
@@ -253,7 +252,7 @@ func (o *Options) GenerateSubject() {
 func (o *Options) SendMessages(messages []message.Message) error {
 	var errs []error
 	for _, m := range messages {
-		err := o.sendMessage(m)
+		err := o.SendMessage(m)
 		if err != nil {
 			log.Error(err)
 			errs = append(errs, err)
@@ -266,16 +265,27 @@ func (o *Options) SendMessages(messages []message.Message) error {
 	return nil
 }
 
-func (o *Options) sendMessage(message message.Message) error {
+// SendMessage pools the addresses of the different teams by contactType and sends the message to each
+func (o *Options) SendMessage(message message.Message) error {
 	teams := o.Config.GetTeamsByNames(message.TeamNames...)
-	for _, team := range teams {
-		err := o.Handlers[team.ContactType].Send(message.Content, o.Subject, team.Addresses)
+	// We should pool the addresses by contact type so that we only send one message per contact type
+	addressPool := o.poolAddressesByContactType(teams)
+	for contactType, addresses := range addressPool {
+		err := o.Handlers[contactType].Send(message.Content, o.Subject, addresses)
 		if err != nil {
-			return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
+			return errors.Wrapf(err, "failed to send message")
 		}
-		log.Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
+		log.Infof("Message successfully sent to %s via %s\n", strings.Join(addresses, ", "), contactType)
 	}
 	return nil
+}
+
+func (o *Options) poolAddressesByContactType(teams []feathers.Team) map[string][]string {
+	addressPool := make(map[string][]string)
+	for _, team := range teams {
+		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
+	}
+	return addressPool
 }
 
 // ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers
