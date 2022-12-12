@@ -67,6 +67,18 @@ func TestMarkdown_Converters(t *testing.T) {
 			expectedSlack: "*Promoted Services*\n_Which services are being promoted?_\n• Peacock \n\n*What functionality is being released?*\n_What features/bug fixes are present?_\n\n• All the features\n• All the bugs\n",
 			expectedHTML:  "<header><strong>Promoted Services</strong></header>\n<p><em>Which services are being promoted?</em></p>\n<ul>\n<li>Peacock</li>\n</ul>\n<header><strong>What functionality is being released?</strong></header>\n<p><em>What features/bug fixes are present?</em></p>\n<ul>\n<li>All the features</li>\n<li>All the bugs</li>\n</ul>\n",
 		},
+		{
+			name:          "NestedBulletReplacement(*)",
+			inputMarkdown: "* New queries added to Product/Summary endpoint:\n   * Return products by product class\n   * Return products that were available for a given date",
+			expectedSlack: "• New queries added to Product/Summary endpoint:\n   • Return products by product class\n   • Return products that were available for a given date",
+			expectedHTML:  "<ul>\n<li>New queries added to Product/Summary endpoint:\n<ul>\n<li>Return products by product class</li>\n<li>Return products that were available for a given date</li>\n</ul>\n</li>\n</ul>\n",
+		},
+		{
+			name:          "NestedBulletReplacement(-)",
+			inputMarkdown: "- New queries added to Product/Summary endpoint:\n   - Return products by product class\n   - Return products that were available for a given date",
+			expectedSlack: "• New queries added to Product/Summary endpoint:\n   • Return products by product class\n   • Return products that were available for a given date",
+			expectedHTML:  "<ul>\n<li>New queries added to Product/Summary endpoint:\n<ul>\n<li>Return products by product class</li>\n<li>Return products that were available for a given date</li>\n</ul>\n</li>\n</ul>\n",
+		},
 	}
 
 	for _, tt := range testCases {
