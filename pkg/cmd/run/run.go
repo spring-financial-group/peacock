@@ -45,7 +45,6 @@ type Options struct {
 	DryRun            bool
 	CommentValidation bool
 	Subject           string
-	PoolAddresses     bool
 
 	GitServerClient domain.GitServer
 	Git             domain.Git
@@ -85,8 +84,6 @@ func NewCmdRun() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.DryRun, "dry-run", "", false, "parses the messages and feathers, returning validation as a comment on the pr. Does not send messages. PR number is required for this. Default is false")
 	cmd.Flags().BoolVarP(&o.CommentValidation, "comment-validation", "", false, "posts a comment to the pr with the validation results if successful. Default is false.")
 	cmd.Flags().StringVarP(&o.Subject, "subject", "", "", "a subject to add to the messages for the handlers that require it. If empty then a subject will be generated.")
-	cmd.Flags().BoolVarP(&o.PoolAddresses, "pool-addresses", "", false, "pools the addresses in each message by contact type to reduce the total number of messages sent - not all handlers support this. Default is false.")
-
 	return cmd
 }
 
@@ -268,20 +265,11 @@ func (o *Options) SendMessages(messages []message.Message) error {
 	return nil
 }
 
-// SendMessage sends the message using the message handlers
+// SendMessage pools the addresses of the different teams by contactType and sends the message to each
 func (o *Options) SendMessage(message message.Message) error {
-	if o.PoolAddresses {
-		return o.sendMessageByContactType(message)
-	}
-	return o.sendMessageByTeam(message)
-}
-
-// sendMessageByContactType pools the addresses of the different teams by contactType and sends the message to each
-func (o *Options) sendMessageByContactType(message message.Message) error {
 	teams := o.Config.GetTeamsByNames(message.TeamNames...)
 	// We should pool the addresses by contact type so that we only send one message per contact type
 	addressPool := o.poolAddressesByContactType(teams)
-
 	for contactType, addresses := range addressPool {
 		err := o.Handlers[contactType].Send(message.Content, o.Subject, addresses)
 		if err != nil {
@@ -298,19 +286,6 @@ func (o *Options) poolAddressesByContactType(teams []feathers.Team) map[string][
 		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
 	}
 	return addressPool
-}
-
-// sendMessageByTeam sends the message to each team individually
-func (o *Options) sendMessageByTeam(message message.Message) error {
-	teams := o.Config.GetTeamsByNames(message.TeamNames...)
-	for _, team := range teams {
-		err := o.Handlers[team.ContactType].Send(message.Content, o.Subject, team.Addresses)
-		if err != nil {
-			return errors.Wrapf(err, "failed to send messages to %s using %s", team.Name, team.ContactType)
-		}
-		log.Infof("Message successfully sent to %s via %s\n", team.Name, team.Addresses)
-	}
-	return nil
 }
 
 // ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers

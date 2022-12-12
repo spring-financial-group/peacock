@@ -416,29 +416,6 @@ func TestOptions_SendMessage(t *testing.T) {
 					handlers.Slack:   slackHandler,
 					handlers.Webhook: webhookHandler,
 				},
-				PoolAddresses: false,
-				Config: &feathers.Feathers{
-					Teams: []feathers.Team{
-						{Name: "Infrastructure", ContactType: handlers.Slack, Addresses: []string{"#SlackAdd1", "#SlackAdd2"}},
-						{Name: "AllDevs", ContactType: handlers.Slack, Addresses: []string{"#SlackAdd3", "#SlackAdd4"}},
-						{Name: "Product", ContactType: handlers.Webhook, Addresses: []string{"Webhook1", "Webhook2"}},
-						{Name: "Support", ContactType: handlers.Webhook, Addresses: []string{"Webhook3", "Webhook4"}},
-					},
-				},
-			},
-			inputMessage: message.Message{
-				TeamNames: []string{"Infrastructure", "AllDevs", "Product", "Support"},
-				Content:   "Test message content",
-			},
-		},
-		{
-			name: "PoolAddresses",
-			opts: &run.Options{
-				Handlers: map[string]domain.MessageHandler{
-					handlers.Slack:   slackHandler,
-					handlers.Webhook: webhookHandler,
-				},
-				PoolAddresses: true,
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{Name: "Infrastructure", ContactType: handlers.Slack, Addresses: []string{"#SlackAdd1", "#SlackAdd2"}},
@@ -457,16 +434,8 @@ func TestOptions_SendMessage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.opts.PoolAddresses {
-				slackHandler.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2", "#SlackAdd3", "#SlackAdd4"}).Return(nil)
-				webhookHandler.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2", "Webhook3", "Webhook4"}).Return(nil)
-			} else {
-				slackHandler.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2"}).Return(nil)
-				slackHandler.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd3", "#SlackAdd4"}).Return(nil)
-				webhookHandler.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2"}).Return(nil)
-				webhookHandler.On("Send", tc.inputMessage.Content, "", []string{"Webhook3", "Webhook4"}).Return(nil)
-
-			}
+			slackHandler.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2", "#SlackAdd3", "#SlackAdd4"}).Return(nil)
+			webhookHandler.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2", "Webhook3", "Webhook4"}).Return(nil)
 
 			err := tc.opts.SendMessage(tc.inputMessage)
 			assert.NoError(t, err)
