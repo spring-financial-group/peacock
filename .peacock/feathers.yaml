@@ -1,5 +1,13 @@
 teams:
-  - name: Infrastructure
+  - name: TestWebhook1
+    contactType: webhook
+    addresses:
+      - MockWebhookAddress
+  - name: TestWebhook2
+    contactType: webhook
+    addresses:
+      - MockWebhookAddress
+  - name: TestSlack1
     contactType: slack
     addresses:
-      - C02BA9QHMD0
+      - MockSlackAddress
