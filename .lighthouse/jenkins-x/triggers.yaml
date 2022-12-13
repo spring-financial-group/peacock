@@ -14,7 +14,7 @@ spec:
     source: "peacock/release.yaml"
   - name: gl
     context: "golint"
-    always_run: true
+    run_if_changed: ^.*\.(go)$
     optional: false
     source: "golint.yaml"
   - name: pr
@@ -29,7 +29,7 @@ spec:
     source: "semanticcheck.yaml"
   - name: tests
     context: "run-tests"
-    always_run: true
+    run_if_changed: ^.*\.(go)$
     optional: false
     source: "tests.yaml"
   postsubmits:
