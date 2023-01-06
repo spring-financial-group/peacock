@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/config"
+	"github.com/spring-financial-group/peacock/pkg/health"
 	"github.com/spring-financial-group/peacock/pkg/webhook"
 )
 
@@ -21,5 +22,7 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 	}
 
 	publicGroup.POST("/webhooks", webhooks.HandleEvents)
-	return nil, nil
+	publicGroup.GET("/health", health.ServeHealth)
+
+	return router, nil
 }
