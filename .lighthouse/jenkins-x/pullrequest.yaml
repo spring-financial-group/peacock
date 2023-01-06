@@ -1,7 +1,6 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  creationTimestamp: null
   name: pullrequest
 spec:
   pipelineSpec:
@@ -11,7 +10,7 @@ spec:
       taskSpec:
         metadata: {}
         stepTemplate:
-          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-cli/pullrequest.yaml@versionStream
+          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go/pullrequest.yaml@versionStream
           name: ""
           resources:
             # override limits for all containers here
@@ -28,11 +27,11 @@ spec:
               cpu: 400m
               memory: 600Mi
         - image: golang:1.18
-          name: build-make-linux
+          name: build-make-build
           resources: {}
           script: |
             #!/bin/sh
-            make linux
+            make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
         - image: ghcr.io/jenkins-x/jx-boot:3.2.197
@@ -51,6 +50,11 @@ spec:
             echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$(cat /workspace/source/bot-token.gt)\"}}}" > /kaniko/.docker/config.json
             rm /workspace/source/bot-token.gt
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
+        - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
+          name: ""
+          resources: {}
+        - name: promote-jx-preview
+          resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s

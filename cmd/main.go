@@ -1,13 +1,12 @@
 package main
 
 import (
+	"github.com/spring-financial-group/peacock/cmd/cli"
 	"os"
-
-	"github.com/spring-financial-group/peacock/cmd/app"
 )
 
 func main() {
-	if err := app.Run(nil); err != nil {
+	if err := cli.Run(nil); err != nil {
 		os.Exit(1)
 	}
 	os.Exit(0)
