@@ -1,15 +1,16 @@
 package feathers
 
 import (
-	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/utils"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"regexp"
 )
 
 const (
-	configPath          = ".peacock/feathers.yaml"
+	feathersPath        = ".peacock/feathers.yaml"
 	slackChannelIDRegex = "^[A-Z0-9]{9,11}$"
 )
 
@@ -24,20 +25,25 @@ type Team struct {
 }
 
 func LoadConfig() (*Feathers, error) {
-	exists, err := utils.Exists(configPath)
+	exists, err := utils.Exists(feathersPath)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.Errorf("could not find %s", configPath)
+		return nil, errors.Errorf("could not find %s", feathersPath)
 	}
 
-	cfg := new(Feathers)
-	err = cleanenv.ReadConfig(configPath, cfg)
+	data, err := ioutil.ReadFile(feathersPath)
 	if err != nil {
 		return nil, err
 	}
-	return cfg, cfg.validate()
+
+	feathers := new(Feathers)
+	err = yaml.Unmarshal(data, feathers)
+	if err != nil {
+		return nil, err
+	}
+	return feathers, feathers.validate()
 }
 
 func (f *Feathers) validate() error {
