@@ -4,28 +4,15 @@ import (
 	"context"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/config"
+	"github.com/spring-financial-group/peacock/pkg/logger"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
 )
 
-func initLogger() {
-	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
-	log.SetOutput(os.Stdout)
-}
-
-func setLoggerLevel(cfg *config.Config) {
-	level, err := log.ParseLevel(cfg.LogLevel)
-	if err != nil {
-		log.Fatalf("Unable to log... wait what: %v\n", err)
-	}
-	log.SetLevel(level)
-}
-
 func Run() {
-	initLogger()
+	logger.Init()
 
 	// Create context that listens for the interrupt signal from the OS.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -36,7 +23,7 @@ func Run() {
 		log.Fatalf("Unable to initialize config: %v\n", err)
 	}
 
-	setLoggerLevel(cfg)
+	logger.SetLevel(cfg.LogLevel)
 
 	sources, err := initDataSources(cfg)
 	if err != nil {

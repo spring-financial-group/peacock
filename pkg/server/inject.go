@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/health"
+	"github.com/spring-financial-group/peacock/pkg/logger"
 	"github.com/spring-financial-group/peacock/pkg/webhook"
 )
 
@@ -13,7 +14,8 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	publicGroup := router.Group("/")
-	publicGroup.Use(gin.Logger())
+	publicGroup.Use(logger.Middleware())
+	infraGroup := router.Group("/")
 
 	// Setup handlers
 	webhooks, err := webhook.NewHandler(&cfg.SCM)
@@ -22,7 +24,7 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 	}
 
 	publicGroup.POST("/webhooks", webhooks.HandleEvents)
-	publicGroup.GET("/health", health.ServeHealth)
+	infraGroup.GET("/health", health.ServeHealth)
 
 	return router, nil
 }
