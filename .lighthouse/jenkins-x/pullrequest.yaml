@@ -53,8 +53,14 @@ spec:
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
-        - name: promote-jx-preview
+        - image: ghcr.io/jenkins-x-plugins/jx-preview:0.0.231
+          name: promote-jx-preview
           resources: {}
+          script: |
+            #!/usr/bin/env sh
+            source .jx/variables.sh
+            export DOCKER_REGISTRY=ghcr.io
+            jx preview create
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s
