@@ -1,7 +1,8 @@
 logLevel: "info"
 
 config:
-
+  scm:
+    provider: github
 
 # Username use for interacting with Git
 gitUser: ""

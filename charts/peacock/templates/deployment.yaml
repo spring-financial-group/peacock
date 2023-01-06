@@ -81,7 +81,7 @@ spec:
         resources:
 {{ toYaml .Values.resources | indent 12 }}
         volumeMounts:
-          - mountPath: /config
+          - mountPath: /config.yaml
             name: config
             subPath: config.yaml
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
