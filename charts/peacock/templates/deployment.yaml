@@ -47,13 +47,13 @@ spec:
           - name: "GIT_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: peacock-service
-                key: token
+                name: peacock
+                key: gh-bot-token
           - name: "HMAC_TOKEN"
             valueFrom:
               secretKeyRef:
                 name: peacock
-                key: hmac
+                key: hmac-secret
 {{- range $pkey, $pval := .Values.env }}
         - name: {{ $pkey }}
           value: {{ quote $pval }}
