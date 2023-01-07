@@ -24,7 +24,7 @@ type Team struct {
 	Addresses   []string `yaml:"addresses"`
 }
 
-func LoadConfig() (*Feathers, error) {
+func LoadFeathers() (*Feathers, error) {
 	exists, err := utils.Exists(feathersPath)
 	if err != nil {
 		return nil, err

@@ -152,7 +152,7 @@ func (o *Options) Run() error {
 
 	if o.Config == nil {
 		log.Info("Loading feathers from local instance")
-		o.Config, err = feathers.LoadConfig()
+		o.Config, err = feathers.LoadFeathers()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
 			o.PostErrorToPR(ctx, err)

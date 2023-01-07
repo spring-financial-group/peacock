@@ -164,7 +164,7 @@ func TestLoadConfig(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			actualConfig, err := feathers.LoadConfig()
+			actualConfig, err := feathers.LoadFeathers()
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
