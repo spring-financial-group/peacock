@@ -8,6 +8,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	feather "github.com/spring-financial-group/peacock/pkg/feathers"
+	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/message"
 )
 
@@ -67,12 +68,24 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	}
 
 	// Create a hash of the messages. Probably should cache these as well.
-	hash, err := message.GenerateHash(messages)
+	newHash, err := message.GenerateHash(messages)
 	if err != nil {
 		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to generate message hash"))
 	}
 
-	breakdown, err := message.GenerateBreakdown(messages, len(feathers.Teams), hash)
+	// Get the hash from the last comment and compare
+	comments, err := w.scm.GetPRCommentsByUser(ctx, owner, repoName, w.cfg.User, prNumber)
+	if err != nil {
+		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to get comments"))
+	}
+	// Currently we only support one type of comment, so we can just get the most recent and check that
+	previousHash := comment.GetHashFromComment(*comments[0].Body)
+	if previousHash == newHash {
+		log.Infof("no changes to messages, skipping")
+		return nil
+	}
+
+	breakdown, err := message.GenerateBreakdown(messages, len(feathers.Teams), newHash)
 	if err != nil {
 		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to generate message breakdown"))
 	}

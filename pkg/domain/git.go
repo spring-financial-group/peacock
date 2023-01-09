@@ -28,4 +28,6 @@ type GitServer interface {
 	GetPRComments(ctx context.Context, owner, repo string, prNumber int) ([]*github.IssueComment, error)
 	// GetFileFromBranch returns the file as a string from a branch
 	GetFileFromBranch(ctx context.Context, owner, repo, branch, path string) ([]byte, error)
+	// GetPRCommentsByUser returns all the comments on a pull request by a user
+	GetPRCommentsByUser(ctx context.Context, owner, repo, user string, prNumber int) ([]*github.IssueComment, error)
 }

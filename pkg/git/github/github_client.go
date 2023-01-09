@@ -91,6 +91,20 @@ func (c *Client) GetPRComments(ctx context.Context, owner, repo string, prNumber
 	return comments, nil
 }
 
+func (c *Client) GetPRCommentsByUser(ctx context.Context, owner, repo, user string, prNumber int) ([]*github.IssueComment, error) {
+	comments, err := c.GetPRComments(ctx, owner, repo, prNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get all PR comments")
+	}
+	var userComments []*github.IssueComment
+	for _, comment := range comments {
+		if *comment.User.Login == user {
+			userComments = append(userComments, comment)
+		}
+	}
+	return comments, nil
+}
+
 func (c *Client) GetFileFromBranch(ctx context.Context, owner, repo, branch, path string) ([]byte, error) {
 	resp, _, _, err := c.Github.Repositories.GetContents(ctx, owner, repo, path, &github.RepositoryContentGetOptions{Ref: branch})
 	if err != nil {
