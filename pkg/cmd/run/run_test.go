@@ -3,7 +3,7 @@ package run_test
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v48/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"

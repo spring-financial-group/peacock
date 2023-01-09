@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	github "github.com/google/go-github/v47/github"
+	github "github.com/google/go-github/v48/github"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -36,6 +36,20 @@ func (_m *GitServer) CommentOnPR(ctx context.Context, owner string, repo string,
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, string) error); ok {
 		r0 = rf(ctx, owner, repo, prNumber, body)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CreateCommitStatus provides a mock function with given fields: ctx, owner, repo, opts
+func (_m *GitServer) CreateCommitStatus(ctx context.Context, owner string, repo string, opts github.CreateCheckRunOptions) error {
+	ret := _m.Called(ctx, owner, repo, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, github.CreateCheckRunOptions) error); ok {
+		r0 = rf(ctx, owner, repo, opts)
 	} else {
 		r0 = ret.Error(0)
 	}

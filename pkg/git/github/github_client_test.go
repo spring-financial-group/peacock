@@ -3,7 +3,7 @@ package github_test
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v48/github"
 	ghmock "github.com/migueleliasweb/go-github-mock/src/mock"
 	github2 "github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/utils"
