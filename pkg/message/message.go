@@ -29,12 +29,12 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 		return nil, err
 	}
 
-	log.Infof("Parsing messages")
+	log.Debug("Parsing messages")
 	teamsInMessages := parseTeamNames(teamNameReg, markdown)
 	if len(teamsInMessages) < 1 {
 		return nil, nil
 	}
-	log.Infof("%d messages found in markdown", len(teamsInMessages))
+	log.Debug("%d messages found in markdown", len(teamsInMessages))
 
 	// Get the contents for each message & trim to remove any text before the first message
 	contents := teamNameReg.Split(markdown, -1)
@@ -44,7 +44,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	for i, m := range contents {
 		messages[i].Content = strings.TrimSpace(m)
 		messages[i].TeamNames = teamsInMessages[i]
-		log.Infof("Found %d team(s) to notify in message %d\n", len(messages[i].TeamNames), i+1)
+		log.Debug("Found %d team(s) to notify in message %d\n", len(messages[i].TeamNames), i+1)
 	}
 	return messages, nil
 }

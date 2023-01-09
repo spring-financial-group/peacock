@@ -56,7 +56,7 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to parse messages from markdown"))
 	}
 	if messages == nil {
-		log.Infof("no messages found in PR body")
+		log.Infof("no messages found in PR body, skipping")
 		return nil
 	}
 
@@ -83,7 +83,7 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 		lastComment := comments[0]
 		oldHash, _ := comment.GetMetadataFromComment(*lastComment.Body)
 		if oldHash == newHash {
-			log.Infof("hashes match, no need to comment")
+			log.Infof("message hash matches previous comment, skipping new breakdown")
 			return nil
 		}
 	}
