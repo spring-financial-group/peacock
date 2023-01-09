@@ -116,3 +116,17 @@ func (c *Client) GetFileFromBranch(ctx context.Context, owner, repo, branch, pat
 	}
 	return []byte(content), nil
 }
+
+func (c *Client) DeleteUsersComments(ctx context.Context, owner, repo, user string, prNumber int) error {
+	comments, err := c.GetPRCommentsByUser(ctx, owner, repo, user, prNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to get all PR comments")
+	}
+	for _, comment := range comments {
+		_, err = c.Github.Issues.DeleteComment(ctx, owner, repo, *comment.ID)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete comment")
+		}
+	}
+	return nil
+}

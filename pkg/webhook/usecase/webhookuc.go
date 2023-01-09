@@ -90,6 +90,12 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to generate message breakdown"))
 	}
 
+	// We should prune the previous comments
+	err = w.scm.DeleteUsersComments(ctx, owner, repoName, w.cfg.User, prNumber)
+	if err != nil {
+		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to delete previous comments"))
+	}
+
 	// Comment on the PR with the breakdown
 	err = w.scm.CommentOnPR(ctx, owner, repoName, prNumber, breakdown)
 	if err != nil {

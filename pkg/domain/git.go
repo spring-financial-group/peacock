@@ -30,4 +30,6 @@ type GitServer interface {
 	GetFileFromBranch(ctx context.Context, owner, repo, branch, path string) ([]byte, error)
 	// GetPRCommentsByUser returns all the comments on a pull request by a user
 	GetPRCommentsByUser(ctx context.Context, owner, repo, user string, prNumber int) ([]*github.IssueComment, error)
+	// DeleteUsersComments deletes all the comments on a pull request by a user
+	DeleteUsersComments(ctx context.Context, owner, repo, user string, prNumber int) error
 }
