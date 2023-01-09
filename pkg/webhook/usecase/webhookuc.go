@@ -29,30 +29,32 @@ func NewUseCase(cfg *config.SCM, git domain.Git, scm domain.GitServer, handlers 
 
 func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	ctx := context.Background()
-	owner, repo := *event.Repo.Owner.Name, *event.Repo.Name
+	repo, pullRequest := event.GetRepo(), event.GetPullRequest()
+	owner, repoName, prNumber := repo.GetOwner().GetName(), repo.GetName(), pullRequest.GetNumber()
+	log.Infof("%s %s %d", owner, repoName, prNumber)
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
-	feathers, err := w.getFeathers(ctx, owner, repo, *event.PullRequest.Head.Ref)
+	feathers, err := w.getFeathers(ctx, owner, repoName, event.PullRequest.Head.GetRef())
 	if err != nil {
-		return w.commentError(ctx, owner, repo, *event.PullRequest.Number, err)
+		return w.commentError(ctx, owner, repoName, prNumber, err)
 	}
 
 	// Check that the relevant communication methods have been configured for the feathers
 	types := feathers.GetAllContactTypes()
 	if err != nil {
-		return w.commentError(ctx, owner, repo, *event.PullRequest.Number, errors.Wrap(err, "failed to get contact types"))
+		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to get contact types"))
 	}
 	for _, t := range types {
 		_, ok := w.handlers[t]
 		if !ok {
-			return w.commentError(ctx, owner, repo, *event.PullRequest.Number, errors.Wrapf(err, "message handler %s not found", t))
+			return w.commentError(ctx, owner, repoName, prNumber, errors.Wrapf(err, "message handler %s not found", t))
 		}
 	}
 
 	// Parse the PR body for any messages
-	messages, err := message.ParseMessagesFromMarkdown(*event.PullRequest.Body)
+	messages, err := message.ParseMessagesFromMarkdown(event.PullRequest.GetBody())
 	if err != nil {
-		return w.commentError(ctx, owner, repo, *event.PullRequest.Number, errors.Wrap(err, "failed to parse messages from markdown"))
+		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to parse messages from markdown"))
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body")
@@ -62,25 +64,25 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	// Check that the teams in the messages exist in the feathers
 	for _, m := range messages {
 		if err = feathers.ExistsInFeathers(m.TeamNames...); err != nil {
-			return w.commentError(ctx, owner, repo, *event.PullRequest.Number, errors.Wrap(err, "failed to find team in feathers"))
+			return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to find team in feathers"))
 		}
 	}
 
 	// Create a hash of the messages. Probably should cache these as well.
 	hash, err := message.GenerateHash(messages)
 	if err != nil {
-		return w.commentError(ctx, owner, repo, *event.PullRequest.Number, errors.Wrap(err, "failed to generate message hash"))
+		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to generate message hash"))
 	}
 
 	breakdown, err := message.GenerateBreakdown(messages, len(feathers.Teams), hash)
 	if err != nil {
-		return w.commentError(ctx, owner, repo, *event.PullRequest.Number, errors.Wrap(err, "failed to generate message breakdown"))
+		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to generate message breakdown"))
 	}
 
 	// Comment on the PR with the breakdown
-	err = w.scm.CommentOnPR(ctx, owner, repo, *event.PullRequest.Number, breakdown)
+	err = w.scm.CommentOnPR(ctx, owner, repoName, prNumber, breakdown)
 	if err != nil {
-		return w.commentError(ctx, owner, repo, *event.PullRequest.Number, errors.Wrap(err, "failed to comment breakdown on PR"))
+		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to comment breakdown on PR"))
 	}
 	return nil
 }
