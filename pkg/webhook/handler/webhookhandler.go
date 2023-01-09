@@ -61,11 +61,6 @@ func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName stri
 }
 
 func (h *Handler) handlePullRequestEditEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
-	// We're only concerned with edits that are to the body
-	if event.GetChanges().GetBody().GetFrom() == "" {
-		log.Infof("%s-PR%d was edited but the body was not changed. Skipping.", event.GetRepo().GetFullName(), event.GetPullRequest().GetNumber())
-		return nil
-	}
-	log.Infof("%s-PR%d body has been edited. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
+	log.Infof("%s-PR%d has been edited. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
 	return h.useCase.HandleDryRun(event)
 }

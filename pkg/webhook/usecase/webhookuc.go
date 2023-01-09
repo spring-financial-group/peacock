@@ -29,12 +29,10 @@ func NewUseCase(cfg *config.SCM, git domain.Git, scm domain.GitServer, handlers 
 
 func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	ctx := context.Background()
-	repo, pullRequest := event.GetRepo(), event.GetPullRequest()
-	owner, repoName, prNumber := repo.GetOwner().GetLogin(), repo.GetName(), pullRequest.GetNumber()
-	log.Infof("%s %s %d", owner, repoName, prNumber)
+	owner, repoName, prNumber := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
-	feathers, err := w.getFeathers(ctx, owner, repoName, event.PullRequest.Head.GetRef())
+	feathers, err := w.getFeathers(ctx, owner, repoName, *event.PullRequest.Head.Ref)
 	if err != nil {
 		return w.commentError(ctx, owner, repoName, prNumber, err)
 	}
