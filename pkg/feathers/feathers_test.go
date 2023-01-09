@@ -164,7 +164,7 @@ func TestLoadConfig(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			actualConfig, err := feathers.LoadFeathers()
+			actualConfig, err := feathers.GetFeathersFromFile()
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {

@@ -24,7 +24,7 @@ type Team struct {
 	Addresses   []string `yaml:"addresses"`
 }
 
-func LoadFeathers() (*Feathers, error) {
+func GetFeathersFromFile() (*Feathers, error) {
 	exists, err := utils.Exists(feathersPath)
 	if err != nil {
 		return nil, err
@@ -38,8 +38,12 @@ func LoadFeathers() (*Feathers, error) {
 		return nil, err
 	}
 
+	return GetFeathersFromBytes(data)
+}
+
+func GetFeathersFromBytes(data []byte) (*Feathers, error) {
 	feathers := new(Feathers)
-	err = yaml.Unmarshal(data, feathers)
+	err := yaml.Unmarshal(data, feathers)
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +97,16 @@ func (f *Feathers) GetContactTypesByTeamNames(names ...string) []string {
 		types = append(types, t.ContactType)
 	}
 	return types
+}
+
+func (f *Feathers) ExistsInFeathers(teamNames ...string) error {
+	allTeamsInFeathers := f.GetAllTeamNames()
+	for _, name := range teamNames {
+		if !utils.ExistsInSlice(name, allTeamsInFeathers) {
+			return errors.Errorf("team %s does not exist in feathers", name)
+		}
+	}
+	return nil
 }
 
 func (t *Team) validate() error {

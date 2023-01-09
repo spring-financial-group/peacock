@@ -2,22 +2,19 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/go-github/v47/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/spring-financial-group/peacock/pkg/domain"
 	"golang.org/x/oauth2"
 	"sort"
 )
 
 type Client struct {
 	Github *github.Client
-
-	Owner string
-	Repo  string
 }
 
-func NewClient(owner, repo, token string) domain.GitServer {
+func NewClient(token string) *Client {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
@@ -25,13 +22,11 @@ func NewClient(owner, repo, token string) domain.GitServer {
 	tc := oauth2.NewClient(ctx, ts)
 	return &Client{
 		Github: github.NewClient(tc),
-		Owner:  owner,
-		Repo:   repo,
 	}
 }
 
-func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*string, error) {
-	prsWithCommit, _, err := c.Github.PullRequests.ListPullRequestsWithCommit(ctx, c.Owner, c.Repo, sha, nil)
+func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, owner, repo, sha string) (*string, error) {
+	prsWithCommit, _, err := c.Github.PullRequests.ListPullRequestsWithCommit(ctx, owner, repo, sha, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -47,20 +42,25 @@ func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (
 	return c.findPRByMergedTime(prsWithCommit).Body, nil
 }
 
-func (c *Client) GetPullRequestBodyFromPRNumber(ctx context.Context, prNumber int) (*string, error) {
-	pr, _, err := c.Github.PullRequests.Get(ctx, c.Owner, c.Repo, prNumber)
+func (c *Client) GetPullRequestBodyFromPRNumber(ctx context.Context, owner, repo string, prNumber int) (*string, error) {
+	pr, _, err := c.Github.PullRequests.Get(ctx, owner, repo, prNumber)
 	if err != nil {
 		return nil, err
 	}
 	return pr.Body, nil
 }
 
-func (c *Client) CommentOnPR(ctx context.Context, prNumber int, body string) error {
-	_, _, err := c.Github.Issues.CreateComment(ctx, c.Owner, c.Repo, prNumber, &github.IssueComment{Body: &body})
+func (c *Client) CommentOnPR(ctx context.Context, owner, repo string, prNumber int, body string) error {
+	_, _, err := c.Github.Issues.CreateComment(ctx, owner, repo, prNumber, &github.IssueComment{Body: &body})
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *Client) CommentError(ctx context.Context, owner, repo string, prNumber int, err error) error {
+	errorMsg := fmt.Sprintf("Validation Failed:\n%s", err.Error())
+	return c.CommentOnPR(ctx, owner, repo, prNumber, errorMsg)
 }
 
 func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.PullRequest {
@@ -79,8 +79,8 @@ func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.
 	return pullRequests[mostRecentPR]
 }
 
-func (c *Client) GetPRComments(ctx context.Context, prNumber int) ([]*github.IssueComment, error) {
-	comments, _, err := c.Github.Issues.ListComments(ctx, c.Owner, c.Repo, prNumber, nil)
+func (c *Client) GetPRComments(ctx context.Context, owner, repo string, prNumber int) ([]*github.IssueComment, error) {
+	comments, _, err := c.Github.Issues.ListComments(ctx, owner, repo, prNumber, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -89,4 +89,16 @@ func (c *Client) GetPRComments(ctx context.Context, prNumber int) ([]*github.Iss
 		return comments[i].CreatedAt.After(*comments[j].CreatedAt)
 	})
 	return comments, nil
+}
+
+func (c *Client) GetFileFromBranch(ctx context.Context, owner, repo, branch, path string) ([]byte, error) {
+	resp, _, _, err := c.Github.Repositories.GetContents(ctx, owner, repo, path, &github.RepositoryContentGetOptions{Ref: branch})
+	if err != nil {
+		return nil, err
+	}
+	content, err := resp.GetContent()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(content), nil
 }

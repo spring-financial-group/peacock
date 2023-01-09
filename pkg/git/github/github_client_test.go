@@ -109,12 +109,10 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 
 		client := github2.Client{
 			Github: mockGH,
-			Owner:  "spring-financial-group",
-			Repo:   "peacock",
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "CommitSHA")
+			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "spring-financial-group", "peacock", "CommitSHA")
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)

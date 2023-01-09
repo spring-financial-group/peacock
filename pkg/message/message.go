@@ -1,10 +1,16 @@
 package message
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"regexp"
 	"strings"
+	"text/template"
 )
 
 const (
@@ -24,7 +30,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	}
 
 	log.Infof("Parsing messages")
-	teamsInMessages := ParseTeamNames(teamNameReg, markdown)
+	teamsInMessages := parseTeamNames(teamNameReg, markdown)
 	if len(teamsInMessages) < 1 {
 		return nil, nil
 	}
@@ -43,7 +49,7 @@ func ParseMessagesFromMarkdown(markdown string) ([]Message, error) {
 	return messages, nil
 }
 
-func ParseTeamNames(teamNameReg *regexp.Regexp, markdown string) [][]string {
+func parseTeamNames(teamNameReg *regexp.Regexp, markdown string) [][]string {
 	// Find all the notify headers
 	notifyHeaders := teamNameReg.FindAllStringSubmatch(markdown, -1)
 	if len(notifyHeaders) < 1 {
@@ -58,4 +64,51 @@ func ParseTeamNames(teamNameReg *regexp.Regexp, markdown string) [][]string {
 		teamsInMessages[i] = teamNames
 	}
 	return teamsInMessages
+}
+
+func GenerateHash(messages []Message) (string, error) {
+	data, err := json.Marshal(messages)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to marshal messages")
+	}
+	h := sha256.New()
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func GenerateBreakdown(messages []Message, totalTeams int, hash string) (string, error) {
+	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
+{{ range $idx, $val := .messages }}
+***
+Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
+<details>
+<summary>Message Breakdown</summary>
+
+{{ $val.Content }}
+
+</details>
+
+{{ end -}}
+<!-- hash: {{ .hash }} -->`
+
+	tmplFuncs := template.FuncMap{
+		"inc":      func(i int) int { return i + 1 },
+		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
+	}
+
+	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTmpl)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse template")
+	}
+
+	var buf bytes.Buffer
+	err = tpl.Execute(&buf, map[string]any{
+		"totalTeams": totalTeams,
+		"messages":   messages,
+		"hash":       hash,
+	})
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(buf.String()), nil
 }

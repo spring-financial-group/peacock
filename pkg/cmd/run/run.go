@@ -1,11 +1,7 @@
 package run
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -25,7 +21,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"text/template"
 )
 
 // Options for the run command
@@ -152,7 +147,7 @@ func (o *Options) Run() error {
 
 	if o.Config == nil {
 		log.Info("Loading feathers from local instance")
-		o.Config, err = feathers.LoadFeathers()
+		o.Config, err = feathers.GetFeathersFromFile()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
 			o.PostErrorToPR(ctx, err)
@@ -201,7 +196,7 @@ func (o *Options) Run() error {
 		}
 		// Return before sending messages
 		if o.CommentValidation && breakdown != "" {
-			if err := o.GitServerClient.CommentOnPR(ctx, o.PRNumber, breakdown); err != nil {
+			if err := o.GitServerClient.CommentOnPR(ctx, o.RepoOwner, o.RepoName, o.PRNumber, breakdown); err != nil {
 				return err
 			}
 		}
@@ -228,15 +223,15 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
 		log.Info("Getting pull request from PR number")
-		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.PRNumber)
+		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.RepoOwner, o.RepoName, o.PRNumber)
 	} else {
 		// If not then we can get it from the last commit in the local instance
 		log.Info("Getting pull request from last commit")
-		sha, err = o.Git.GetLatestCommitSHA()
+		sha, err = o.Git.GetLatestCommitSHA("")
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get latest commit sha")
 		}
-		body, err = o.GitServerClient.GetPullRequestBodyFromCommit(ctx, sha)
+		body, err = o.GitServerClient.GetPullRequestBodyFromCommit(ctx, o.RepoOwner, o.RepoName, sha)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get pull request")
@@ -321,18 +316,18 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []message.Me
 	if !changed {
 		return "", nil
 	}
-	return o.generateBreakdown(messages, hash)
+	return message.GenerateBreakdown(messages, len(o.Config.GetAllTeamNames()), hash)
 }
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR
 func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Message) (bool, string, error) {
 	log.Info("Checking if messages have changed")
-	currentHash, err := o.generateMessageHash(messages)
+	currentHash, err := message.GenerateHash(messages)
 	if err != nil {
 		return false, "", err
 	}
 
-	comments, err := o.GitServerClient.GetPRComments(ctx, o.PRNumber)
+	comments, err := o.GitServerClient.GetPRComments(ctx, o.RepoOwner, o.RepoName, o.PRNumber)
 	if err != nil {
 		return false, "", err
 	}
@@ -374,59 +369,12 @@ func (o *Options) getHashFromComment(comment string) string {
 	return matches[1]
 }
 
-func (o *Options) generateBreakdown(messages []message.Message, hash string) (string, error) {
-	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
-{{ range $idx, $val := .messages }}
-***
-Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
-<details>
-<summary>Message Breakdown</summary>
-
-{{ $val.Content }}
-
-</details>
-
-{{ end -}}
-<!-- hash: {{ .hash }} -->`
-
-	tmplFuncs := template.FuncMap{
-		"inc":      func(i int) int { return i + 1 },
-		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
-	}
-
-	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTmpl)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to parse template")
-	}
-
-	var buf bytes.Buffer
-	err = tpl.Execute(&buf, map[string]any{
-		"totalTeams": len(o.Config.GetAllTeamNames()),
-		"messages":   messages,
-		"hash":       hash,
-	})
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(buf.String()), nil
-}
-
-func (o *Options) generateMessageHash(messages []message.Message) (string, error) {
-	data, err := json.Marshal(messages)
-	if err != nil {
-		return "", err
-	}
-	h := sha256.New()
-	h.Write(data)
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
 // PostErrorToPR posts an error to the pull request as a comment
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
 		errorMsg := fmt.Sprintf("[Peacock] Validation Failed:\n%s", err.Error())
-		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, errorMsg)
+		err = o.GitServerClient.CommentOnPR(ctx, o.RepoOwner, o.RepoName, o.PRNumber, errorMsg)
 		if err != nil {
 			panic(err)
 		}
@@ -454,14 +402,14 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	if o.RepoOwner == "" || o.RepoName == "" {
 		log.Info("No one repo owner or name provided, getting from git")
-		o.RepoOwner, o.RepoName, err = o.Git.GetRepoOwnerAndName()
+		o.RepoOwner, o.RepoName, err = o.Git.GetRepoOwnerAndName("")
 		if err != nil {
 			return errors.Wrap(err, "failed to get repo owner and name")
 		}
 	}
 
 	if o.GitServerClient == nil {
-		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitHubToken)
+		o.GitServerClient = github.NewClient(o.GitHubToken)
 	}
 	return nil
 }
@@ -471,10 +419,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 func (o *Options) initialiseHandlers() (err error) {
 	o.Handlers = map[string]domain.MessageHandler{}
 	if o.SlackToken != "" {
-		o.Handlers[handlers.Slack], err = slack.NewSlackHandler(o.SlackToken)
-		if err != nil {
-			return errors.Wrap(err, "failed to initialise Slack handler")
-		}
+		o.Handlers[handlers.Slack] = slack.NewSlackHandler(o.SlackToken)
 	}
 
 	if o.WebhookURL != "" {

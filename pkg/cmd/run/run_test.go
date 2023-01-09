@@ -156,7 +156,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), opts.PRNumber).Return(tt.returnedComments, nil).Once()
+		mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), "", "", opts.PRNumber).Return(tt.returnedComments, nil).Once()
 
 		t.Run(tt.name, func(t *testing.T) {
 			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
@@ -234,12 +234,12 @@ func TestOptions_Run(t *testing.T) {
 
 	for _, tt := range testCases {
 		if tt.opts.DryRun {
-			mockGitServer.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(tt.prBody, nil).Once()
-			mockGitServer.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber, mock.AnythingOfType("string")).Return(nil).Once()
-			mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(nil, nil)
+			mockGitServer.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber).Return(tt.prBody, nil).Once()
+			mockGitServer.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber, mock.AnythingOfType("string")).Return(nil).Once()
+			mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber).Return(nil, nil)
 		} else {
-			mockGitClient.On("GetLatestCommitSHA").Return("SHA", nil)
-			mockGitServer.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
+			mockGitClient.On("GetLatestCommitSHA", "").Return("SHA", nil)
+			mockGitServer.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, "SHA").Return(tt.prBody, nil).Once()
 		}
 
 		for _, team := range tt.opts.Config.Teams {
@@ -312,7 +312,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		},
 	}
 
-	mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), 0).Return(nil, nil)
+	mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), mock.Anything, mock.Anything, 0).Return(nil, nil)
 
 	for _, tt := range testCases {
 

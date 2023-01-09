@@ -13,6 +13,7 @@ gitToken: ""
 # Secret used for webhooks
 hmacSecret: ""
 
+webhookUrl: "https://api-staging.jx.mqube.build/EmailService/api/SendEmail/Peacock"
 
 # Additional annotations & labels to be added to the peacock deployment
 podAnnotations: {}
