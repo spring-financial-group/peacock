@@ -79,16 +79,20 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to get comments"))
 	}
 	// Currently we only support one type of comment, so we can just get the most recent and check that
-	previousHash := comment.GetHashFromComment(*comments[0].Body)
-	if previousHash == newHash {
-		log.Infof("no changes to messages, skipping")
-		return nil
+	if len(comments) > 0 {
+		lastComment := comments[0]
+		oldHash, _ := comment.GetMetadataFromComment(*lastComment.Body)
+		if oldHash == newHash {
+			log.Infof("hashes match, no need to comment")
+			return nil
+		}
 	}
 
-	breakdown, err := message.GenerateBreakdown(messages, len(feathers.Teams), newHash)
+	breakdown, err := message.GenerateBreakdown(messages, len(feathers.Teams))
 	if err != nil {
 		return w.commentError(ctx, owner, repoName, prNumber, errors.Wrap(err, "failed to generate message breakdown"))
 	}
+	breakdown = comment.AddMetadataToComment(breakdown, newHash, comment.BreakdownCommentType)
 
 	// We should prune the previous comments
 	err = w.scm.DeleteUsersComments(ctx, owner, repoName, w.cfg.User, prNumber)

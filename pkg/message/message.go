@@ -76,7 +76,7 @@ func GenerateHash(messages []Message) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func GenerateBreakdown(messages []Message, totalTeams int, hash string) (string, error) {
+func GenerateBreakdown(messages []Message, totalTeams int) (string, error) {
 	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
 {{ range $idx, $val := .messages }}
 ***
@@ -88,8 +88,7 @@ Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 
 </details>
 
-{{ end -}}
-<!-- hash: {{ .hash }} -->`
+{{ end -}}`
 
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
@@ -105,7 +104,6 @@ Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 	err = tpl.Execute(&buf, map[string]any{
 		"totalTeams": totalTeams,
 		"messages":   messages,
-		"hash":       hash,
 	})
 	if err != nil {
 		return "", err

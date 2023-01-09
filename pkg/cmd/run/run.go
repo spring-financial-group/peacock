@@ -9,6 +9,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
+	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
@@ -316,7 +317,11 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []message.Me
 	if !changed {
 		return "", nil
 	}
-	return message.GenerateBreakdown(messages, len(o.Config.GetAllTeamNames()), hash)
+	breakdown, err := message.GenerateBreakdown(messages, len(o.Config.GetAllTeamNames()))
+	if err != nil {
+		return "", err
+	}
+	return comment.AddMetadataToComment(breakdown, hash, comment.BreakdownCommentType), nil
 }
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR

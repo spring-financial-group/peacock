@@ -5,7 +5,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
+	"os"
 	"regexp"
 )
 
@@ -33,7 +33,7 @@ func GetFeathersFromFile() (*Feathers, error) {
 		return nil, errors.Errorf("could not find %s", feathersPath)
 	}
 
-	data, err := ioutil.ReadFile(feathersPath)
+	data, err := os.ReadFile(feathersPath)
 	if err != nil {
 		return nil, err
 	}

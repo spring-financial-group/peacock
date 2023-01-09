@@ -43,6 +43,20 @@ func (_m *GitServer) CommentOnPR(ctx context.Context, owner string, repo string,
 	return r0
 }
 
+// DeleteUsersComments provides a mock function with given fields: ctx, owner, repo, user, prNumber
+func (_m *GitServer) DeleteUsersComments(ctx context.Context, owner string, repo string, user string, prNumber int) error {
+	ret := _m.Called(ctx, owner, repo, user, prNumber)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, int) error); ok {
+		r0 = rf(ctx, owner, repo, user, prNumber)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetFileFromBranch provides a mock function with given fields: ctx, owner, repo, branch, path
 func (_m *GitServer) GetFileFromBranch(ctx context.Context, owner string, repo string, branch string, path string) ([]byte, error) {
 	ret := _m.Called(ctx, owner, repo, branch, path)
@@ -82,6 +96,29 @@ func (_m *GitServer) GetPRComments(ctx context.Context, owner string, repo strin
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, string, int) error); ok {
 		r1 = rf(ctx, owner, repo, prNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPRCommentsByUser provides a mock function with given fields: ctx, owner, repo, user, prNumber
+func (_m *GitServer) GetPRCommentsByUser(ctx context.Context, owner string, repo string, user string, prNumber int) ([]*github.IssueComment, error) {
+	ret := _m.Called(ctx, owner, repo, user, prNumber)
+
+	var r0 []*github.IssueComment
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, int) []*github.IssueComment); ok {
+		r0 = rf(ctx, owner, repo, user, prNumber)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*github.IssueComment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, int) error); ok {
+		r1 = rf(ctx, owner, repo, user, prNumber)
 	} else {
 		r1 = ret.Error(1)
 	}
