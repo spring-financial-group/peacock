@@ -12,8 +12,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
-	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
-	"github.com/spring-financial-group/peacock/pkg/handlers/webhook"
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
@@ -158,12 +156,7 @@ func (o *Options) Run() error {
 
 	if o.Handlers == nil {
 		log.Info("Initialising message handlers")
-		err = o.initialiseHandlers()
-		if err != nil {
-			err = errors.Wrapf(err, "failed to init handlers")
-			o.PostErrorToPR(ctx, err)
-			return err
-		}
+		o.Handlers = handlers.InitMessageHandlers(o.SlackToken, o.WebhookURL, o.WebhookToken, o.WebhookSecret)
 	}
 
 	log.Info("Parsing messages from pull request body")
@@ -415,29 +408,6 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	if o.GitServerClient == nil {
 		o.GitServerClient = github.NewClient(o.GitHubToken)
-	}
-	return nil
-}
-
-// initialiseHandlers initialises the message handlers depending on the flags passed through to the command.
-// It then checks that all the handlers required by the feathers have been initialised.
-func (o *Options) initialiseHandlers() (err error) {
-	o.Handlers = map[string]domain.MessageHandler{}
-	if o.SlackToken != "" {
-		o.Handlers[handlers.Slack] = slack.NewSlackHandler(o.SlackToken)
-	}
-
-	if o.WebhookURL != "" {
-		o.Handlers[handlers.Webhook] = webhook.NewWebHookHandler(o.WebhookURL, o.WebhookToken, o.WebhookSecret)
-	}
-
-	// We should check that all the handlers required by the feathers have been initialised
-	for _, t := range o.Config.GetAllContactTypes() {
-		if o.Handlers[t] == nil {
-			return errors.Errorf(
-				"contact type \"%s\" found in feathers but no handler has been initialised, "+
-					"check required flags have been passed for this type", t)
-		}
 	}
 	return nil
 }
