@@ -32,4 +32,6 @@ type GitServer interface {
 	GetPRCommentsByUser(ctx context.Context, owner, repo, user string, prNumber int) ([]*github.IssueComment, error)
 	// DeleteUsersComments deletes all the comments on a pull request by a user
 	DeleteUsersComments(ctx context.Context, owner, repo, user string, prNumber int) error
+	// CreateCommitStatus creates a commit status on a commit
+	CreateCommitStatus(ctx context.Context, owner, repo string, opts github.CreateCheckRunOptions) error
 }
