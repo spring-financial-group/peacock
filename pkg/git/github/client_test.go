@@ -108,7 +108,7 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 		mockGH := github.NewClient(mockedHTTPClient)
 
 		client := github2.Client{
-			Github: mockGH,
+			github: mockGH,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {

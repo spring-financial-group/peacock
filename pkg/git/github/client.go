@@ -11,7 +11,11 @@ import (
 )
 
 type Client struct {
-	Github *github.Client
+	github   *github.Client
+	user     string
+	owner    string
+	repo     string
+	prNumber int
 }
 
 func NewClient(token string) *Client {
@@ -21,12 +25,12 @@ func NewClient(token string) *Client {
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	return &Client{
-		Github: github.NewClient(tc),
+		github: github.NewClient(tc),
 	}
 }
 
-func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, owner, repo, sha string) (*string, error) {
-	prsWithCommit, _, err := c.Github.PullRequests.ListPullRequestsWithCommit(ctx, owner, repo, sha, nil)
+func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*string, error) {
+	prsWithCommit, _, err := c.github.PullRequests.ListPullRequestsWithCommit(ctx, c.owner, c.repo, sha, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -42,25 +46,25 @@ func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, owner, repo, 
 	return c.findPRByMergedTime(prsWithCommit).Body, nil
 }
 
-func (c *Client) GetPullRequestBodyFromPRNumber(ctx context.Context, owner, repo string, prNumber int) (*string, error) {
-	pr, _, err := c.Github.PullRequests.Get(ctx, owner, repo, prNumber)
+func (c *Client) GetPullRequestBodyFromPRNumber(ctx context.Context) (*string, error) {
+	pr, _, err := c.github.PullRequests.Get(ctx, c.owner, c.repo, c.prNumber)
 	if err != nil {
 		return nil, err
 	}
 	return pr.Body, nil
 }
 
-func (c *Client) CommentOnPR(ctx context.Context, owner, repo string, prNumber int, body string) error {
-	_, _, err := c.Github.Issues.CreateComment(ctx, owner, repo, prNumber, &github.IssueComment{Body: &body})
+func (c *Client) CommentOnPR(ctx context.Context, body string) error {
+	_, _, err := c.github.Issues.CreateComment(ctx, c.owner, c.repo, c.prNumber, &github.IssueComment{Body: &body})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Client) CommentError(ctx context.Context, owner, repo string, prNumber int, err error) error {
+func (c *Client) CommentError(ctx context.Context, err error) error {
 	errorMsg := fmt.Sprintf("Validation Failed:\n%s", err.Error())
-	return c.CommentOnPR(ctx, owner, repo, prNumber, errorMsg)
+	return c.CommentOnPR(ctx, errorMsg)
 }
 
 func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.PullRequest {
@@ -79,8 +83,8 @@ func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.
 	return pullRequests[mostRecentPR]
 }
 
-func (c *Client) GetPRComments(ctx context.Context, owner, repo string, prNumber int) ([]*github.IssueComment, error) {
-	comments, _, err := c.Github.Issues.ListComments(ctx, owner, repo, prNumber, nil)
+func (c *Client) GetPRComments(ctx context.Context) ([]*github.IssueComment, error) {
+	comments, _, err := c.github.Issues.ListComments(ctx, c.owner, c.repo, c.prNumber, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -91,22 +95,22 @@ func (c *Client) GetPRComments(ctx context.Context, owner, repo string, prNumber
 	return comments, nil
 }
 
-func (c *Client) GetPRCommentsByUser(ctx context.Context, owner, repo, user string, prNumber int) ([]*github.IssueComment, error) {
-	comments, err := c.GetPRComments(ctx, owner, repo, prNumber)
+func (c *Client) GetPRCommentsByUser(ctx context.Context) ([]*github.IssueComment, error) {
+	comments, err := c.GetPRComments(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get all PR comments")
 	}
 	var userComments []*github.IssueComment
 	for _, comment := range comments {
-		if *comment.User.Login == user {
+		if *comment.User.Login == c.user {
 			userComments = append(userComments, comment)
 		}
 	}
 	return comments, nil
 }
 
-func (c *Client) GetFileFromBranch(ctx context.Context, owner, repo, branch, path string) ([]byte, error) {
-	resp, _, _, err := c.Github.Repositories.GetContents(ctx, owner, repo, path, &github.RepositoryContentGetOptions{Ref: branch})
+func (c *Client) GetFileFromBranch(ctx context.Context, branch, path string) ([]byte, error) {
+	resp, _, _, err := c.github.Repositories.GetContents(ctx, c.owner, c.repo, path, &github.RepositoryContentGetOptions{Ref: branch})
 	if err != nil {
 		return nil, err
 	}
@@ -117,13 +121,13 @@ func (c *Client) GetFileFromBranch(ctx context.Context, owner, repo, branch, pat
 	return []byte(content), nil
 }
 
-func (c *Client) DeleteUsersComments(ctx context.Context, owner, repo, user string, prNumber int) error {
-	comments, err := c.GetPRCommentsByUser(ctx, owner, repo, user, prNumber)
+func (c *Client) DeleteUsersComments(ctx context.Context) error {
+	comments, err := c.GetPRCommentsByUser(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to get all PR comments")
 	}
 	for _, comment := range comments {
-		_, err = c.Github.Issues.DeleteComment(ctx, owner, repo, *comment.ID)
+		_, err = c.github.Issues.DeleteComment(ctx, c.owner, c.repo, *comment.ID)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete comment")
 		}
@@ -131,8 +135,8 @@ func (c *Client) DeleteUsersComments(ctx context.Context, owner, repo, user stri
 	return nil
 }
 
-func (c *Client) CreateCommitStatus(ctx context.Context, owner, repo string, opts github.CreateCheckRunOptions) error {
-	_, _, err := c.Github.Checks.CreateCheckRun(ctx, owner, repo, opts)
+func (c *Client) CreateCommitStatus(ctx context.Context, opts github.CreateCheckRunOptions) error {
+	_, _, err := c.github.Checks.CreateCheckRun(ctx, c.owner, c.repo, opts)
 	if err != nil {
 		return errors.Wrap(err, "failed to create commit status")
 	}

@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"github.com/google/go-github/v48/github"
+	githubscm "github.com/spring-financial-group/peacock/pkg/git/github"
 )
 
 const (
@@ -16,22 +17,29 @@ type Git interface {
 	GetRepoOwnerAndName(dir string) (string, string, error)
 }
 
-type GitServer interface {
-	GetPullRequestBodyFromCommit(ctx context.Context, owner, repo string, sha string) (*string, error)
+type SCM interface {
+	GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*string, error)
 	// GetPullRequestBodyFromPRNumber returns the body of a pull request from pr number
-	GetPullRequestBodyFromPRNumber(ctx context.Context, owner, repo string, prNumber int) (*string, error)
+	GetPullRequestBodyFromPRNumber(ctx context.Context) (*string, error)
 	// CommentOnPR posts a comment on a pull request given the pr number
-	CommentOnPR(ctx context.Context, owner, repo string, prNumber int, body string) error
+	CommentOnPR(ctx context.Context, body string) error
 	// CommentError posts an error comment on a pull request given the pr number
-	CommentError(ctx context.Context, owner, repo string, prNumber int, err error) error
+	CommentError(ctx context.Context, err error) error
 	// GetPRComments returns all comments on a pull request given the pr number sorted by most recent comment first
-	GetPRComments(ctx context.Context, owner, repo string, prNumber int) ([]*github.IssueComment, error)
+	GetPRComments(ctx context.Context) ([]*github.IssueComment, error)
 	// GetFileFromBranch returns the file as a string from a branch
-	GetFileFromBranch(ctx context.Context, owner, repo, branch, path string) ([]byte, error)
+	GetFileFromBranch(ctx context.Context, branch, path string) ([]byte, error)
 	// GetPRCommentsByUser returns all the comments on a pull request by a user
-	GetPRCommentsByUser(ctx context.Context, owner, repo, user string, prNumber int) ([]*github.IssueComment, error)
+	GetPRCommentsByUser(ctx context.Context) ([]*github.IssueComment, error)
 	// DeleteUsersComments deletes all the comments on a pull request by a user
-	DeleteUsersComments(ctx context.Context, owner, repo, user string, prNumber int) error
+	DeleteUsersComments(ctx context.Context) error
 	// CreateCommitStatus creates a commit status on a commit
-	CreateCommitStatus(ctx context.Context, owner, repo string, opts github.CreateCheckRunOptions) error
+	CreateCommitStatus(ctx context.Context, opts github.CreateCheckRunOptions) error
+}
+
+type SCMClientFactory interface {
+	// GetClient returns a client for interacting with the SCM
+	GetClient(owner, repo, user string, prNumber int) *githubscm.Client
+	// RemoveClient removes a client from memory
+	RemoveClient(client *githubscm.Client)
 }

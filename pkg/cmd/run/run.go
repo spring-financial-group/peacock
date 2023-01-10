@@ -40,7 +40,7 @@ type Options struct {
 	CommentValidation bool
 	Subject           string
 
-	GitServerClient domain.GitServer
+	GitServerClient domain.SCM
 	Git             domain.Git
 	Handlers        map[string]domain.MessageHandler
 	Config          *feathers.Feathers

@@ -3,7 +3,6 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/spring-financial-group/peacock/pkg/config"
-	"github.com/spring-financial-group/peacock/pkg/git"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/health"
@@ -20,8 +19,7 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 	publicGroup.Use(logger.Middleware())
 	infraGroup := router.Group("/")
 
-	gitter := git.NewClient()
-	scm := github.NewClient(cfg.SCM.Token)
+	scmFactory := github.NewClientFactory(cfg.SCM.Token)
 
 	messageHandlers := handlers.InitMessageHandlers(
 		cfg.MessageHandlers.Slack.Token,
@@ -30,7 +28,7 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 		cfg.MessageHandlers.Webhook.Secret,
 	)
 
-	webhookUC := webhookuc.NewUseCase(&cfg.SCM, gitter, scm, messageHandlers)
+	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmFactory, messageHandlers)
 
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)
