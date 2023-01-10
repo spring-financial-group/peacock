@@ -2,6 +2,7 @@ package webhookuc
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -47,7 +48,7 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	for _, t := range types {
 		_, ok := w.handlers[t]
 		if !ok {
-			return w.handleError(ctx, owner, repoName, sha, prNumber, errors.Wrapf(err, "message handler %s not found", t))
+			return w.handleError(ctx, owner, repoName, sha, prNumber, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
 	}
 
@@ -132,6 +133,7 @@ func (w *WebHookUseCase) handleError(ctx context.Context, owner, repo, headSHA s
 	commentErr := w.scm.CommentError(ctx, owner, repo, prNumber, err)
 	if commentErr != nil {
 		log.Errorf("error commenting on PR: %v", commentErr)
+		return err
 	}
 
 	status := github.CreateCheckRunOptions{
