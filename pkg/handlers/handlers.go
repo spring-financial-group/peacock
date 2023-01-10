@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
 	"github.com/spring-financial-group/peacock/pkg/handlers/webhook"
@@ -17,9 +18,11 @@ var Valid = []string{Slack, Webhook}
 func InitMessageHandlers(slackToken, webhookURL, webhookToken, webhookSecret string) map[string]domain.MessageHandler {
 	handlers := make(map[string]domain.MessageHandler)
 	if slackToken != "" {
+		log.Info("Slack message handler initialised")
 		handlers[Slack] = slack.NewSlackHandler(slackToken)
 	}
 	if webhookURL != "" && webhookToken != "" && webhookSecret != "" {
+		log.Info("Webhook message handler initialised")
 		handlers[Webhook] = webhook.NewWebHookHandler(webhookURL, webhookToken, webhookSecret)
 	}
 	return handlers

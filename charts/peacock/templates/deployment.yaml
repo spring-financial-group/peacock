@@ -59,6 +59,8 @@ spec:
               secretKeyRef:
                 name: peacock
                 key: slack-token
+          - name: "WEBHOOK_AUTH_TOKEN"
+            value: "SomeTokenToGetThingsWorking"
           - name: "WEBHOOK_URL"
             value: {{ .Values.webhookUrl }}
 {{- range $pkey, $pval := .Values.env }}
