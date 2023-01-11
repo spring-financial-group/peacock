@@ -7,12 +7,10 @@ require (
 	github.com/cbrgm/githubevents v1.6.2
 	github.com/gin-gonic/gin v1.8.2
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/go-github/v47 v47.1.0
 	github.com/google/go-github/v48 v48.2.0
 	github.com/ilyakaznacheev/cleanenv v1.3.0
 	github.com/microcosm-cc/bluemonday v1.0.21
 	github.com/migueleliasweb/go-github-mock v0.0.12
-	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/russross/blackfriday v1.6.0
 	github.com/sirupsen/logrus v1.8.1

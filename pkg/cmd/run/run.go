@@ -190,7 +190,7 @@ func (o *Options) Run() error {
 		}
 		// Return before sending messages
 		if o.CommentValidation && breakdown != "" {
-			if err := o.GitServerClient.CommentOnPR(ctx, o.RepoOwner, o.RepoName, o.PRNumber, breakdown); err != nil {
+			if err := o.GitServerClient.CommentOnPR(ctx, breakdown); err != nil {
 				return err
 			}
 		}
@@ -217,7 +217,7 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
 		log.Info("Getting pull request from PR number")
-		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.RepoOwner, o.RepoName, o.PRNumber)
+		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx)
 	} else {
 		// If not then we can get it from the last commit in the local instance
 		log.Info("Getting pull request from last commit")
@@ -225,7 +225,7 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get latest commit sha")
 		}
-		body, err = o.GitServerClient.GetPullRequestBodyFromCommit(ctx, o.RepoOwner, o.RepoName, sha)
+		body, err = o.GitServerClient.GetPullRequestBodyFromCommit(ctx, sha)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get pull request")
@@ -325,7 +325,7 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Me
 		return false, "", err
 	}
 
-	comments, err := o.GitServerClient.GetPRComments(ctx, o.RepoOwner, o.RepoName, o.PRNumber)
+	comments, err := o.GitServerClient.GetPRComments(ctx)
 	if err != nil {
 		return false, "", err
 	}
@@ -372,7 +372,7 @@ func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
 		errorMsg := fmt.Sprintf("[Peacock] Validation Failed:\n%s", err.Error())
-		err = o.GitServerClient.CommentOnPR(ctx, o.RepoOwner, o.RepoName, o.PRNumber, errorMsg)
+		err = o.GitServerClient.CommentOnPR(ctx, errorMsg)
 		if err != nil {
 			panic(err)
 		}
@@ -407,7 +407,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 	}
 
 	if o.GitServerClient == nil {
-		o.GitServerClient = github.NewClient(o.GitHubToken)
+		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, "", o.GitHubToken, o.PRNumber)
 	}
 	return nil
 }

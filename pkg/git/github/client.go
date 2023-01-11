@@ -18,14 +18,18 @@ type Client struct {
 	prNumber int
 }
 
-func NewClient(token string) *Client {
+func NewClient(owner, repo, user, token string, prNumber int) *Client {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	return &Client{
-		github: github.NewClient(tc),
+		github:   github.NewClient(tc),
+		user:     user,
+		owner:    owner,
+		repo:     repo,
+		prNumber: prNumber,
 	}
 }
 
