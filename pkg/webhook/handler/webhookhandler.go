@@ -28,6 +28,7 @@ func NewHandler(cfg *config.SCM, group *gin.RouterGroup, uc *webhookuc.WebHookUs
 
 func (h *Handler) RegisterGitHubHooks() {
 	h.OnPullRequestEventOpened(h.handlePullRequestOpenedEvent)
+	h.OnPullRequestEventReopened(h.handlePullRequestOpenedEvent)
 	h.OnPullRequestEventClosed(h.handlePullRequestClosedEvent)
 	h.OnPullRequestEventEdited(h.handlePullRequestEditEvent)
 }
@@ -56,6 +57,7 @@ func (h *Handler) handlePullRequestOpenedEvent(deliveryID string, eventName stri
 func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
 	if !*event.PullRequest.Merged {
 		log.Infof("%s-PR%d was closed without merging. Skipping.", *event.Repo.FullName, *event.PullRequest.Number)
+		h.useCase.RemoveFeathers(*event.PullRequest.Head.Ref)
 		return nil
 	}
 	log.Infof("%s-PR%d was merged. Starting full run.", *event.Repo.FullName, *event.PullRequest.Number)

@@ -10,6 +10,14 @@ const (
 	GitHubURL = "https://github.com"
 )
 
+// Repository status constants
+const (
+	SuccessStatus = "success"
+	PendingStatus = "pending"
+	FailureStatus = "failure"
+	ErrorStatus   = "error"
+)
+
 type Git interface {
 	// GetLatestCommitSHA gets the SHA of the latest commit from the local env
 	GetLatestCommitSHA(dir string) (string, error)
@@ -35,6 +43,10 @@ type SCM interface {
 	DeleteUsersComments(ctx context.Context) error
 	// CreateCommitStatus creates a commit status on a commit
 	CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error
+	// CreateValidationCommitStatus creates a validation commit status on a commit
+	CreateValidationCommitStatus(ctx context.Context, ref string, state string) error
+	// CreateReleaseCommitStatus creates a release commit status on a commit
+	CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error
 }
 
 type SCMClientFactory interface {

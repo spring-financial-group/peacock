@@ -33,11 +33,17 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers ma
 }
 
 func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
+	ctx := context.Background()
+
 	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
 	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
-	go w.createPendingStatus(context.Background(), scm, sha)
 
-	ctx := context.Background()
+	// Set the current pipeline status to pending
+	go func() {
+		if err := scm.CreateValidationCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
+			log.Errorf("failed to create pending status: %v", err)
+		}
+	}()
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
@@ -64,7 +70,7 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return w.createSuccessStatus(ctx, scm, sha)
+		return scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
 	}
 
 	// Check that the teams in the messages exist in the feathers
@@ -91,7 +97,7 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 		oldHash, _ := comment.GetMetadataFromComment(*lastComment.Body)
 		if oldHash == newHash {
 			log.Infof("message hash matches previous comment, skipping new breakdown")
-			return nil
+			return scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
 		}
 	}
 
@@ -112,7 +118,7 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 	if err != nil {
 		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to comment breakdown on PR"))
 	}
-	err = w.createSuccessStatus(ctx, scm, sha)
+	err = scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}
@@ -120,11 +126,16 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 }
 
 func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
+	ctx := context.Background()
 	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
 	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
-	go w.createPendingStatus(context.Background(), scm, sha)
 
-	ctx := context.Background()
+	// Set the current pipeline status to pending
+	go func() {
+		if err := scm.CreateReleaseCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
+			log.Errorf("failed to create pending status: %v", err)
+		}
+	}()
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
@@ -151,7 +162,7 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return w.createSuccessStatus(ctx, scm, sha)
+		return scm.CreateReleaseCommitStatus(ctx, sha, domain.SuccessStatus)
 	}
 
 	// Check that the teams in the messages exist in the feathers
@@ -165,7 +176,10 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to send messages"))
 	}
 
-	err = w.createSuccessStatus(ctx, scm, sha)
+	// Once the messages have been sent we can remove the cached feathers
+	w.RemoveFeathers(*event.PullRequest.Head.Ref)
+
+	err = scm.CreateReleaseCommitStatus(ctx, sha, domain.SuccessStatus)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}
@@ -202,6 +216,10 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch
 	return feathers.feathers, nil
 }
 
+func (w *WebHookUseCase) RemoveFeathers(branch string) {
+	delete(w.feathers, branch)
+}
+
 func (w *WebHookUseCase) handleError(ctx context.Context, scm domain.SCM, headSHA string, err error) error {
 	// With any errors we want to comment on the PR & set the status to failed
 	commentErr := scm.CommentError(ctx, err)
@@ -210,44 +228,18 @@ func (w *WebHookUseCase) handleError(ctx context.Context, scm domain.SCM, headSH
 		return err
 	}
 
-	status := &github.RepoStatus{
-		State:       github.String("error"),
-		Description: github.String(err.Error()),
-		Context:     github.String("peacock-verify"),
-	}
-	statusErr := scm.CreateCommitStatus(ctx, headSHA, status)
+	statusErr := scm.CreateValidationCommitStatus(ctx, headSHA, domain.ErrorStatus)
 	if statusErr != nil {
 		log.Errorf("error setting commit status: %v", statusErr)
 	}
 	return err
 }
 
-func (w *WebHookUseCase) createSuccessStatus(ctx context.Context, scm domain.SCM, headSHA string) error {
-	status := &github.RepoStatus{
-		State:       github.String("success"),
-		Description: github.String("Peacock verified"),
-		Context:     github.String("peacock-verify"),
-	}
-	return scm.CreateCommitStatus(ctx, headSHA, status)
-}
-
-func (w *WebHookUseCase) createPendingStatus(ctx context.Context, scm domain.SCM, headSHA string) {
-	status := &github.RepoStatus{
-		State:       github.String("pending"),
-		Description: github.String("Peacock verifying"),
-		Context:     github.String("peacock-verify"),
-	}
-	err := scm.CreateCommitStatus(ctx, headSHA, status)
-	if err != nil {
-		log.Errorf("error setting pending commit status: %v", err)
-	}
-}
-
 // SendMessages send the messages using the message handlers
 func (w *WebHookUseCase) SendMessages(messages []message.Message, feathers *feather.Feathers) error {
 	var errs []error
 	for _, m := range messages {
-		err := w.SendMessage(m, feathers)
+		err := w.sendMessage(m, feathers)
 		if err != nil {
 			log.Error(err)
 			errs = append(errs, err)
@@ -260,8 +252,8 @@ func (w *WebHookUseCase) SendMessages(messages []message.Message, feathers *feat
 	return nil
 }
 
-// SendMessage pools the addresses of the different teams by contactType and sends the message to each
-func (w *WebHookUseCase) SendMessage(message message.Message, feathers *feather.Feathers) error {
+// sendMessage pools the addresses of the different teams by contactType and sends the message to each
+func (w *WebHookUseCase) sendMessage(message message.Message, feathers *feather.Feathers) error {
 	// We should pool the addresses by contact type so that we only send one message per contact type
 	addressPool := feathers.GetAddressPoolByTeamNames(message.TeamNames...)
 	for contactType, addresses := range addressPool {

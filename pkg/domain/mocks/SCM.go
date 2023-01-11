@@ -43,13 +43,41 @@ func (_m *SCM) CommentOnPR(ctx context.Context, body string) error {
 	return r0
 }
 
-// CreateCommitStatus provides a mock function with given fields: ctx, opts
-func (_m *SCM) CreateCommitStatus(ctx context.Context, opts github.CreateCheckRunOptions) error {
-	ret := _m.Called(ctx, opts)
+// CreateCommitStatus provides a mock function with given fields: ctx, ref, status
+func (_m *SCM) CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error {
+	ret := _m.Called(ctx, ref, status)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, github.CreateCheckRunOptions) error); ok {
-		r0 = rf(ctx, opts)
+	if rf, ok := ret.Get(0).(func(context.Context, string, *github.RepoStatus) error); ok {
+		r0 = rf(ctx, ref, status)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CreateReleaseCommitStatus provides a mock function with given fields: ctx, ref, state
+func (_m *SCM) CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error {
+	ret := _m.Called(ctx, ref, state)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, ref, state)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CreateValidationCommitStatus provides a mock function with given fields: ctx, ref, state
+func (_m *SCM) CreateValidationCommitStatus(ctx context.Context, ref string, state string) error {
+	ret := _m.Called(ctx, ref, state)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, ref, state)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -6,8 +6,23 @@ import (
 	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/spring-financial-group/peacock/pkg/utils"
 	"golang.org/x/oauth2"
 	"sort"
+)
+
+// Base repository statuses to use for creating a commit status
+var (
+	ValidationStatus = &github.RepoStatus{
+		State:       nil,
+		Description: utils.NewPtr("Validates the PR body against the feathers"),
+		Context:     utils.NewPtr("peacock-validation"),
+	}
+	ReleaseStatus = &github.RepoStatus{
+		State:       nil,
+		Description: utils.NewPtr("Validates the PR body against the feathers"),
+		Context:     utils.NewPtr("peacock-release"),
+	}
 )
 
 type Client struct {
@@ -140,6 +155,26 @@ func (c *Client) DeleteUsersComments(ctx context.Context) error {
 }
 
 func (c *Client) CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error {
+	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
+	if err != nil {
+		return errors.Wrap(err, "failed to create commit status")
+	}
+	return nil
+}
+
+func (c *Client) CreateValidationCommitStatus(ctx context.Context, ref string, state string) error {
+	status := ValidationStatus
+	status.State = &state
+	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
+	if err != nil {
+		return errors.Wrap(err, "failed to create commit status")
+	}
+	return nil
+}
+
+func (c *Client) CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error {
+	status := ReleaseStatus
+	status.State = &state
 	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
 	if err != nil {
 		return errors.Wrap(err, "failed to create commit status")
