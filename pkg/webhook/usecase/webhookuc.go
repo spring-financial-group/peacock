@@ -17,6 +17,9 @@ type WebHookUseCase struct {
 	cfg        *config.SCM
 	scmFactory domain.SCMClientFactory
 	handlers   map[string]domain.MessageHandler
+
+	// Todo: cache feathers and messages better
+	feathers map[string]*feathersInfo
 }
 
 func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers map[string]domain.MessageHandler) *WebHookUseCase {
@@ -24,6 +27,7 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers ma
 		cfg:        cfg,
 		scmFactory: scmFactory,
 		handlers:   handlers,
+		feathers:   make(map[string]*feathersInfo),
 	}
 }
 
@@ -35,7 +39,7 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	ctx := context.Background()
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
-	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref)
+	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
 	if err != nil {
 		return w.handleError(ctx, scm, sha, err)
 	}
@@ -59,7 +63,7 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return nil
+		return w.createSuccessStatus(ctx, scm, sha)
 	}
 
 	// Check that the teams in the messages exist in the feathers
@@ -119,13 +123,34 @@ func (w *WebHookUseCase) HandlePRMerge(event *github.PullRequestEvent) error {
 	return nil
 }
 
-func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch string) (*feather.Feathers, error) {
-	// Get the feathers for the pull request, should cache this as this will run for any edited event
+type feathersInfo struct {
+	feathers *feather.Feathers
+	sha      string
+}
+
+func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch, sha string) (*feather.Feathers, error) {
+	// Get the feathers for the branch and check that it matches the sha
+	feathers, ok := w.feathers[branch]
+	if ok && feathers.sha == sha {
+		log.Infof("using cached feathers for branch %s", branch)
+		return feathers.feathers, nil
+	}
+
+	log.Infof("fetching feathers for branch %s", branch)
+	feathers = &feathersInfo{
+		sha: sha,
+	}
+
 	data, err := scm.GetFileFromBranch(ctx, branch, ".peacock/feathers.yaml")
 	if err != nil {
 		return nil, err
 	}
-	return feather.GetFeathersFromBytes(data)
+	feathers.feathers, err = feather.GetFeathersFromBytes(data)
+	if err != nil {
+		return nil, err
+	}
+	w.feathers[branch] = feathers
+	return feathers.feathers, nil
 }
 
 func (w *WebHookUseCase) handleError(ctx context.Context, scm domain.SCM, headSHA string, err error) error {
@@ -168,4 +193,3 @@ func (w *WebHookUseCase) createPendingStatus(ctx context.Context, scm domain.SCM
 		log.Errorf("error setting pending commit status: %v", err)
 	}
 }
-
