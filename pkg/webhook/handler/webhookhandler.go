@@ -40,6 +40,7 @@ func (h *Handler) RegisterGitHubHooks() {
 // @Success 200
 // @Router /webhooks [post]
 func (h *Handler) HandleEvents(c *gin.Context) {
+	log.Infof("Received webhook event")
 	err := h.HandleEventRequest(c.Request)
 	if err != nil {
 		log.Error(err)
