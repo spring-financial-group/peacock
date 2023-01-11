@@ -49,7 +49,8 @@ func (h *Handler) HandleEvents(c *gin.Context) {
 }
 
 func (h *Handler) handlePullRequestOpenedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
-	return nil
+	log.Infof("%s-PR%d has been opened. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
+	return h.useCase.ValidatePeacock(event)
 }
 
 func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
@@ -58,10 +59,10 @@ func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName stri
 		return nil
 	}
 	log.Infof("%s-PR%d was merged. Starting full run.", *event.Repo.FullName, *event.PullRequest.Number)
-	return nil
+	return h.useCase.RunPeacock(event)
 }
 
 func (h *Handler) handlePullRequestEditEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
 	log.Infof("%s-PR%d has been edited. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
-	return h.useCase.HandleDryRun(event)
+	return h.useCase.ValidatePeacock(event)
 }

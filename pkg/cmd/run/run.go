@@ -17,7 +17,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -256,9 +255,8 @@ func (o *Options) SendMessages(messages []message.Message) error {
 
 // SendMessage pools the addresses of the different teams by contactType and sends the message to each
 func (o *Options) SendMessage(message message.Message) error {
-	teams := o.Config.GetTeamsByNames(message.TeamNames...)
 	// We should pool the addresses by contact type so that we only send one message per contact type
-	addressPool := o.poolAddressesByContactType(teams)
+	addressPool := o.Config.GetAddressPoolByTeamNames(message.TeamNames...)
 	for contactType, addresses := range addressPool {
 		err := o.Handlers[contactType].Send(message.Content, o.Subject, addresses)
 		if err != nil {
@@ -267,14 +265,6 @@ func (o *Options) SendMessage(message message.Message) error {
 		log.Infof("Message successfully sent to %s via %s\n", strings.Join(addresses, ", "), contactType)
 	}
 	return nil
-}
-
-func (o *Options) poolAddressesByContactType(teams []feathers.Team) map[string][]string {
-	addressPool := make(map[string][]string)
-	for _, team := range teams {
-		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
-	}
-	return addressPool
 }
 
 // ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers
@@ -338,7 +328,7 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Me
 	for _, c := range comments {
 		// Comments sorted by most recent first, so the first matching comment
 		// was the last one posted by the bot
-		previousHash = o.getHashFromComment(*c.Body)
+		previousHash, _ = comment.GetMetadataFromComment(*c.Body)
 		if previousHash != "" {
 			log.Info("Found previous hash in comment")
 			break
@@ -356,15 +346,6 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Me
 	}
 	log.Info("Previous hash does not match current hash, messages have changed")
 	return true, currentHash, nil
-}
-
-func (o *Options) getHashFromComment(comment string) string {
-	re := regexp.MustCompile(`(?m)<!-- hash: ([a-zA-Z0-9]+) -->`)
-	matches := re.FindStringSubmatch(comment)
-	if len(matches) != 2 {
-		return ""
-	}
-	return matches[1]
 }
 
 // PostErrorToPR posts an error to the pull request as a comment

@@ -109,6 +109,15 @@ func (f *Feathers) ExistsInFeathers(teamNames ...string) error {
 	return nil
 }
 
+func (f *Feathers) GetAddressPoolByTeamNames(teamNames ...string) map[string][]string {
+	wantedTeams := f.GetTeamsByNames(teamNames...)
+	addressPool := make(map[string][]string, len(f.GetAllContactTypes()))
+	for _, team := range wantedTeams {
+		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
+	}
+	return addressPool
+}
+
 func (t *Team) validate() error {
 	if t.Name == "" {
 		return errors.New("no team name found")

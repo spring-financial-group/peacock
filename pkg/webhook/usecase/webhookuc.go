@@ -11,6 +11,7 @@ import (
 	feather "github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/message"
+	"strings"
 )
 
 type WebHookUseCase struct {
@@ -31,7 +32,7 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers ma
 	}
 }
 
-func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
+func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
 	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
 	go w.createPendingStatus(context.Background(), scm, sha)
@@ -118,8 +119,56 @@ func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	return nil
 }
 
-func (w *WebHookUseCase) HandlePRMerge(event *github.PullRequestEvent) error {
-	// Should be pretty simple. If we cache all the info about the PR, we can just send the messages.
+func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
+	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
+	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
+	go w.createPendingStatus(context.Background(), scm, sha)
+
+	ctx := context.Background()
+
+	// Get the feathers for the pull request, should cache this as this will run for any edited event
+	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
+	if err != nil {
+		return w.handleError(ctx, scm, sha, err)
+	}
+
+	// Check that the relevant communication methods have been configured for the feathers
+	types := feathers.GetAllContactTypes()
+	if err != nil {
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to get contact types"))
+	}
+	for _, t := range types {
+		_, ok := w.handlers[t]
+		if !ok {
+			return w.handleError(ctx, scm, sha, errors.New(fmt.Sprintf("message handler %s not found", t)))
+		}
+	}
+
+	// Parse the PR body for any messages
+	messages, err := message.ParseMessagesFromMarkdown(event.PullRequest.GetBody())
+	if err != nil {
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to parse messages from markdown"))
+	}
+	if messages == nil {
+		log.Infof("no messages found in PR body, skipping")
+		return w.createSuccessStatus(ctx, scm, sha)
+	}
+
+	// Check that the teams in the messages exist in the feathers
+	for _, m := range messages {
+		if err = feathers.ExistsInFeathers(m.TeamNames...); err != nil {
+			return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to find team in feathers"))
+		}
+	}
+
+	if err = w.SendMessages(messages, feathers); err != nil {
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to send messages"))
+	}
+
+	err = w.createSuccessStatus(ctx, scm, sha)
+	if err != nil {
+		log.Errorf("failed to create success status: %v", err)
+	}
 	return nil
 }
 
@@ -192,4 +241,35 @@ func (w *WebHookUseCase) createPendingStatus(ctx context.Context, scm domain.SCM
 	if err != nil {
 		log.Errorf("error setting pending commit status: %v", err)
 	}
+}
+
+// SendMessages send the messages using the message handlers
+func (w *WebHookUseCase) SendMessages(messages []message.Message, feathers *feather.Feathers) error {
+	var errs []error
+	for _, m := range messages {
+		err := w.SendMessage(m, feathers)
+		if err != nil {
+			log.Error(err)
+			errs = append(errs, err)
+			continue
+		}
+	}
+	if len(errs) > 0 {
+		return errors.New("failed to send messages")
+	}
+	return nil
+}
+
+// SendMessage pools the addresses of the different teams by contactType and sends the message to each
+func (w *WebHookUseCase) SendMessage(message message.Message, feathers *feather.Feathers) error {
+	// We should pool the addresses by contact type so that we only send one message per contact type
+	addressPool := feathers.GetAddressPoolByTeamNames(message.TeamNames...)
+	for contactType, addresses := range addressPool {
+		err := w.handlers[contactType].Send(message.Content, "test subject", addresses)
+		if err != nil {
+			return errors.Wrapf(err, "failed to send message")
+		}
+		log.Infof("Message successfully sent to %s via %s\n", strings.Join(addresses, ", "), contactType)
+	}
+	return nil
 }
