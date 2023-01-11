@@ -34,7 +34,7 @@ type SCM interface {
 	// DeleteUsersComments deletes all the comments on a pull request by a user
 	DeleteUsersComments(ctx context.Context) error
 	// CreateCommitStatus creates a commit status on a commit
-	CreateCommitStatus(ctx context.Context, opts github.CreateCheckRunOptions) error
+	CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error
 }
 
 type SCMClientFactory interface {

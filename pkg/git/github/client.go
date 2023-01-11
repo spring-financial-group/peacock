@@ -139,8 +139,8 @@ func (c *Client) DeleteUsersComments(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) CreateCommitStatus(ctx context.Context, opts github.CreateCheckRunOptions) error {
-	_, _, err := c.github.Checks.CreateCheckRun(ctx, c.owner, c.repo, opts)
+func (c *Client) CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error {
+	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
 	if err != nil {
 		return errors.Wrap(err, "failed to create commit status")
 	}

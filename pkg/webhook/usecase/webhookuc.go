@@ -11,7 +11,6 @@ import (
 	feather "github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/message"
-	"time"
 )
 
 type WebHookUseCase struct {
@@ -31,6 +30,8 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers ma
 func (w *WebHookUseCase) HandleDryRun(event *github.PullRequestEvent) error {
 	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
 	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
+	go w.createPendingStatus(context.Background(), scm, sha)
+
 	ctx := context.Background()
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
@@ -135,17 +136,12 @@ func (w *WebHookUseCase) handleError(ctx context.Context, scm domain.SCM, headSH
 		return err
 	}
 
-	status := github.CreateCheckRunOptions{
-		Name:        "peacock-verify",
-		HeadSHA:     headSHA,
-		DetailsURL:  nil,
-		ExternalID:  nil,
-		Conclusion:  github.String("failure"),
-		CompletedAt: &github.Timestamp{Time: time.Now()},
-		Output:      nil,
-		Actions:     nil,
+	status := &github.RepoStatus{
+		State:       github.String("error"),
+		Description: github.String(err.Error()),
+		Context:     github.String("peacock-verify"),
 	}
-	statusErr := scm.CreateCommitStatus(ctx, status)
+	statusErr := scm.CreateCommitStatus(ctx, headSHA, status)
 	if statusErr != nil {
 		log.Errorf("error setting commit status: %v", statusErr)
 	}
@@ -153,15 +149,23 @@ func (w *WebHookUseCase) handleError(ctx context.Context, scm domain.SCM, headSH
 }
 
 func (w *WebHookUseCase) createSuccessStatus(ctx context.Context, scm domain.SCM, headSHA string) error {
-	status := github.CreateCheckRunOptions{
-		Name:        "peacock-verify",
-		HeadSHA:     headSHA,
-		DetailsURL:  nil,
-		ExternalID:  nil,
-		Conclusion:  github.String("success"),
-		CompletedAt: &github.Timestamp{Time: time.Now()},
-		Output:      nil,
-		Actions:     nil,
+	status := &github.RepoStatus{
+		State:       github.String("success"),
+		Description: github.String("Peacock verified"),
+		Context:     github.String("peacock-verify"),
 	}
-	return scm.CreateCommitStatus(ctx, status)
+	return scm.CreateCommitStatus(ctx, headSHA, status)
 }
+
+func (w *WebHookUseCase) createPendingStatus(ctx context.Context, scm domain.SCM, headSHA string) {
+	status := &github.RepoStatus{
+		State:       github.String("pending"),
+		Description: github.String("Peacock verifying"),
+		Context:     github.String("peacock-verify"),
+	}
+	err := scm.CreateCommitStatus(ctx, headSHA, status)
+	if err != nil {
+		log.Errorf("error setting pending commit status: %v", err)
+	}
+}
+
