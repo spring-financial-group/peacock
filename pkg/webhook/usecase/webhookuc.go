@@ -19,7 +19,6 @@ type WebHookUseCase struct {
 	scmFactory domain.SCMClientFactory
 	handlers   map[string]domain.MessageHandler
 
-	// Todo: cache feathers and messages better
 	feathers map[string]*feathersInfo
 }
 
@@ -175,6 +174,7 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 	if err = w.SendMessages(messages, feathers); err != nil {
 		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to send messages"))
 	}
+	log.Infof("%s message(s) sent")
 
 	// Once the messages have been sent we can remove the cached feathers
 	w.RemoveFeathers(*event.PullRequest.Head.Ref)

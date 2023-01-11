@@ -41,7 +41,6 @@ func (h *Handler) RegisterGitHubHooks() {
 // @Success 200
 // @Router /webhooks [post]
 func (h *Handler) HandleEvents(c *gin.Context) {
-	log.Infof("Received webhook event")
 	err := h.HandleEventRequest(c.Request)
 	if err != nil {
 		log.Error(err)
@@ -50,7 +49,7 @@ func (h *Handler) HandleEvents(c *gin.Context) {
 }
 
 func (h *Handler) handlePullRequestOpenedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
-	log.Infof("%s-PR%d has been opened. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
+	log.Infof("%s-PR%d was opened. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
 	return h.useCase.ValidatePeacock(event)
 }
 
