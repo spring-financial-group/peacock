@@ -39,11 +39,9 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
 
 	// Set the current pipeline status to pending
-	go func() {
-		if err := scm.CreateValidationCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
-			log.Errorf("failed to create pending status: %v", err)
-		}
-	}()
+	if err := scm.CreateValidationCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to create pending status"))
+	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
@@ -64,6 +62,10 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 	}
 
 	// Parse the PR body for any messages
+	if event.PullRequest.Body == nil {
+		log.Infof("PR body is nil, skipping")
+		return scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
+	}
 	messages, err := message.ParseMessagesFromMarkdown(event.PullRequest.GetBody())
 	if err != nil {
 		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to parse messages from markdown"))
@@ -131,11 +133,9 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
 
 	// Set the current pipeline status to pending
-	go func() {
-		if err := scm.CreateReleaseCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
-			log.Errorf("failed to create pending status: %v", err)
-		}
-	}()
+	if err := scm.CreateValidationCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to create pending status"))
+	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
@@ -195,11 +195,9 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch
 	// Get the feathers for the branch and check that it matches the sha
 	feathers, ok := w.feathers[branch]
 	if ok && feathers.sha == sha {
-		log.Infof("using cached feathers for branch %s", branch)
 		return feathers.feathers, nil
 	}
 
-	log.Infof("fetching feathers for branch %s", branch)
 	feathers = &feathersInfo{
 		sha: sha,
 	}
