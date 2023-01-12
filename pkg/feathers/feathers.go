@@ -15,13 +15,20 @@ const (
 )
 
 type Feathers struct {
-	Teams []Team `yaml:"teams"`
+	Teams  []Team `yaml:"teams"`
+	Config Config `yaml:"config"`
 }
 
 type Team struct {
 	Name        string   `yaml:"name"`
 	ContactType string   `yaml:"contactType"`
 	Addresses   []string `yaml:"addresses"`
+}
+
+type Config struct {
+	Messages struct {
+		Subject string `yaml:"subject"`
+	} `yaml:"messages"`
 }
 
 func GetFeathersFromFile() (*Feathers, error) {

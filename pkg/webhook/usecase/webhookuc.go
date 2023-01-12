@@ -261,11 +261,11 @@ func (w *WebHookUseCase) sendMessage(message message.Message, feathers *feather.
 	// We should pool the addresses by contact type so that we only send one message per contact type
 	addressPool := feathers.GetAddressPoolByTeamNames(message.TeamNames...)
 	for contactType, addresses := range addressPool {
-		err := w.handlers[contactType].Send(message.Content, "test subject", addresses)
+		err := w.handlers[contactType].Send(message.Content, feathers.Config.Messages.Subject, addresses)
 		if err != nil {
 			return errors.Wrapf(err, "failed to send message")
 		}
-		log.Infof("Message successfully sent to %s via %s\n", strings.Join(addresses, ", "), contactType)
+		log.Infof("Message successfully sent to %s via %s", strings.Join(addresses, ", "), contactType)
 	}
 	return nil
 }
