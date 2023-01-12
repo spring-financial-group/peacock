@@ -115,6 +115,7 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 	}
 
 	// Comment on the PR with the breakdown
+	log.Info("commenting on PR with message breakdown")
 	err = scm.CommentOnPR(ctx, breakdown)
 	if err != nil {
 		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to comment breakdown on PR"))
@@ -138,7 +139,7 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 	}
 
 	// Set the current pipeline status to pending
-	if err := scm.CreateValidationCommitStatus(ctx, *latestCommit.SHA, domain.PendingStatus); err != nil {
+	if err := scm.CreateReleaseCommitStatus(ctx, *latestCommit.SHA, domain.PendingStatus); err != nil {
 		return w.handleError(ctx, scm, *latestCommit.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
@@ -241,16 +242,16 @@ func (w *WebHookUseCase) handleError(ctx context.Context, scm domain.SCM, headSH
 
 // SendMessages send the messages using the message handlers
 func (w *WebHookUseCase) SendMessages(messages []message.Message, feathers *feather.Feathers) error {
-	var errs []error
+	var errCount int
 	for _, m := range messages {
 		err := w.sendMessage(m, feathers)
 		if err != nil {
 			log.Error(err)
-			errs = append(errs, err)
+			errCount++
 			continue
 		}
 	}
-	if len(errs) > 0 {
+	if errCount > 0 {
 		return errors.New("failed to send messages")
 	}
 	return nil
