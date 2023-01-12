@@ -1,7 +1,6 @@
 package git
 
 import (
-	"github.com/spring-financial-group/peacock/pkg/domain"
 	"net/url"
 	"os/exec"
 	"strings"
@@ -10,12 +9,12 @@ import (
 type Client struct {
 }
 
-func NewClient() domain.Git {
-	return &Client{}
+func NewClient() Client {
+	return Client{}
 }
 
-func (c *Client) GetRepoOwnerAndName() (string, string, error) {
-	command, err := c.git("config", "--get", "remote.origin.url")
+func (c Client) GetRepoOwnerAndName(dir string) (string, string, error) {
+	command, err := c.git(dir, "config", "--get", "remote.origin.url")
 	if err != nil {
 		return "", "", err
 	}
@@ -29,12 +28,13 @@ func (c *Client) GetRepoOwnerAndName() (string, string, error) {
 	return split[0], split[1], nil
 }
 
-func (c *Client) GetLatestCommitSHA() (string, error) {
-	return c.git("rev-parse", "HEAD")
+func (c Client) GetLatestCommitSHA(dir string) (string, error) {
+	return c.git(dir, "rev-parse", "HEAD")
 }
 
-func (c *Client) git(args ...string) (string, error) {
+func (c Client) git(dir string, args ...string) (string, error) {
 	e := exec.Command("git", args...)
+	e.Dir = dir
 	out, err := e.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }

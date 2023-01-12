@@ -1,20 +1,22 @@
 package feathers
 
 import (
-	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/utils"
+	"gopkg.in/yaml.v3"
+	"os"
 	"regexp"
 )
 
 const (
-	configPath          = ".peacock/feathers.yaml"
+	feathersPath        = ".peacock/feathers.yaml"
 	slackChannelIDRegex = "^[A-Z0-9]{9,11}$"
 )
 
 type Feathers struct {
-	Teams []Team `yaml:"teams"`
+	Teams  []Team `yaml:"teams"`
+	Config Config `yaml:"config"`
 }
 
 type Team struct {
@@ -23,21 +25,36 @@ type Team struct {
 	Addresses   []string `yaml:"addresses"`
 }
 
-func LoadConfig() (*Feathers, error) {
-	exists, err := utils.Exists(configPath)
+type Config struct {
+	Messages struct {
+		Subject string `yaml:"subject"`
+	} `yaml:"messages"`
+}
+
+func GetFeathersFromFile() (*Feathers, error) {
+	exists, err := utils.Exists(feathersPath)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.Errorf("could not find %s", configPath)
+		return nil, errors.Errorf("could not find %s", feathersPath)
 	}
 
-	cfg := new(Feathers)
-	err = cleanenv.ReadConfig(configPath, cfg)
+	data, err := os.ReadFile(feathersPath)
 	if err != nil {
 		return nil, err
 	}
-	return cfg, cfg.validate()
+
+	return GetFeathersFromBytes(data)
+}
+
+func GetFeathersFromBytes(data []byte) (*Feathers, error) {
+	feathers := new(Feathers)
+	err := yaml.Unmarshal(data, feathers)
+	if err != nil {
+		return nil, err
+	}
+	return feathers, feathers.validate()
 }
 
 func (f *Feathers) validate() error {
@@ -87,6 +104,25 @@ func (f *Feathers) GetContactTypesByTeamNames(names ...string) []string {
 		types = append(types, t.ContactType)
 	}
 	return types
+}
+
+func (f *Feathers) ExistsInFeathers(teamNames ...string) error {
+	allTeamsInFeathers := f.GetAllTeamNames()
+	for _, name := range teamNames {
+		if !utils.ExistsInSlice(name, allTeamsInFeathers) {
+			return errors.Errorf("team %s does not exist in feathers", name)
+		}
+	}
+	return nil
+}
+
+func (f *Feathers) GetAddressPoolByTeamNames(teamNames ...string) map[string][]string {
+	wantedTeams := f.GetTeamsByNames(teamNames...)
+	addressPool := make(map[string][]string, len(f.GetAllContactTypes()))
+	for _, team := range wantedTeams {
+		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
+	}
+	return addressPool
 }
 
 func (t *Team) validate() error {

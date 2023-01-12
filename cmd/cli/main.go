@@ -1,4 +1,4 @@
-package app
+package cli
 
 import (
 	"github.com/spring-financial-group/peacock/pkg/cmd"

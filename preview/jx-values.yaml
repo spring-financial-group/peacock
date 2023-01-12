@@ -1,0 +1,5 @@
+# this file is replaced by the development environemnt values
+# when building a Preview by `jx preview create`
+# but we need some file to be here to avoid `helmfile destroy` failing
+# when we run `jx preview destroy`
+dummy: value

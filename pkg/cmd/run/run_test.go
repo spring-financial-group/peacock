@@ -3,7 +3,7 @@ package run_test
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v48/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
@@ -156,7 +156,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), opts.PRNumber).Return(tt.returnedComments, nil).Once()
+		mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), "", "", opts.PRNumber).Return(tt.returnedComments, nil).Once()
 
 		t.Run(tt.name, func(t *testing.T) {
 			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
@@ -234,12 +234,12 @@ func TestOptions_Run(t *testing.T) {
 
 	for _, tt := range testCases {
 		if tt.opts.DryRun {
-			mockGitServer.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(tt.prBody, nil).Once()
-			mockGitServer.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber, mock.AnythingOfType("string")).Return(nil).Once()
-			mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), tt.opts.PRNumber).Return(nil, nil)
+			mockGitServer.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber).Return(tt.prBody, nil).Once()
+			mockGitServer.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber, mock.AnythingOfType("string")).Return(nil).Once()
+			mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber).Return(nil, nil)
 		} else {
-			mockGitClient.On("GetLatestCommitSHA").Return("SHA", nil)
-			mockGitServer.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
+			mockGitClient.On("GetLatestCommitSHA", "").Return("SHA", nil)
+			mockGitServer.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, "SHA").Return(tt.prBody, nil).Once()
 		}
 
 		for _, team := range tt.opts.Config.Teams {
@@ -285,7 +285,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some infrastructure\nrelated things",
 				},
 			},
-			expectedBreakdown: "[Peacock] Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 -->",
+			expectedBreakdown: "[Peacock] Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 type: breakdown -->\n",
 		},
 		{
 			name: "MultipleMessages&MultipleTeams",
@@ -308,11 +308,11 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some ml\nrelated things",
 				},
 			},
-			expectedBreakdown: "[Peacock] Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 -->",
+			expectedBreakdown: "[Peacock] Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 type: breakdown -->\n",
 		},
 	}
 
-	mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), 0).Return(nil, nil)
+	mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), mock.Anything, mock.Anything, 0).Return(nil, nil)
 
 	for _, tt := range testCases {
 
