@@ -47,6 +47,8 @@ type SCM interface {
 	CreateValidationCommitStatus(ctx context.Context, ref string, state string) error
 	// CreateReleaseCommitStatus creates a release commit status on a commit
 	CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error
+	// GetLatestCommitInBranch returns the most recent commit in a branch
+	GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error)
 }
 
 type SCMClientFactory interface {

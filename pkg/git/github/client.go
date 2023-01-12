@@ -181,3 +181,11 @@ func (c *Client) CreateReleaseCommitStatus(ctx context.Context, ref string, stat
 	}
 	return nil
 }
+
+func (c *Client) GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error) {
+	commit, _, err := c.github.Repositories.GetCommit(ctx, c.owner, c.repo, branch, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get latest commit in branch")
+	}
+	return commit, nil
+}
