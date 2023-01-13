@@ -132,15 +132,9 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
 	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
 
-	// We need to get the most recent commit in the default branch so that we can set its status
-	latestCommit, err := scm.GetLatestCommitInBranch(ctx, *event.Repo.DefaultBranch)
-	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to get latest commit in default branch"))
-	}
-
 	// Set the current pipeline status to pending
-	if err := scm.CreateReleaseCommitStatus(ctx, *latestCommit.SHA, domain.PendingStatus); err != nil {
-		return w.handleError(ctx, scm, *latestCommit.SHA, errors.Wrap(err, "failed to create pending status"))
+	if err := scm.CreateReleaseCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to create pending status"))
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
@@ -152,12 +146,12 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 	// Check that the relevant communication methods have been configured for the feathers
 	types := feathers.GetAllContactTypes()
 	if err != nil {
-		return w.handleError(ctx, scm, *latestCommit.SHA, errors.Wrap(err, "failed to get contact types"))
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to get contact types"))
 	}
 	for _, t := range types {
 		_, ok := w.handlers[t]
 		if !ok {
-			return w.handleError(ctx, scm, *latestCommit.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
+			return w.handleError(ctx, scm, sha, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
 	}
 
@@ -168,25 +162,25 @@ func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return scm.CreateReleaseCommitStatus(ctx, *latestCommit.SHA, domain.SuccessStatus)
+		return scm.CreateReleaseCommitStatus(ctx, sha, domain.SuccessStatus)
 	}
 
 	// Check that the teams in the messages exist in the feathers
 	for _, m := range messages {
 		if err = feathers.ExistsInFeathers(m.TeamNames...); err != nil {
-			return w.handleError(ctx, scm, *latestCommit.SHA, errors.Wrap(err, "failed to find team in feathers"))
+			return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to find team in feathers"))
 		}
 	}
 
 	if err = w.SendMessages(messages, feathers); err != nil {
-		return w.handleError(ctx, scm, *latestCommit.SHA, errors.Wrap(err, "failed to send messages"))
+		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to send messages"))
 	}
 	log.Infof("%d message(s) sent", len(messages))
 
 	// Once the messages have been sent we can remove the cached feathers
 	w.RemoveFeathers(*event.PullRequest.Head.Ref)
 
-	err = scm.CreateReleaseCommitStatus(ctx, *latestCommit.SHA, domain.SuccessStatus)
+	err = scm.CreateReleaseCommitStatus(ctx, sha, domain.SuccessStatus)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}
