@@ -211,8 +211,14 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch
 
 	data, err := scm.GetFileFromBranch(ctx, branch, ".peacock/feathers.yaml")
 	if err != nil {
-		return nil, err
+		switch err.(type) {
+		case *domain.ErrFileNotFound:
+			return nil, errors.New("feathers does not exist in branch")
+		default:
+			return nil, err
+		}
 	}
+
 	feathers.feathers, err = feather.GetFeathersFromBytes(data)
 	if err != nil {
 		return nil, err

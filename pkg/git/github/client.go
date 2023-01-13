@@ -6,8 +6,10 @@ import (
 	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"golang.org/x/oauth2"
+	"net/http"
 	"sort"
 )
 
@@ -129,11 +131,15 @@ func (c *Client) GetPRCommentsByUser(ctx context.Context) ([]*github.IssueCommen
 }
 
 func (c *Client) GetFileFromBranch(ctx context.Context, branch, path string) ([]byte, error) {
-	resp, _, _, err := c.github.Repositories.GetContents(ctx, c.owner, c.repo, path, &github.RepositoryContentGetOptions{Ref: branch})
+	fileContent, _, resp, err := c.github.Repositories.GetContents(ctx, c.owner, c.repo, path, &github.RepositoryContentGetOptions{Ref: branch})
 	if err != nil {
-		return nil, err
+		if resp.StatusCode == http.StatusNotFound {
+			err = &domain.ErrFileNotFound{Path: path}
+		}
+		return nil, errors.Wrap(err, "failed to get file from branch")
 	}
-	content, err := resp.GetContent()
+
+	content, err := fileContent.GetContent()
 	if err != nil {
 		return nil, err
 	}
