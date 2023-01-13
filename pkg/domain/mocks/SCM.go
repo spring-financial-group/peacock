@@ -122,6 +122,20 @@ func (_m *SCM) GetFileFromBranch(ctx context.Context, branch string, path string
 	return r0, r1
 }
 
+// GetKey provides a mock function with given fields:
+func (_m *SCM) GetKey() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // GetLatestCommitInBranch provides a mock function with given fields: ctx, branch
 func (_m *SCM) GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error) {
 	ret := _m.Called(ctx, branch)

@@ -195,3 +195,7 @@ func (c *Client) GetLatestCommitInBranch(ctx context.Context, branch string) (*g
 	}
 	return commit, nil
 }
+
+func (c *Client) GetKey() string {
+	return fmt.Sprintf("%s/%s/%s/%d", c.user, c.owner, c.repo, c.prNumber)
+}

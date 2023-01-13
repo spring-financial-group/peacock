@@ -3,7 +3,6 @@ package domain
 import (
 	"context"
 	"github.com/google/go-github/v48/github"
-	githubscm "github.com/spring-financial-group/peacock/pkg/git/github"
 )
 
 const (
@@ -49,11 +48,13 @@ type SCM interface {
 	CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error
 	// GetLatestCommitInBranch returns the most recent commit in a branch
 	GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error)
+	// GetKey returns the identifier of the SCM
+	GetKey() string
 }
 
 type SCMClientFactory interface {
 	// GetClient returns a client for interacting with the SCM
-	GetClient(owner, repo, user string, prNumber int) *githubscm.Client
+	GetClient(owner, repo, user string, prNumber int) SCM
 	// RemoveClient removes a client from memory
-	RemoveClient(client *githubscm.Client)
+	RemoveClient(key string)
 }

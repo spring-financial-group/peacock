@@ -34,6 +34,7 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers ma
 func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
 	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
+	defer w.scmFactory.RemoveClient(scm.GetKey())
 
 	// Set the current pipeline status to pending
 	if err := scm.CreateValidationCommitStatus(ctx, e.SHA, domain.PendingStatus); err != nil {
@@ -128,6 +129,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
 	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
+	defer w.scmFactory.RemoveClient(scm.GetKey())
 
 	// Set the current pipeline status to pending
 	if err := scm.CreateReleaseCommitStatus(ctx, e.SHA, domain.PendingStatus); err != nil {
@@ -175,7 +177,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	log.Infof("%d message(s) sent", len(messages))
 
 	// Once the messages have been sent we can remove the cached feathers
-	w.RemoveFeathers(e.Branch)
+	w.CleanUp(e.Branch)
 
 	err = scm.CreateReleaseCommitStatus(ctx, e.SHA, domain.SuccessStatus)
 	if err != nil {
@@ -218,7 +220,7 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch
 	return feathers.feathers, nil
 }
 
-func (w *WebHookUseCase) RemoveFeathers(branch string) {
+func (w *WebHookUseCase) CleanUp(branch string) {
 	delete(w.feathers, branch)
 }
 

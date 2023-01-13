@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	github "github.com/spring-financial-group/peacock/pkg/git/github"
+	domain "github.com/spring-financial-group/peacock/pkg/domain"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -13,24 +13,24 @@ type SCMClientFactory struct {
 }
 
 // GetClient provides a mock function with given fields: owner, repo, user, prNumber
-func (_m *SCMClientFactory) GetClient(owner string, repo string, user string, prNumber int) *github.Client {
+func (_m *SCMClientFactory) GetClient(owner string, repo string, user string, prNumber int) domain.SCM {
 	ret := _m.Called(owner, repo, user, prNumber)
 
-	var r0 *github.Client
-	if rf, ok := ret.Get(0).(func(string, string, string, int) *github.Client); ok {
+	var r0 domain.SCM
+	if rf, ok := ret.Get(0).(func(string, string, string, int) domain.SCM); ok {
 		r0 = rf(owner, repo, user, prNumber)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*github.Client)
+			r0 = ret.Get(0).(domain.SCM)
 		}
 	}
 
 	return r0
 }
 
-// RemoveClient provides a mock function with given fields: client
-func (_m *SCMClientFactory) RemoveClient(client *github.Client) {
-	_m.Called(client)
+// RemoveClient provides a mock function with given fields: key
+func (_m *SCMClientFactory) RemoveClient(key string) {
+	_m.Called(key)
 }
 
 type mockConstructorTestingTNewSCMClientFactory interface {
