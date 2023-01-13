@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-github/v48/github"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/config"
+	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/webhook/usecase"
 )
 
@@ -50,7 +51,7 @@ func (h *Handler) HandleEvents(c *gin.Context) {
 
 func (h *Handler) handlePullRequestOpenedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
 	log.Infof("%s-PR%d was opened. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
-	return h.useCase.ValidatePeacock(event)
+	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
 
 func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
@@ -60,10 +61,10 @@ func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName stri
 		return nil
 	}
 	log.Infof("%s-PR%d was merged. Starting full run.", *event.Repo.FullName, *event.PullRequest.Number)
-	return h.useCase.RunPeacock(event)
+	return h.useCase.RunPeacock(models.MarshalPullRequestEvent(event))
 }
 
 func (h *Handler) handlePullRequestEditEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
 	log.Infof("%s-PR%d has been edited. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
-	return h.useCase.ValidatePeacock(event)
+	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }

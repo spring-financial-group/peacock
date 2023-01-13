@@ -3,7 +3,6 @@ package webhookuc
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/config"
@@ -11,6 +10,7 @@ import (
 	feather "github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/message"
+	"github.com/spring-financial-group/peacock/pkg/models"
 	"strings"
 )
 
@@ -31,66 +31,64 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers ma
 	}
 }
 
-func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
+func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
-
-	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
-	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
+	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
 
 	// Set the current pipeline status to pending
-	if err := scm.CreateValidationCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to create pending status"))
+	if err := scm.CreateValidationCommitStatus(ctx, e.SHA, domain.PendingStatus); err != nil {
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
-	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
+	feathers, err := w.getFeathers(ctx, scm, e.Branch, e.SHA)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, err)
+		return w.handleError(ctx, scm, e.SHA, err)
 	}
 
 	// Check that the relevant communication methods have been configured for the feathers
 	types := feathers.GetAllContactTypes()
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to get contact types"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to get contact types"))
 	}
 	for _, t := range types {
 		_, ok := w.handlers[t]
 		if !ok {
-			return w.handleError(ctx, scm, sha, errors.New(fmt.Sprintf("message handler %s not found", t)))
+			return w.handleError(ctx, scm, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
 	}
 
 	// Parse the PR body for any messages
-	if event.PullRequest.Body == nil {
+	if e.Body == "" {
 		log.Infof("PR body is nil, skipping")
-		return scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
+		return scm.CreateValidationCommitStatus(ctx, e.SHA, domain.SuccessStatus)
 	}
-	messages, err := message.ParseMessagesFromMarkdown(event.PullRequest.GetBody())
+	messages, err := message.ParseMessagesFromMarkdown(e.Body)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to parse messages from markdown"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
+		return scm.CreateValidationCommitStatus(ctx, e.SHA, domain.SuccessStatus)
 	}
 
 	// Check that the teams in the messages exist in the feathers
 	for _, m := range messages {
 		if err = feathers.ExistsInFeathers(m.TeamNames...); err != nil {
-			return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to find team in feathers"))
+			return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to find team in feathers"))
 		}
 	}
 
 	// Create a hash of the messages. Probably should cache these as well.
 	newHash, err := message.GenerateHash(messages)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to generate message hash"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to generate message hash"))
 	}
 
 	// Get the hash from the last comment and compare
 	comments, err := scm.GetPRCommentsByUser(ctx)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to get comments"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to get comments"))
 	}
 	// Currently we only support one type of comment, so we can just get the most recent and check that
 	if len(comments) > 0 {
@@ -98,89 +96,88 @@ func (w *WebHookUseCase) ValidatePeacock(event *github.PullRequestEvent) error {
 		oldHash, _ := comment.GetMetadataFromComment(*lastComment.Body)
 		if oldHash == newHash {
 			log.Infof("message hash matches previous comment, skipping new breakdown")
-			return scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
+			return scm.CreateValidationCommitStatus(ctx, e.SHA, domain.SuccessStatus)
 		}
 	}
 
 	breakdown, err := message.GenerateBreakdown(messages, len(feathers.Teams))
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to generate message breakdown"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to generate message breakdown"))
 	}
 	breakdown = comment.AddMetadataToComment(breakdown, newHash, comment.BreakdownCommentType)
 
 	// We should prune the previous comments
 	err = scm.DeleteUsersComments(ctx)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to delete previous comments"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to delete previous comments"))
 	}
 
 	// Comment on the PR with the breakdown
 	log.Info("commenting on PR with message breakdown")
 	err = scm.CommentOnPR(ctx, breakdown)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to comment breakdown on PR"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to comment breakdown on PR"))
 	}
-	err = scm.CreateValidationCommitStatus(ctx, sha, domain.SuccessStatus)
+	err = scm.CreateValidationCommitStatus(ctx, e.SHA, domain.SuccessStatus)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}
 	return nil
 }
 
-func (w *WebHookUseCase) RunPeacock(event *github.PullRequestEvent) error {
+func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
-	owner, repoName, prNumber, sha := *event.Repo.Owner.Login, *event.Repo.Name, *event.PullRequest.Number, *event.PullRequest.Head.SHA
-	scm := w.scmFactory.GetClient(owner, repoName, w.cfg.User, prNumber)
+	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
 
 	// Set the current pipeline status to pending
-	if err := scm.CreateReleaseCommitStatus(ctx, sha, domain.PendingStatus); err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to create pending status"))
+	if err := scm.CreateReleaseCommitStatus(ctx, e.SHA, domain.PendingStatus); err != nil {
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
-	feathers, err := w.getFeathers(ctx, scm, *event.PullRequest.Head.Ref, sha)
+	feathers, err := w.getFeathers(ctx, scm, e.Branch, e.SHA)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, err)
+		return w.handleError(ctx, scm, e.SHA, err)
 	}
 
 	// Check that the relevant communication methods have been configured for the feathers
 	types := feathers.GetAllContactTypes()
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to get contact types"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to get contact types"))
 	}
 	for _, t := range types {
 		_, ok := w.handlers[t]
 		if !ok {
-			return w.handleError(ctx, scm, sha, errors.New(fmt.Sprintf("message handler %s not found", t)))
+			return w.handleError(ctx, scm, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
 	}
 
 	// Parse the PR body for any messages
-	messages, err := message.ParseMessagesFromMarkdown(event.PullRequest.GetBody())
+	messages, err := message.ParseMessagesFromMarkdown(e.Body)
 	if err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to parse messages from markdown"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return scm.CreateReleaseCommitStatus(ctx, sha, domain.SuccessStatus)
+		return scm.CreateReleaseCommitStatus(ctx, e.SHA, domain.SuccessStatus)
 	}
 
 	// Check that the teams in the messages exist in the feathers
 	for _, m := range messages {
 		if err = feathers.ExistsInFeathers(m.TeamNames...); err != nil {
-			return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to find team in feathers"))
+			return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to find team in feathers"))
 		}
 	}
 
 	if err = w.SendMessages(messages, feathers); err != nil {
-		return w.handleError(ctx, scm, sha, errors.Wrap(err, "failed to send messages"))
+		return w.handleError(ctx, scm, e.SHA, errors.Wrap(err, "failed to send messages"))
 	}
 	log.Infof("%d message(s) sent", len(messages))
 
 	// Once the messages have been sent we can remove the cached feathers
-	w.RemoveFeathers(*event.PullRequest.Head.Ref)
+	w.RemoveFeathers(e.Branch)
 
-	err = scm.CreateReleaseCommitStatus(ctx, sha, domain.SuccessStatus)
+	err = scm.CreateReleaseCommitStatus(ctx, e.SHA, domain.SuccessStatus)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}
