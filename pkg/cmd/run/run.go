@@ -263,7 +263,7 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 		// Check that the handler for the teams contact type is initialised
 		teams := o.Feathers.GetTeamsByNames(m.TeamNames...)
 		for _, team := range teams {
-			if !o.MSGHandler.IsInitialised(team.ContactType) {
+			if o.MSGHandler.IsInitialised(team.ContactType) {
 				return errors.Errorf("Team \"%s\" has contact type \"%s\", handler not initialised for this type - check input flags", team.Name, team.ContactType)
 			}
 		}
