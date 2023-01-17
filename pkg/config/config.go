@@ -3,9 +3,9 @@ package config
 import "github.com/ilyakaznacheev/cleanenv"
 
 type Config struct {
-	LogLevel        string          `env:"LOG_LEVEL"`
-	SCM             SCM             `yaml:"scm"`
-	MessageHandlers MessageHandlers `yaml:"messageHandlers"`
+	LogLevel        string `env:"LOG_LEVEL"`
+	SCM             SCM
+	MessageHandlers MessageHandlers
 }
 
 type SCM struct {
@@ -15,8 +15,8 @@ type SCM struct {
 }
 
 type MessageHandlers struct {
-	Slack   Slack   `yaml:"slack"`
-	Webhook Webhook `yaml:"webhook"`
+	Slack   Slack
+	Webhook Webhook
 }
 
 type Slack struct {
@@ -31,7 +31,7 @@ type Webhook struct {
 
 func Load() (*Config, error) {
 	var cfg Config
-	err := cleanenv.ReadEnv(cfg)
+	err := cleanenv.ReadEnv(&cfg)
 	if err != nil {
 		return nil, err
 	}
