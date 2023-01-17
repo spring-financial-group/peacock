@@ -123,6 +123,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
 	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
 	defer w.scmFactory.RemoveClient(scm.GetKey())
+	defer w.CleanUp(e.Branch)
 
 	// We can use the most recent commit in the default branch to display the status. This way we don't have to worry about
 	// merge method used on the PR. We'll continue to use the last commit SHA in the PR for error handling/feathers etc.
@@ -174,9 +175,6 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to send messages"))
 	}
 	log.Infof("%d message(s) sent", len(messages))
-
-	// Once the messages have been sent we can remove the cached feathers
-	w.CleanUp(e.Branch)
 
 	err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
 	if err != nil {

@@ -25,8 +25,8 @@ type Slack struct {
 
 type Webhook struct {
 	URL    string `env:"WEBHOOK_URL"`
-	Token  string `env:"WEBHOOK_SECRET"`
-	Secret string `env:"WEBHOOK_TOKEN"`
+	Token  string `env:"WEBHOOK_TOKEN"`
+	Secret string `env:"WEBHOOK_SECRET"`
 }
 
 func Load() (*Config, error) {
