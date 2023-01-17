@@ -1,11 +1,10 @@
-package github_test
+package github
 
 import (
 	"context"
 	"fmt"
 	"github.com/google/go-github/v48/github"
 	ghmock "github.com/migueleliasweb/go-github-mock/src/mock"
-	github2 "github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -107,12 +106,16 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 		)
 		mockGH := github.NewClient(mockedHTTPClient)
 
-		client := github2.Client{
-			github: mockGH,
+		client := Client{
+			github:   mockGH,
+			user:     "mqube-bot",
+			repo:     "peacock",
+			owner:    "spring-financial-group",
+			prNumber: 1,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "spring-financial-group", "peacock", "CommitSHA")
+			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "CommitSHA")
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)
