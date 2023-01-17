@@ -20,11 +20,12 @@ spec:
               script: |
                 #!/usr/bin/env sh
                 jx gitops variables --commit=false
-                echo "export GITHUB_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['gh-bot-token']}" | base64 -d)\"" >> .jx/variables.sh
-                echo "export SLACK_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['slack-token']}" | base64 -d)\"" >> .jx/variables.sh
-                echo "export WEBHOOK_SECRET=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['hmac-secret']}" | base64 -d)\"" >> .jx/variables.sh
-                echo "export WEBHOOK_URL=https://api-staging.jx.mqube.build/EmailService/api/SendEmail/Peacock" >> .jx/variables.sh
                 
+                ## Export secrets for use in peacock
+                echo "export GITHUB_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
+                echo "export SLACK_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['slack-token']}" | base64 -d)\"" >> .jx/variables.sh
+                echo "export WEBHOOK_SECRET=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['webhook-secret']}" | base64 -d)\"" >> .jx/variables.sh
+                echo "export WEBHOOK_URL=https://api-staging.jx.mqube.build/EmailService/api/SendEmail/Peacock" >> .jx/variables.sh
                 echo "$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['test-feathers']}" | base64 -d)" > ./.peacock/feathers.yaml
               workingDir: /workspace/source
             - image: golang:1.18
