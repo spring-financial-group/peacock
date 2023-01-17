@@ -167,9 +167,9 @@ func (c *Client) DeleteUsersComments(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) CreatePeacockCommitStatus(ctx context.Context, ref, state, statusContext string) error {
+func (c *Client) CreatePeacockCommitStatus(ctx context.Context, ref string, state domain.State, statusContext string) error {
 	status := RepoStatus[statusContext]
-	status.State = &state
+	status.State = utils.NewPtr(string(state))
 
 	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
 	if err != nil {
@@ -178,12 +178,12 @@ func (c *Client) CreatePeacockCommitStatus(ctx context.Context, ref, state, stat
 	return nil
 }
 
-func (c *Client) GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error) {
+func (c *Client) GetLatestCommitSHAInBranch(ctx context.Context, branch string) (string, error) {
 	commit, _, err := c.github.Repositories.GetCommit(ctx, c.owner, c.repo, branch, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get latest commit in branch")
+		return "", errors.Wrap(err, "failed to get latest commit in branch")
 	}
-	return commit, nil
+	return commit.GetSHA(), nil
 }
 
 func (c *Client) GetKey() string {
@@ -196,7 +196,7 @@ func (c *Client) HandleError(ctx context.Context, statusContext, headSHA string,
 		log.Errorf("Failed to comment error on PR: %s", commentErr.Error())
 	}
 
-	statusErr := c.CreatePeacockCommitStatus(ctx, headSHA, domain.FailureStatus, statusContext)
+	statusErr := c.CreatePeacockCommitStatus(ctx, headSHA, domain.FailureState, statusContext)
 	if err != statusErr {
 		log.Errorf("failed to create failed commit status: %s", err)
 	}

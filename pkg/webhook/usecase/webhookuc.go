@@ -37,7 +37,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	defer w.scmFactory.RemoveClient(scm.GetKey())
 
 	// Set the current pipeline status to pending
-	if err := scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.PendingStatus, domain.ValidationContext); err != nil {
+	if err := scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.PendingState, domain.ValidationContext); err != nil {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
@@ -65,7 +65,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessStatus, domain.ValidationContext)
+		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 	}
 
 	// Check that the teams in the messages exist in the feathers
@@ -92,7 +92,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		oldHash, _ := comment.GetMetadataFromComment(*lastComment.Body)
 		if oldHash == newHash {
 			log.Infof("message hash matches previous comment, skipping new breakdown")
-			return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessStatus, domain.ValidationContext)
+			return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 		}
 	}
 
@@ -114,7 +114,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	if err != nil {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to comment breakdown on PR"))
 	}
-	err = scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessStatus, domain.ValidationContext)
+	err = scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}
@@ -128,14 +128,13 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 
 	// We can use the most recent commit in the default branch to display the status. This way we don't have to worry about
 	// merge method used on the PR. We'll continue to use the last commit SHA in the PR for error handling/feathers etc.
-	latestCommit, err := scm.GetLatestCommitInBranch(ctx, e.DefaultBranch)
+	defaultBranchSHA, err := scm.GetLatestCommitSHAInBranch(ctx, e.DefaultBranch)
 	if err != nil {
 		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to get latest commit in default branch"))
 	}
-	defaultBranchSHA := *latestCommit.SHA
 
 	// Set the current pipeline status to pending
-	if err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.PendingStatus, domain.ReleaseContext); err != nil {
+	if err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.PendingState, domain.ReleaseContext); err != nil {
 		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
@@ -164,7 +163,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	}
 	if messages == nil {
 		log.Infof("no messages found in PR body, skipping")
-		return scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessStatus, domain.ReleaseContext)
+		return scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
 	}
 
 	// Check that the teams in the messages exist in the feathers
@@ -182,7 +181,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	// Once the messages have been sent we can remove the cached feathers
 	w.CleanUp(e.Branch)
 
-	err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessStatus, domain.ReleaseContext)
+	err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}

@@ -11,11 +11,14 @@ const (
 
 // Repository status constants
 const (
-	SuccessStatus = "success"
-	PendingStatus = "pending"
-	FailureStatus = "failure"
-	ErrorStatus   = "error"
+	SuccessState = State("success")
+	PendingState = State("pending")
+	FailureState = State("failure")
+	ErrorState   = State("error")
 )
+
+// State is a type alias for the state of a repository status
+type State string
 
 // Repository status contexts
 const (
@@ -47,9 +50,9 @@ type SCM interface {
 	// DeleteUsersComments deletes all the comments on a pull request by a user
 	DeleteUsersComments(ctx context.Context) error
 	// CreatePeacockCommitStatus creates a commit status on a commit
-	CreatePeacockCommitStatus(ctx context.Context, ref, state, statusContext string) error
-	// GetLatestCommitInBranch returns the most recent commit in a branch
-	GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error)
+	CreatePeacockCommitStatus(ctx context.Context, ref string, state State, statusContext string) error
+	// GetLatestCommitSHAInBranch returns the most recent commit in a branch
+	GetLatestCommitSHAInBranch(ctx context.Context, branch string) (string, error)
 	// GetKey returns the identifier of the SCM
 	GetKey() string
 	// HandleError handles an error by commenting on the PR and creating a commit status on the given SHA

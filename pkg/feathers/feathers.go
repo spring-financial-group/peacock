@@ -26,9 +26,11 @@ type Team struct {
 }
 
 type Config struct {
-	Messages struct {
-		Subject string `yaml:"subject"`
-	} `yaml:"messages"`
+	Messages Messages `yaml:"messages"`
+}
+
+type Messages struct {
+	Subject string `yaml:"subject"`
 }
 
 func GetFeathersFromFile() (*Feathers, error) {
@@ -50,7 +52,7 @@ func GetFeathersFromFile() (*Feathers, error) {
 
 func GetFeathersFromBytes(data []byte) (*Feathers, error) {
 	feathers := new(Feathers)
-	err := yaml.Unmarshal(data, feathers)
+	err := yaml.Unmarshal(data, &feathers)
 	if err != nil {
 		return nil, err
 	}

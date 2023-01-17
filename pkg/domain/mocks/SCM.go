@@ -6,6 +6,7 @@ import (
 	context "context"
 
 	github "github.com/google/go-github/v48/github"
+	domain "github.com/spring-financial-group/peacock/pkg/domain"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -44,11 +45,11 @@ func (_m *SCM) CommentOnPR(ctx context.Context, body string) error {
 }
 
 // CreatePeacockCommitStatus provides a mock function with given fields: ctx, ref, state, statusContext
-func (_m *SCM) CreatePeacockCommitStatus(ctx context.Context, ref string, state string, statusContext string) error {
+func (_m *SCM) CreatePeacockCommitStatus(ctx context.Context, ref string, state domain.State, statusContext string) error {
 	ret := _m.Called(ctx, ref, state, statusContext)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, domain.State, string) error); ok {
 		r0 = rf(ctx, ref, state, statusContext)
 	} else {
 		r0 = ret.Error(0)
@@ -108,17 +109,15 @@ func (_m *SCM) GetKey() string {
 	return r0
 }
 
-// GetLatestCommitInBranch provides a mock function with given fields: ctx, branch
-func (_m *SCM) GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error) {
+// GetLatestCommitSHAInBranch provides a mock function with given fields: ctx, branch
+func (_m *SCM) GetLatestCommitSHAInBranch(ctx context.Context, branch string) (string, error) {
 	ret := _m.Called(ctx, branch)
 
-	var r0 *github.RepositoryCommit
-	if rf, ok := ret.Get(0).(func(context.Context, string) *github.RepositoryCommit); ok {
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, string) string); ok {
 		r0 = rf(ctx, branch)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*github.RepositoryCommit)
-		}
+		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error

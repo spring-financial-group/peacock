@@ -49,12 +49,12 @@ func (h *Handler) HandleEvents(c *gin.Context) {
 	}
 }
 
-func (h *Handler) handlePullRequestOpenedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
+func (h *Handler) handlePullRequestOpenedEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	log.Infof("%s-PR%d was opened. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
 
-func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
+func (h *Handler) handlePullRequestClosedEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	if !*event.PullRequest.Merged {
 		log.Infof("%s-PR%d was closed without merging. Skipping.", *event.Repo.FullName, *event.PullRequest.Number)
 		h.useCase.CleanUp(*event.PullRequest.Head.Ref)
@@ -64,7 +64,7 @@ func (h *Handler) handlePullRequestClosedEvent(deliveryID string, eventName stri
 	return h.useCase.RunPeacock(models.MarshalPullRequestEvent(event))
 }
 
-func (h *Handler) handlePullRequestEditEvent(deliveryID string, eventName string, event *github.PullRequestEvent) error {
+func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	log.Infof("%s-PR%d has been edited. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
