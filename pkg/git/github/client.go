@@ -28,7 +28,7 @@ var (
 		},
 		ReleaseContext: {
 			State:       nil,
-			Description: utils.NewPtr("Validates the PR body against the feathers"),
+			Description: utils.NewPtr("Sends the messages to the Teams outlined in the PR body"),
 			Context:     utils.NewPtr(ReleaseContext),
 		},
 	}
