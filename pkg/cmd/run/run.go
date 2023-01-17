@@ -6,19 +6,19 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
-	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/message"
+	"github.com/spring-financial-group/peacock/pkg/msgclient"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
 	"strconv"
-	"strings"
 )
 
 // Options for the run command
@@ -42,8 +42,8 @@ type Options struct {
 
 	GitServerClient domain.SCM
 	Git             domain.Git
-	Handlers        map[string]domain.MessageHandler
-	Config          *feathers.Feathers
+	MSGHandler      domain.MessageHandler
+	Feathers        *feathers.Feathers
 }
 
 var (
@@ -147,9 +147,9 @@ func (o *Options) Run() error {
 		return nil
 	}
 
-	if o.Config == nil {
+	if o.Feathers == nil {
 		log.Info("Loading feathers from local instance")
-		o.Config, err = feathers.GetFeathersFromFile()
+		o.Feathers, err = feathers.GetFeathersFromFile()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
 			o.PostErrorToPR(ctx, err)
@@ -157,9 +157,17 @@ func (o *Options) Run() error {
 		}
 	}
 
-	if o.Handlers == nil {
-		log.Info("Initialising message handlers")
-		o.Handlers = handlers.InitMessageHandlers(o.SlackToken, o.WebhookURL, o.WebhookToken, o.WebhookSecret)
+	if o.MSGHandler == nil {
+		o.MSGHandler = msgclient.NewMessageHandler(&config.MessageHandlers{
+			Slack: config.Slack{
+				Token: o.SlackToken,
+			},
+			Webhook: config.Webhook{
+				URL:    o.WebhookURL,
+				Token:  o.WebhookToken,
+				Secret: o.WebhookSecret,
+			},
+		})
 	}
 
 	log.Info("Parsing messages from pull request body")
@@ -206,7 +214,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Info("Sending messages")
-	err = o.SendMessages(messages)
+	err = o.MSGHandler.SendMessages(o.Feathers, messages)
 	if err != nil {
 		return err
 	}
@@ -240,40 +248,9 @@ func (o *Options) GenerateSubject() {
 	o.Subject = fmt.Sprintf("New Release Notes for %s", o.RepoName)
 }
 
-// SendMessages send the messages using the message handlers
-func (o *Options) SendMessages(messages []message.Message) error {
-	var errs []error
-	for _, m := range messages {
-		err := o.SendMessage(m)
-		if err != nil {
-			log.Error(err)
-			errs = append(errs, err)
-			continue
-		}
-	}
-	if len(errs) > 0 {
-		return errors.New("failed to send messages")
-	}
-	return nil
-}
-
-// SendMessage pools the addresses of the different teams by contactType and sends the message to each
-func (o *Options) SendMessage(message message.Message) error {
-	// We should pool the addresses by contact type so that we only send one message per contact type
-	addressPool := o.Config.GetAddressPoolByTeamNames(message.TeamNames...)
-	for contactType, addresses := range addressPool {
-		err := o.Handlers[contactType].Send(message.Content, o.Subject, addresses)
-		if err != nil {
-			return errors.Wrapf(err, "failed to send message")
-		}
-		log.Infof("Message successfully sent to %s via %s\n", strings.Join(addresses, ", "), contactType)
-	}
-	return nil
-}
-
 // ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers
 func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
-	allTeamsInConfig := o.Config.GetAllTeamNames()
+	allTeamsInConfig := o.Feathers.GetAllTeamNames()
 	for _, m := range messages {
 		// Check the team name actually exists in feathers
 		for _, msgTeamName := range m.TeamNames {
@@ -284,9 +261,9 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 		}
 
 		// Check that the handler for the teams contact type is initialised
-		teams := o.Config.GetTeamsByNames(m.TeamNames...)
+		teams := o.Feathers.GetTeamsByNames(m.TeamNames...)
 		for _, team := range teams {
-			if o.Handlers[team.ContactType] == nil {
+			if !o.MSGHandler.IsInitialised(team.ContactType) {
 				return errors.Errorf("Team \"%s\" has contact type \"%s\", handler not initialised for this type - check input flags", team.Name, team.ContactType)
 			}
 		}
@@ -304,7 +281,7 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []message.Me
 	if !changed {
 		return "", nil
 	}
-	breakdown, err := message.GenerateBreakdown(messages, len(o.Config.GetAllTeamNames()))
+	breakdown, err := message.GenerateBreakdown(messages, len(o.Feathers.GetAllTeamNames()))
 	if err != nil {
 		return "", err
 	}

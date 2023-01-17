@@ -11,22 +11,21 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/models"
-	"strings"
 )
 
 type WebHookUseCase struct {
 	cfg        *config.SCM
 	scmFactory domain.SCMClientFactory
-	handlers   map[string]domain.MessageHandler
+	msgHandler domain.MessageHandler
 
 	feathers map[string]*feathersMeta
 }
 
-func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, handlers map[string]domain.MessageHandler) *WebHookUseCase {
+func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, msgHandler domain.MessageHandler) *WebHookUseCase {
 	return &WebHookUseCase{
 		cfg:        cfg,
 		scmFactory: scmFactory,
-		handlers:   handlers,
+		msgHandler: msgHandler,
 		feathers:   make(map[string]*feathersMeta),
 	}
 }
@@ -53,9 +52,8 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to get contact types"))
 	}
 	for _, t := range types {
-		_, ok := w.handlers[t]
-		if !ok {
-			return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
+		if !w.msgHandler.IsInitialised(t) {
+			return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
 	}
 
@@ -150,8 +148,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to get contact types"))
 	}
 	for _, t := range types {
-		_, ok := w.handlers[t]
-		if !ok {
+		if !w.msgHandler.IsInitialised(t) {
 			return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
 	}
@@ -173,7 +170,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		}
 	}
 
-	if err = w.SendMessages(messages, feathers); err != nil {
+	if err = w.msgHandler.SendMessages(feathers, messages); err != nil {
 		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to send messages"))
 	}
 	log.Infof("%d message(s) sent", len(messages))
@@ -224,35 +221,4 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch
 
 func (w *WebHookUseCase) CleanUp(branch string) {
 	delete(w.feathers, branch)
-}
-
-// SendMessages send the messages using the message handlers
-func (w *WebHookUseCase) SendMessages(messages []message.Message, feathers *feather.Feathers) error {
-	var errCount int
-	for _, m := range messages {
-		err := w.sendMessage(m, feathers)
-		if err != nil {
-			log.Error(err)
-			errCount++
-			continue
-		}
-	}
-	if errCount > 0 {
-		return errors.New("failed to send messages")
-	}
-	return nil
-}
-
-// sendMessage pools the addresses of the different teams by contactType and sends the message to each
-func (w *WebHookUseCase) sendMessage(message message.Message, feathers *feather.Feathers) error {
-	// We should pool the addresses by contact type so that we only send one message per contact type
-	addressPool := feathers.GetAddressPoolByTeamNames(message.TeamNames...)
-	for contactType, addresses := range addressPool {
-		err := w.handlers[contactType].Send(message.Content, feathers.Config.Messages.Subject, addresses)
-		if err != nil {
-			return errors.Wrapf(err, "failed to send message")
-		}
-		log.Infof("Message successfully sent to %s via %s", strings.Join(addresses, ", "), contactType)
-	}
-	return nil
 }

@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"github.com/google/go-github/v48/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
-	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
-	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/message"
+	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -170,7 +169,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 func TestOptions_Run(t *testing.T) {
 	mockSCM := mocks.NewSCM(t)
 	mockGitClient := mocks.NewGit(t)
-	mockSlackHander := mocks.NewMessageHandler(t)
+	mockHandler := mocks.NewMessageHandler(t)
 
 	testCases := []struct {
 		name        string
@@ -191,12 +190,12 @@ func TestOptions_Run(t *testing.T) {
 				SlackToken:        "testSlackToken",
 				Git:               mockGitClient,
 				GitServerClient:   mockSCM,
-				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
-				Config: &feathers.Feathers{
+				MSGHandler:        mockHandler,
+				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{
 							Name:        "infrastructure",
-							ContactType: handlers.Slack,
+							ContactType: models.Slack,
 							Addresses:   []string{"TestAdd", "TestAdd2"},
 						},
 					},
@@ -217,12 +216,12 @@ func TestOptions_Run(t *testing.T) {
 				SlackToken:        "testSlackToken",
 				Git:               mockGitClient,
 				GitServerClient:   mockSCM,
-				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
-				Config: &feathers.Feathers{
+				MSGHandler:        mockHandler,
+				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{
 							Name:        "infrastructure",
-							ContactType: handlers.Slack,
+							ContactType: models.Slack,
 							Addresses:   []string{"TestAdd", "TestAdd2"},
 						},
 					},
@@ -242,10 +241,10 @@ func TestOptions_Run(t *testing.T) {
 			mockSCM.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
 		}
 
-		for _, team := range tt.opts.Config.Teams {
-			if !tt.opts.DryRun {
-				mockSlackHander.On("Send", "Test Content", "New Release Notes for peacock", team.Addresses).Return(nil).Once()
-			}
+		mockHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
+
+		if !tt.opts.DryRun {
+			mockHandler.On("SendMessages", tt.opts.Feathers, mock.AnythingOfType("[]message.Message")).Return(nil).Once()
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -273,7 +272,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 			name: "OneMessage",
 			opts: &run.Options{
 				GitServerClient: mockSCM,
-				Config: &feathers.Feathers{
+				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{Name: "infrastructure"},
 					},
@@ -291,7 +290,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 			name: "MultipleMessages&MultipleTeams",
 			opts: &run.Options{
 				GitServerClient: mockSCM,
-				Config: &feathers.Feathers{
+				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{Name: "infrastructure"},
 						{Name: "ml"},
@@ -325,6 +324,8 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 }
 
 func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
+	mockHandler := mocks.NewMessageHandler(t)
+
 	testCases := []struct {
 		name          string
 		opts          *run.Options
@@ -334,10 +335,10 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 		{
 			name: "Passing",
 			opts: &run.Options{
-				Handlers: map[string]domain.MessageHandler{handlers.Slack: mocks.NewMessageHandler(t)},
-				Config: &feathers.Feathers{
+				MSGHandler: mockHandler,
+				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
-						{Name: "infrastructure", ContactType: handlers.Slack},
+						{Name: "infrastructure", ContactType: models.Slack},
 					},
 				},
 			},
@@ -352,10 +353,10 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 		{
 			name: "TeamDoesNotExist",
 			opts: &run.Options{
-				Handlers: map[string]domain.MessageHandler{handlers.Slack: mocks.NewMessageHandler(t)},
-				Config: &feathers.Feathers{
+				MSGHandler: mockHandler,
+				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
-						{Name: "infrastructure", ContactType: handlers.Slack},
+						{Name: "infrastructure", ContactType: models.Slack},
 					},
 				},
 			},
@@ -367,28 +368,12 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			},
 			shouldError: true,
 		},
-		{
-			name: "HandlerDoesNotExist",
-			opts: &run.Options{
-				Handlers: map[string]domain.MessageHandler{},
-				Config: &feathers.Feathers{
-					Teams: []feathers.Team{
-						{Name: "infrastructure", ContactType: handlers.Slack},
-					},
-				},
-			},
-			inputMessages: []message.Message{
-				{
-					TeamNames: []string{"infrastructure"},
-					Content:   "some content",
-				},
-			},
-			shouldError: true,
-		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			mockHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
+
 			err := tt.opts.ValidateMessagesWithConfig(tt.inputMessages)
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
@@ -396,49 +381,6 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-		})
-	}
-}
-
-func TestOptions_SendMessage(t *testing.T) {
-	slackHandler := mocks.NewMessageHandler(t)
-	webhookHandler := mocks.NewMessageHandler(t)
-
-	testCases := []struct {
-		name         string
-		opts         *run.Options
-		inputMessage message.Message
-	}{
-		{
-			name: "Default",
-			opts: &run.Options{
-				Handlers: map[string]domain.MessageHandler{
-					handlers.Slack:   slackHandler,
-					handlers.Webhook: webhookHandler,
-				},
-				Config: &feathers.Feathers{
-					Teams: []feathers.Team{
-						{Name: "Infrastructure", ContactType: handlers.Slack, Addresses: []string{"#SlackAdd1", "#SlackAdd2"}},
-						{Name: "AllDevs", ContactType: handlers.Slack, Addresses: []string{"#SlackAdd3", "#SlackAdd4"}},
-						{Name: "Product", ContactType: handlers.Webhook, Addresses: []string{"Webhook1", "Webhook2"}},
-						{Name: "Support", ContactType: handlers.Webhook, Addresses: []string{"Webhook3", "Webhook4"}},
-					},
-				},
-			},
-			inputMessage: message.Message{
-				TeamNames: []string{"Infrastructure", "AllDevs", "Product", "Support"},
-				Content:   "Test message content",
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			slackHandler.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2", "#SlackAdd3", "#SlackAdd4"}).Return(nil)
-			webhookHandler.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2", "Webhook3", "Webhook4"}).Return(nil)
-
-			err := tc.opts.SendMessage(tc.inputMessage)
-			assert.NoError(t, err)
 		})
 	}
 }

@@ -2,7 +2,7 @@ package feathers
 
 import (
 	"github.com/pkg/errors"
-	"github.com/spring-financial-group/peacock/pkg/handlers"
+	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -140,7 +140,7 @@ func (t *Team) validate() error {
 
 	// We should check that the contactType actually has a handler
 	var valid bool
-	for _, h := range handlers.Valid {
+	for _, h := range models.Valid {
 		if t.ContactType == h {
 			valid = true
 		}
@@ -156,7 +156,7 @@ func (t *Team) validate() error {
 	}
 	for _, address := range t.Addresses {
 		switch t.ContactType {
-		case handlers.Slack:
+		case models.Slack:
 			match := slackRegex.MatchString(address)
 			if !match {
 				return errors.Errorf("failed to parse slack channel ID \"%s\" for team \"%s\"", address, t.Name)

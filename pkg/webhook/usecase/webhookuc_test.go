@@ -6,7 +6,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
-	"github.com/spring-financial-group/peacock/pkg/handlers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -43,12 +42,12 @@ var (
 		Teams: []feathers.Team{
 			{
 				Name:        InfraTeam,
-				ContactType: handlers.Slack,
+				ContactType: models.Slack,
 				Addresses:   []string{"C1234567890"},
 			},
 			{
 				Name:        SkisocksTeam,
-				ContactType: handlers.Webhook,
+				ContactType: models.Webhook,
 				Addresses:   []string{"skisocks@github.com"},
 			},
 		},
@@ -71,10 +70,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, map[string]domain.MessageHandler{
-		handlers.Slack:   mockMessageHandler,
-		handlers.Webhook: mockMessageHandler,
-	})
+	uc := NewUseCase(cfg, mockFactory, mockMessageHandler)
 
 	t.Run("Happy Path", func(t *testing.T) {
 		prBody := "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks"
@@ -96,6 +92,8 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		mockSCM.On("CommentOnPR", mockCTX, mock.Anything).Return(nil).Once()
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
+		mockMessageHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
+
 		err := uc.ValidatePeacock(mockEvent)
 		assert.NoError(t, err)
 	})
@@ -110,10 +108,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, map[string]domain.MessageHandler{
-		handlers.Slack:   mockMessageHandler,
-		handlers.Webhook: mockMessageHandler,
-	})
+	uc := NewUseCase(cfg, mockFactory, mockMessageHandler)
 
 	t.Run("Happy Path", func(t *testing.T) {
 		prBody := "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks"
@@ -134,7 +129,8 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 
-		mockMessageHandler.On("Send", mock.Anything, mockFeathers.Config.Messages.Subject, mock.Anything).Return(nil)
+		mockMessageHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
+		mockMessageHandler.On("SendMessages", mockFeathers, mock.AnythingOfType("[]message.Message")).Return(nil)
 
 		err := uc.RunPeacock(mockEvent)
 		assert.NoError(t, err)

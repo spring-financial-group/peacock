@@ -3,19 +3,18 @@ package webhook
 import (
 	"encoding/json"
 	"github.com/pkg/errors"
-	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/markdown"
 	"github.com/spring-financial-group/peacock/pkg/utils/http_utils"
 )
 
-type handler struct {
+type Client struct {
 	url    string
 	token  string
 	secret string
 }
 
-func NewWebHookHandler(url, authToken, secret string) domain.MessageHandler {
-	return &handler{
+func NewClient(url, authToken, secret string) *Client {
+	return &Client{
 		url:    url,
 		token:  authToken,
 		secret: secret,
@@ -28,7 +27,7 @@ type postRequest struct {
 	Addresses []string `json:"addresses"`
 }
 
-func (h *handler) Send(content, subject string, addresses []string) error {
+func (h *Client) Send(content, subject string, addresses []string) error {
 	postReq := postRequest{
 		Body:      markdown.ConvertToHTML(content),
 		Subject:   subject,
