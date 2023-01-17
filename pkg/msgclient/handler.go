@@ -23,7 +23,7 @@ func NewMessageHandler(cfg *config.MessageHandlers) *Handler {
 		log.Info("Slack message handler initialised")
 		clients[models.Slack] = slack.NewClient(cfg.Slack.Token)
 	}
-	if cfg.Webhook.URL != "" && cfg.Webhook.Token != "" && cfg.Webhook.Secret != "" {
+	if cfg.Webhook.URL != "" && cfg.Webhook.Secret != "" {
 		log.Info("Webhook message handler initialised")
 		clients[models.Webhook] = webhook.NewClient(cfg.Webhook.URL, cfg.Webhook.Token, cfg.Webhook.Secret)
 	}
