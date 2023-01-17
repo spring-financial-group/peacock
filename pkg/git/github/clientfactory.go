@@ -35,6 +35,7 @@ func (c *ClientFactory) GetClient(owner, repo, user string, prNumber int) domain
 		owner:    owner,
 		repo:     repo,
 		prNumber: prNumber,
+		user:     user,
 	}
 	c.clients[key] = client
 	return client

@@ -134,7 +134,6 @@ func (c *Client) GetPRCommentsByUser(ctx context.Context) ([]*github.IssueCommen
 			userComments = append(userComments, comment)
 		}
 	}
-	log.Debugf("Found %d comments by user %s", len(userComments), c.user)
 	return userComments, nil
 }
 
