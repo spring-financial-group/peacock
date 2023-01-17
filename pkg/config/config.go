@@ -31,7 +31,7 @@ type Webhook struct {
 
 func Load() (*Config, error) {
 	var cfg Config
-	err := cleanenv.ReadConfig("config.yaml", &cfg)
+	err := cleanenv.ReadEnv(cfg)
 	if err != nil {
 		return nil, err
 	}
