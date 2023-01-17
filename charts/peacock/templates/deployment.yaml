@@ -47,29 +47,29 @@ spec:
           - name: "GIT_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.serviceSecretName }}
+                name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: git-token
           - name: "GITHUB_SECRET"
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.serviceSecretName }}
+                name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: github-secret
           - name: "SLACK_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.serviceSecretName }}
+                name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: slack-token
           - name: "WEBHOOK_URL"
             value: {{ .Values.webhookUrl }}
           - name: "WEBHOOK_SECRET"
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.serviceSecretName }}
+                name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: webhook-secret
           - name: "WEBHOOK_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.serviceSecretName }}
+                name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: webhook-token
 {{- range $pkey, $pval := .Values.env }}
         - name: {{ $pkey }}
