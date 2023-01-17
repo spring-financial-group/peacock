@@ -197,7 +197,7 @@ func (c *Client) HandleError(ctx context.Context, statusContext, headSHA string,
 	}
 
 	statusErr := c.CreatePeacockCommitStatus(ctx, headSHA, domain.FailureState, statusContext)
-	if err != statusErr {
+	if statusErr != nil {
 		log.Errorf("failed to create failed commit status: %s", err)
 	}
 	return err
