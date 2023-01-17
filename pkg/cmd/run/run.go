@@ -26,6 +26,7 @@ type Options struct {
 	PRNumber     int
 	GitServerURL string
 	GitHubToken  string
+	GitUser      string
 	RepoOwner    string
 	RepoName     string
 
@@ -89,6 +90,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 		GitHubToken      string
 		RepoOwner        string
 		RepoName         string
+		GitUser          string
 		SlackToken       string
 		WebhookURL       string
 		WebhookAuthToken string
@@ -101,6 +103,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	cmd.Flags().StringVarP(&keys.GitHubToken, "git-token-key", "", "GITHUB_TOKEN", "the environment variable key for the git token used to operate on the git repository.")
 	cmd.Flags().StringVarP(&keys.RepoOwner, "git-owner-key", "", "REPO_OWNER", "the environment variable key for the owner of the git repository.")
 	cmd.Flags().StringVarP(&keys.RepoName, "git-repo-key", "", "REPO_NAME", "the environment variable key for the name of the git repo to run on.")
+	cmd.Flags().StringVarP(&keys.RepoName, "git-user", "", "GIT_USER", "the environment variable key for the name user to interact with Git.")
 	cmd.Flags().StringVarP(&keys.SlackToken, "slack-token-key", "", "SLACK_TOKEN", "the environment variable key for the slack token used to send the messages to slack channels")
 	cmd.Flags().StringVarP(&keys.WebhookURL, "webhook-URL-key", "", "WEBHOOK_URL", "the environment variable key for the webhook URL")
 	cmd.Flags().StringVarP(&keys.WebhookAuthToken, "webhook-auth-token-key", "", "WEBHOOK_AUTH_TOKEN", "the environment variable key for the webhook auth token")
@@ -118,6 +121,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	o.GitHubToken = os.Getenv(keys.GitHubToken)
 	o.RepoOwner = os.Getenv(keys.RepoOwner)
 	o.RepoName = os.Getenv(keys.RepoName)
+	o.GitUser = os.Getenv(keys.GitUser)
 	o.SlackToken = os.Getenv(keys.SlackToken)
 	o.WebhookURL = os.Getenv(keys.WebhookURL)
 	o.WebhookToken = os.Getenv(keys.WebhookAuthToken)
@@ -388,7 +392,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 	}
 
 	if o.GitServerClient == nil {
-		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, "", o.GitHubToken, o.PRNumber)
+		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitUser, o.GitHubToken, o.PRNumber)
 	}
 	return nil
 }

@@ -17,7 +17,7 @@ import (
 )
 
 func TestOptions_HaveMessagesChanged(t *testing.T) {
-	mockGitServer := mocks.NewGitServer(t)
+	mockSCM := mocks.NewSCM(t)
 	// Comments returned from the GitHub API are sorted by most recent first
 	testCases := []struct {
 		name             string
@@ -35,7 +35,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
+					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 type: breakdown -->"),
 				},
 			},
 			expectedHash:    "",
@@ -50,7 +50,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: SomeOtherHash -->"),
+					Body: utils.NewPtr("<!-- hash: SomeOtherHash type: breakdown -->"),
 				},
 			},
 			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
@@ -65,16 +65,16 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: SomeOtherHash -->"),
+					Body: utils.NewPtr("<!-- hash: SomeOtherHash type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AnotherHash -->"),
+					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: HashingHel -->"),
+					Body: utils.NewPtr("<!-- hash: HashingHel type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AllTheHashes -->"),
+					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
 				},
 			},
 			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
@@ -89,16 +89,16 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
+					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AnotherHash -->"),
+					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: HashingHel -->"),
+					Body: utils.NewPtr("<!-- hash: HashingHel type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AllTheHashes -->"),
+					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
 				},
 			},
 			expectedHash:    "",
@@ -113,16 +113,16 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: AnotherHash -->"),
+					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 -->"),
+					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: HashingHel -->"),
+					Body: utils.NewPtr("<!-- hash: HashingHel type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AllTheHashes -->"),
+					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
 				},
 			},
 			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
@@ -152,11 +152,11 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 	}
 
 	opts := &run.Options{
-		GitServerClient: mockGitServer,
+		GitServerClient: mockSCM,
 	}
 
 	for _, tt := range testCases {
-		mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), "", "", opts.PRNumber).Return(tt.returnedComments, nil).Once()
+		mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx")).Return(tt.returnedComments, nil).Once()
 
 		t.Run(tt.name, func(t *testing.T) {
 			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
@@ -168,7 +168,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 }
 
 func TestOptions_Run(t *testing.T) {
-	mockGitServer := mocks.NewGitServer(t)
+	mockSCM := mocks.NewSCM(t)
 	mockGitClient := mocks.NewGit(t)
 	mockSlackHander := mocks.NewMessageHandler(t)
 
@@ -190,7 +190,7 @@ func TestOptions_Run(t *testing.T) {
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
 				Git:               mockGitClient,
-				GitServerClient:   mockGitServer,
+				GitServerClient:   mockSCM,
 				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
@@ -216,7 +216,7 @@ func TestOptions_Run(t *testing.T) {
 				CommentValidation: true,
 				SlackToken:        "testSlackToken",
 				Git:               mockGitClient,
-				GitServerClient:   mockGitServer,
+				GitServerClient:   mockSCM,
 				Handlers:          map[string]domain.MessageHandler{handlers.Slack: mockSlackHander},
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
@@ -234,12 +234,12 @@ func TestOptions_Run(t *testing.T) {
 
 	for _, tt := range testCases {
 		if tt.opts.DryRun {
-			mockGitServer.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber).Return(tt.prBody, nil).Once()
-			mockGitServer.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber, mock.AnythingOfType("string")).Return(nil).Once()
-			mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, tt.opts.PRNumber).Return(nil, nil)
+			mockSCM.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx")).Return(tt.prBody, nil).Once()
+			mockSCM.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), mock.AnythingOfType("string")).Return(nil).Once()
+			mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx")).Return(nil, nil)
 		} else {
 			mockGitClient.On("GetLatestCommitSHA", "").Return("SHA", nil)
-			mockGitServer.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), tt.opts.RepoOwner, tt.opts.RepoName, "SHA").Return(tt.prBody, nil).Once()
+			mockSCM.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
 		}
 
 		for _, team := range tt.opts.Config.Teams {
@@ -261,7 +261,7 @@ func TestOptions_Run(t *testing.T) {
 }
 
 func TestOptions_GenerateMessageBreakdown(t *testing.T) {
-	mockGitServer := mocks.NewGitServer(t)
+	mockSCM := mocks.NewSCM(t)
 
 	testCases := []struct {
 		name              string
@@ -272,7 +272,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		{
 			name: "OneMessage",
 			opts: &run.Options{
-				GitServerClient: mockGitServer,
+				GitServerClient: mockSCM,
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{Name: "infrastructure"},
@@ -290,7 +290,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		{
 			name: "MultipleMessages&MultipleTeams",
 			opts: &run.Options{
-				GitServerClient: mockGitServer,
+				GitServerClient: mockSCM,
 				Config: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{Name: "infrastructure"},
@@ -312,7 +312,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		},
 	}
 
-	mockGitServer.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), mock.Anything, mock.Anything, 0).Return(nil, nil)
+	mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx")).Return(nil, nil)
 
 	for _, tt := range testCases {
 
