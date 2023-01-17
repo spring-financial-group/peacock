@@ -9,10 +9,9 @@ type Config struct {
 }
 
 type SCM struct {
-	Provider string `yaml:"provider"`
-	User     string `env:"GIT_USER"`
-	Token    string `env:"GIT_TOKEN"`
-	Secret   string `env:"HMAC_TOKEN"`
+	User   string `env:"GIT_USER"`
+	Token  string `env:"GIT_TOKEN"`
+	Secret string `env:"GITHUB_SECRET"`
 }
 
 type MessageHandlers struct {
@@ -26,8 +25,8 @@ type Slack struct {
 
 type Webhook struct {
 	URL    string `env:"WEBHOOK_URL"`
-	Token  string `env:"WEBHOOK_AUTH_TOKEN"`
-	Secret string `env:"HMAC_TOKEN"`
+	Token  string `env:"WEBHOOK_SECRET"`
+	Secret string `env:"WEBHOOK_TOKEN"`
 }
 
 func Load() (*Config, error) {

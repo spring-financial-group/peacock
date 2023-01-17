@@ -1,19 +1,24 @@
 logLevel: "info"
 
-config:
-  scm:
-    provider: github
-
 # Username use for interacting with Git
 gitUser: ""
-
 # Token for authenticating with Git
 gitToken: ""
+# Secret used for GitHub api
+githubSecret: ""
 
-# Secret used for webhooks
-hmacSecret: ""
+# Token for authenticating with Slack
+slackToken: ""
 
-webhookUrl: "https://api-staging.jx.mqube.build/EmailService/api/SendEmail/Peacock"
+# URL to send webhooks object to
+webhookUrl: ""
+# Secret for authenticating the webhook
+webhookSecret: ""
+# Token for authenticating the message webhook
+webhookToken: ""
+
+# Existing secret to use for the service
+serviceSecretName: ""
 
 # Additional annotations & labels to be added to the peacock deployment
 podAnnotations: {}

@@ -47,22 +47,30 @@ spec:
           - name: "GIT_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: peacock
-                key: gh-bot-token
-          - name: "HMAC_TOKEN"
+                name: {{ .Values.serviceSecretName }}
+                key: git-token
+          - name: "GITHUB_SECRET"
             valueFrom:
               secretKeyRef:
-                name: peacock
-                key: hmac-secret
+                name: {{ .Values.serviceSecretName }}
+                key: github-secret
           - name: "SLACK_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: peacock
+                name: {{ .Values.serviceSecretName }}
                 key: slack-token
-          - name: "WEBHOOK_AUTH_TOKEN"
-            value: "SomeTokenToGetThingsWorking"
           - name: "WEBHOOK_URL"
             value: {{ .Values.webhookUrl }}
+          - name: "WEBHOOK_SECRET"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.serviceSecretName }}
+                key: webhook-secret
+          - name: "WEBHOOK_TOKEN"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.serviceSecretName }}
+                key: webhook-token
 {{- range $pkey, $pval := .Values.env }}
         - name: {{ $pkey }}
           value: {{ quote $pval }}
@@ -89,15 +97,7 @@ spec:
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
         resources:
 {{ toYaml .Values.resources | indent 12 }}
-        volumeMounts:
-          - mountPath: /config.yaml
-            name: config
-            subPath: config.yaml
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
-      volumes:
-        - name: config
-          configMap: 
-            name: {{ .Values.service.name }}-config
       imagePullSecrets:
 {{- range $pval := .Values.jx.imagePullSecrets }}
       - name: {{ quote $pval }}

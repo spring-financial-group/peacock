@@ -7,6 +7,7 @@ image:
   tag: "{{ requiredEnv "VERSION" }}"
   pullPolicy: "Always"
 
-gitUser: "mockUser"
-gitToken: "mockToken"
-hmacSecret: "mockSecret"
+logLevel: "debug"
+gitUser: "peacock-bot"
+
+webhookUrl: "https://api-staging.jx.mqube.build/EmailService/api/SendEmail/Peacock"
