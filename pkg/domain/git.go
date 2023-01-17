@@ -17,6 +17,12 @@ const (
 	ErrorStatus   = "error"
 )
 
+// Repository status contexts
+const (
+	ValidationContext = "peacock-validation"
+	ReleaseContext    = "peacock-release"
+)
+
 type Git interface {
 	// GetLatestCommitSHA gets the SHA of the latest commit from the local env
 	GetLatestCommitSHA(dir string) (string, error)
@@ -40,16 +46,14 @@ type SCM interface {
 	GetPRCommentsByUser(ctx context.Context) ([]*github.IssueComment, error)
 	// DeleteUsersComments deletes all the comments on a pull request by a user
 	DeleteUsersComments(ctx context.Context) error
-	// CreateCommitStatus creates a commit status on a commit
-	CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error
-	// CreateValidationCommitStatus creates a validation commit status on a commit
-	CreateValidationCommitStatus(ctx context.Context, ref string, state string) error
-	// CreateReleaseCommitStatus creates a release commit status on a commit
-	CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error
+	// CreatePeacockCommitStatus creates a commit status on a commit
+	CreatePeacockCommitStatus(ctx context.Context, ref, state, statusContext string) error
 	// GetLatestCommitInBranch returns the most recent commit in a branch
 	GetLatestCommitInBranch(ctx context.Context, branch string) (*github.RepositoryCommit, error)
 	// GetKey returns the identifier of the SCM
 	GetKey() string
+	// HandleError handles an error by commenting on the PR and creating a commit status on the given SHA
+	HandleError(ctx context.Context, statusContext, headSHA string, err error) error
 }
 
 type SCMClientFactory interface {

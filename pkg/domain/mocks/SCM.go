@@ -43,41 +43,13 @@ func (_m *SCM) CommentOnPR(ctx context.Context, body string) error {
 	return r0
 }
 
-// CreateCommitStatus provides a mock function with given fields: ctx, ref, status
-func (_m *SCM) CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error {
-	ret := _m.Called(ctx, ref, status)
+// CreatePeacockCommitStatus provides a mock function with given fields: ctx, ref, state, statusContext
+func (_m *SCM) CreatePeacockCommitStatus(ctx context.Context, ref string, state string, statusContext string) error {
+	ret := _m.Called(ctx, ref, state, statusContext)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, *github.RepoStatus) error); ok {
-		r0 = rf(ctx, ref, status)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// CreateReleaseCommitStatus provides a mock function with given fields: ctx, ref, state
-func (_m *SCM) CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error {
-	ret := _m.Called(ctx, ref, state)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, ref, state)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// CreateValidationCommitStatus provides a mock function with given fields: ctx, ref, state
-func (_m *SCM) CreateValidationCommitStatus(ctx context.Context, ref string, state string) error {
-	ret := _m.Called(ctx, ref, state)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, ref, state)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+		r0 = rf(ctx, ref, state, statusContext)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -249,6 +221,20 @@ func (_m *SCM) GetPullRequestBodyFromPRNumber(ctx context.Context) (*string, err
 	}
 
 	return r0, r1
+}
+
+// HandleError provides a mock function with given fields: ctx, statusContext, headSHA, err
+func (_m *SCM) HandleError(ctx context.Context, statusContext string, headSHA string, err error) error {
+	ret := _m.Called(ctx, statusContext, headSHA, err)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, error) error); ok {
+		r0 = rf(ctx, statusContext, headSHA, err)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 type mockConstructorTestingTNewSCM interface {

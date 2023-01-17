@@ -13,17 +13,24 @@ import (
 	"sort"
 )
 
-// Base repository statuses to use for creating a commit status
+const (
+	ValidationContext = "peacock-validation"
+	ReleaseContext    = "peacock-release"
+)
+
+// RepoStatus Base repository statuses to use for creating a commit status
 var (
-	ValidationStatus = &github.RepoStatus{
-		State:       nil,
-		Description: utils.NewPtr("Validates the PR body against the feathers"),
-		Context:     utils.NewPtr("peacock-validation"),
-	}
-	ReleaseStatus = &github.RepoStatus{
-		State:       nil,
-		Description: utils.NewPtr("Validates the PR body against the feathers"),
-		Context:     utils.NewPtr("peacock-release"),
+	RepoStatus = map[string]*github.RepoStatus{
+		ValidationContext: {
+			State:       nil,
+			Description: utils.NewPtr("Validates the PR body against the feathers"),
+			Context:     utils.NewPtr(ValidationContext),
+		},
+		ReleaseContext: {
+			State:       nil,
+			Description: utils.NewPtr("Validates the PR body against the feathers"),
+			Context:     utils.NewPtr(ReleaseContext),
+		},
 	}
 )
 
@@ -160,27 +167,10 @@ func (c *Client) DeleteUsersComments(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) CreateCommitStatus(ctx context.Context, ref string, status *github.RepoStatus) error {
-	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
-	if err != nil {
-		return errors.Wrap(err, "failed to create commit status")
-	}
-	return nil
-}
-
-func (c *Client) CreateValidationCommitStatus(ctx context.Context, ref string, state string) error {
-	status := ValidationStatus
+func (c *Client) CreatePeacockCommitStatus(ctx context.Context, ref, state, statusContext string) error {
+	status := RepoStatus[statusContext]
 	status.State = &state
-	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
-	if err != nil {
-		return errors.Wrap(err, "failed to create commit status")
-	}
-	return nil
-}
 
-func (c *Client) CreateReleaseCommitStatus(ctx context.Context, ref string, state string) error {
-	status := ReleaseStatus
-	status.State = &state
 	_, _, err := c.github.Repositories.CreateStatus(ctx, c.owner, c.repo, ref, status)
 	if err != nil {
 		return errors.Wrap(err, "failed to create commit status")
@@ -198,4 +188,17 @@ func (c *Client) GetLatestCommitInBranch(ctx context.Context, branch string) (*g
 
 func (c *Client) GetKey() string {
 	return fmt.Sprintf("%s/%s/%s/%d", c.user, c.owner, c.repo, c.prNumber)
+}
+
+func (c *Client) HandleError(ctx context.Context, statusContext, headSHA string, err error) error {
+	commentErr := c.CommentError(ctx, err)
+	if commentErr != nil {
+		log.Errorf("Failed to comment error on PR: %s", commentErr.Error())
+	}
+
+	statusErr := c.CreatePeacockCommitStatus(ctx, headSHA, domain.FailureStatus, statusContext)
+	if err != statusErr {
+		log.Errorf("failed to create failed commit status: %s", err)
+	}
+	return err
 }
