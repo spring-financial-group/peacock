@@ -21,7 +21,7 @@ func MarshalPullRequestEvent(event *github.PullRequestEvent) *PullRequestEventDT
 	return &PullRequestEventDTO{
 		Owner:         *event.Repo.Owner.Login,
 		RepoName:      *event.Repo.Name,
-		Body:          *event.PullRequest.Body,
+		Body:          event.PullRequest.GetBody(),
 		PRNumber:      *event.PullRequest.Number,
 		SHA:           *event.PullRequest.Head.SHA,
 		Branch:        *event.PullRequest.Head.Ref,

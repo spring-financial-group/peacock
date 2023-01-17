@@ -59,11 +59,6 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		}
 	}
 
-	// Parse the PR body for any messages
-	if e.Body == "" {
-		log.Infof("PR body is nil, skipping")
-		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessStatus, domain.ValidationContext)
-	}
 	messages, err := message.ParseMessagesFromMarkdown(e.Body)
 	if err != nil {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
@@ -140,8 +135,8 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	defaultBranchSHA := *latestCommit.SHA
 
 	// Set the current pipeline status to pending
-	if err := scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.PendingStatus, domain.ReleaseContext); err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
+	if err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.PendingStatus, domain.ReleaseContext); err != nil {
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
