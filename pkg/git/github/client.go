@@ -134,7 +134,7 @@ func (c *Client) GetPRCommentsByUser(ctx context.Context) ([]*github.IssueCommen
 			userComments = append(userComments, comment)
 		}
 	}
-	return comments, nil
+	return userComments, nil
 }
 
 func (c *Client) GetFileFromBranch(ctx context.Context, branch, path string) ([]byte, error) {
