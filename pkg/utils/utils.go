@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func CommaSeperated[T any](slice []T) (commaSep string) {
+func CommaSeparated[T any](slice []T) (commaSep string) {
 	for i, val := range slice {
 		if i == 0 {
 			commaSep = fmt.Sprintf("%v", val)

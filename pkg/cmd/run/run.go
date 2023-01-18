@@ -1,31 +1,24 @@
 package run
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
+	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
-	"github.com/spring-financial-group/peacock/pkg/handlers"
-	"github.com/spring-financial-group/peacock/pkg/handlers/slack"
-	"github.com/spring-financial-group/peacock/pkg/handlers/webhook"
 	"github.com/spring-financial-group/peacock/pkg/message"
+	"github.com/spring-financial-group/peacock/pkg/msgclient"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/spring-financial-group/peacock/pkg/utils/templates"
 	"os"
-	"regexp"
 	"strconv"
-	"strings"
-	"text/template"
 )
 
 // Options for the run command
@@ -33,6 +26,7 @@ type Options struct {
 	PRNumber     int
 	GitServerURL string
 	GitHubToken  string
+	GitUser      string
 	RepoOwner    string
 	RepoName     string
 
@@ -46,10 +40,10 @@ type Options struct {
 	CommentValidation bool
 	Subject           string
 
-	GitServerClient domain.GitServer
+	GitServerClient domain.SCM
 	Git             domain.Git
-	Handlers        map[string]domain.MessageHandler
-	Config          *feathers.Feathers
+	MSGHandler      domain.MessageHandler
+	Feathers        *feathers.Feathers
 }
 
 var (
@@ -96,6 +90,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 		GitHubToken      string
 		RepoOwner        string
 		RepoName         string
+		GitUser          string
 		SlackToken       string
 		WebhookURL       string
 		WebhookAuthToken string
@@ -108,6 +103,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	cmd.Flags().StringVarP(&keys.GitHubToken, "git-token-key", "", "GITHUB_TOKEN", "the environment variable key for the git token used to operate on the git repository.")
 	cmd.Flags().StringVarP(&keys.RepoOwner, "git-owner-key", "", "REPO_OWNER", "the environment variable key for the owner of the git repository.")
 	cmd.Flags().StringVarP(&keys.RepoName, "git-repo-key", "", "REPO_NAME", "the environment variable key for the name of the git repo to run on.")
+	cmd.Flags().StringVarP(&keys.RepoName, "git-user", "", "GIT_USER", "the environment variable key for the name user to interact with Git.")
 	cmd.Flags().StringVarP(&keys.SlackToken, "slack-token-key", "", "SLACK_TOKEN", "the environment variable key for the slack token used to send the messages to slack channels")
 	cmd.Flags().StringVarP(&keys.WebhookURL, "webhook-URL-key", "", "WEBHOOK_URL", "the environment variable key for the webhook URL")
 	cmd.Flags().StringVarP(&keys.WebhookAuthToken, "webhook-auth-token-key", "", "WEBHOOK_AUTH_TOKEN", "the environment variable key for the webhook auth token")
@@ -125,6 +121,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 	o.GitHubToken = os.Getenv(keys.GitHubToken)
 	o.RepoOwner = os.Getenv(keys.RepoOwner)
 	o.RepoName = os.Getenv(keys.RepoName)
+	o.GitUser = os.Getenv(keys.GitUser)
 	o.SlackToken = os.Getenv(keys.SlackToken)
 	o.WebhookURL = os.Getenv(keys.WebhookURL)
 	o.WebhookToken = os.Getenv(keys.WebhookAuthToken)
@@ -150,9 +147,9 @@ func (o *Options) Run() error {
 		return nil
 	}
 
-	if o.Config == nil {
+	if o.Feathers == nil {
 		log.Info("Loading feathers from local instance")
-		o.Config, err = feathers.LoadConfig()
+		o.Feathers, err = feathers.GetFeathersFromFile()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
 			o.PostErrorToPR(ctx, err)
@@ -160,14 +157,17 @@ func (o *Options) Run() error {
 		}
 	}
 
-	if o.Handlers == nil {
-		log.Info("Initialising message handlers")
-		err = o.initialiseHandlers()
-		if err != nil {
-			err = errors.Wrapf(err, "failed to init handlers")
-			o.PostErrorToPR(ctx, err)
-			return err
-		}
+	if o.MSGHandler == nil {
+		o.MSGHandler = msgclient.NewMessageHandler(&config.MessageHandlers{
+			Slack: config.Slack{
+				Token: o.SlackToken,
+			},
+			Webhook: config.Webhook{
+				URL:    o.WebhookURL,
+				Token:  o.WebhookToken,
+				Secret: o.WebhookSecret,
+			},
+		})
 	}
 
 	log.Info("Parsing messages from pull request body")
@@ -201,7 +201,7 @@ func (o *Options) Run() error {
 		}
 		// Return before sending messages
 		if o.CommentValidation && breakdown != "" {
-			if err := o.GitServerClient.CommentOnPR(ctx, o.PRNumber, breakdown); err != nil {
+			if err := o.GitServerClient.CommentOnPR(ctx, breakdown); err != nil {
 				return err
 			}
 		}
@@ -214,7 +214,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Info("Sending messages")
-	err = o.SendMessages(messages)
+	err = o.MSGHandler.SendMessages(o.Feathers, messages)
 	if err != nil {
 		return err
 	}
@@ -228,11 +228,11 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
 		log.Info("Getting pull request from PR number")
-		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.PRNumber)
+		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx)
 	} else {
 		// If not then we can get it from the last commit in the local instance
 		log.Info("Getting pull request from last commit")
-		sha, err = o.Git.GetLatestCommitSHA()
+		sha, err = o.Git.GetLatestCommitSHA("")
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get latest commit sha")
 		}
@@ -248,49 +248,9 @@ func (o *Options) GenerateSubject() {
 	o.Subject = fmt.Sprintf("New Release Notes for %s", o.RepoName)
 }
 
-// SendMessages send the messages using the message handlers
-func (o *Options) SendMessages(messages []message.Message) error {
-	var errs []error
-	for _, m := range messages {
-		err := o.SendMessage(m)
-		if err != nil {
-			log.Error(err)
-			errs = append(errs, err)
-			continue
-		}
-	}
-	if len(errs) > 0 {
-		return errors.New("failed to send messages")
-	}
-	return nil
-}
-
-// SendMessage pools the addresses of the different teams by contactType and sends the message to each
-func (o *Options) SendMessage(message message.Message) error {
-	teams := o.Config.GetTeamsByNames(message.TeamNames...)
-	// We should pool the addresses by contact type so that we only send one message per contact type
-	addressPool := o.poolAddressesByContactType(teams)
-	for contactType, addresses := range addressPool {
-		err := o.Handlers[contactType].Send(message.Content, o.Subject, addresses)
-		if err != nil {
-			return errors.Wrapf(err, "failed to send message")
-		}
-		log.Infof("Message successfully sent to %s via %s\n", strings.Join(addresses, ", "), contactType)
-	}
-	return nil
-}
-
-func (o *Options) poolAddressesByContactType(teams []feathers.Team) map[string][]string {
-	addressPool := make(map[string][]string)
-	for _, team := range teams {
-		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
-	}
-	return addressPool
-}
-
 // ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers
 func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
-	allTeamsInConfig := o.Config.GetAllTeamNames()
+	allTeamsInConfig := o.Feathers.GetAllTeamNames()
 	for _, m := range messages {
 		// Check the team name actually exists in feathers
 		for _, msgTeamName := range m.TeamNames {
@@ -301,9 +261,9 @@ func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
 		}
 
 		// Check that the handler for the teams contact type is initialised
-		teams := o.Config.GetTeamsByNames(m.TeamNames...)
+		teams := o.Feathers.GetTeamsByNames(m.TeamNames...)
 		for _, team := range teams {
-			if o.Handlers[team.ContactType] == nil {
+			if !o.MSGHandler.IsInitialised(team.ContactType) {
 				return errors.Errorf("Team \"%s\" has contact type \"%s\", handler not initialised for this type - check input flags", team.Name, team.ContactType)
 			}
 		}
@@ -321,18 +281,22 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []message.Me
 	if !changed {
 		return "", nil
 	}
-	return o.generateBreakdown(messages, hash)
+	breakdown, err := message.GenerateBreakdown(messages, len(o.Feathers.GetAllTeamNames()))
+	if err != nil {
+		return "", err
+	}
+	return comment.AddMetadataToComment(breakdown, hash, comment.BreakdownCommentType), nil
 }
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR
 func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Message) (bool, string, error) {
 	log.Info("Checking if messages have changed")
-	currentHash, err := o.generateMessageHash(messages)
+	currentHash, err := message.GenerateHash(messages)
 	if err != nil {
 		return false, "", err
 	}
 
-	comments, err := o.GitServerClient.GetPRComments(ctx, o.PRNumber)
+	comments, err := o.GitServerClient.GetPRComments(ctx)
 	if err != nil {
 		return false, "", err
 	}
@@ -345,7 +309,7 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Me
 	for _, c := range comments {
 		// Comments sorted by most recent first, so the first matching comment
 		// was the last one posted by the bot
-		previousHash = o.getHashFromComment(*c.Body)
+		previousHash, _ = comment.GetMetadataFromComment(*c.Body)
 		if previousHash != "" {
 			log.Info("Found previous hash in comment")
 			break
@@ -365,68 +329,12 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Me
 	return true, currentHash, nil
 }
 
-func (o *Options) getHashFromComment(comment string) string {
-	re := regexp.MustCompile(`(?m)<!-- hash: ([a-zA-Z0-9]+) -->`)
-	matches := re.FindStringSubmatch(comment)
-	if len(matches) != 2 {
-		return ""
-	}
-	return matches[1]
-}
-
-func (o *Options) generateBreakdown(messages []message.Message, hash string) (string, error) {
-	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
-{{ range $idx, $val := .messages }}
-***
-Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
-<details>
-<summary>Message Breakdown</summary>
-
-{{ $val.Content }}
-
-</details>
-
-{{ end -}}
-<!-- hash: {{ .hash }} -->`
-
-	tmplFuncs := template.FuncMap{
-		"inc":      func(i int) int { return i + 1 },
-		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
-	}
-
-	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTmpl)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to parse template")
-	}
-
-	var buf bytes.Buffer
-	err = tpl.Execute(&buf, map[string]any{
-		"totalTeams": len(o.Config.GetAllTeamNames()),
-		"messages":   messages,
-		"hash":       hash,
-	})
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(buf.String()), nil
-}
-
-func (o *Options) generateMessageHash(messages []message.Message) (string, error) {
-	data, err := json.Marshal(messages)
-	if err != nil {
-		return "", err
-	}
-	h := sha256.New()
-	h.Write(data)
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
 // PostErrorToPR posts an error to the pull request as a comment
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
 		errorMsg := fmt.Sprintf("[Peacock] Validation Failed:\n%s", err.Error())
-		err = o.GitServerClient.CommentOnPR(ctx, o.PRNumber, errorMsg)
+		err = o.GitServerClient.CommentOnPR(ctx, errorMsg)
 		if err != nil {
 			panic(err)
 		}
@@ -454,40 +362,14 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	if o.RepoOwner == "" || o.RepoName == "" {
 		log.Info("No one repo owner or name provided, getting from git")
-		o.RepoOwner, o.RepoName, err = o.Git.GetRepoOwnerAndName()
+		o.RepoOwner, o.RepoName, err = o.Git.GetRepoOwnerAndName("")
 		if err != nil {
 			return errors.Wrap(err, "failed to get repo owner and name")
 		}
 	}
 
 	if o.GitServerClient == nil {
-		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitHubToken)
-	}
-	return nil
-}
-
-// initialiseHandlers initialises the message handlers depending on the flags passed through to the command.
-// It then checks that all the handlers required by the feathers have been initialised.
-func (o *Options) initialiseHandlers() (err error) {
-	o.Handlers = map[string]domain.MessageHandler{}
-	if o.SlackToken != "" {
-		o.Handlers[handlers.Slack], err = slack.NewSlackHandler(o.SlackToken)
-		if err != nil {
-			return errors.Wrap(err, "failed to initialise Slack handler")
-		}
-	}
-
-	if o.WebhookURL != "" {
-		o.Handlers[handlers.Webhook] = webhook.NewWebHookHandler(o.WebhookURL, o.WebhookToken, o.WebhookSecret)
-	}
-
-	// We should check that all the handlers required by the feathers have been initialised
-	for _, t := range o.Config.GetAllContactTypes() {
-		if o.Handlers[t] == nil {
-			return errors.Errorf(
-				"contact type \"%s\" found in feathers but no handler has been initialised, "+
-					"check required flags have been passed for this type", t)
-		}
+		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitUser, o.GitHubToken, o.PRNumber)
 	}
 	return nil
 }

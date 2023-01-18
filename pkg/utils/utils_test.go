@@ -31,7 +31,7 @@ func TestUtils_CommaSeperated(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualOutput := utils.CommaSeperated(tt.input)
+			actualOutput := utils.CommaSeparated(tt.input)
 			assert.Equal(t, tt.expectedOutput, actualOutput)
 		})
 	}

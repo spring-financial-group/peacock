@@ -1,20 +1,22 @@
 package feathers
 
 import (
-	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
-	"github.com/spring-financial-group/peacock/pkg/handlers"
+	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
+	"gopkg.in/yaml.v3"
+	"os"
 	"regexp"
 )
 
 const (
-	configPath          = ".peacock/feathers.yaml"
+	feathersPath        = ".peacock/feathers.yaml"
 	slackChannelIDRegex = "^[A-Z0-9]{9,11}$"
 )
 
 type Feathers struct {
-	Teams []Team `yaml:"teams"`
+	Teams  []Team `yaml:"teams"`
+	Config Config `yaml:"config"`
 }
 
 type Team struct {
@@ -23,21 +25,38 @@ type Team struct {
 	Addresses   []string `yaml:"addresses"`
 }
 
-func LoadConfig() (*Feathers, error) {
-	exists, err := utils.Exists(configPath)
+type Config struct {
+	Messages Messages `yaml:"messages"`
+}
+
+type Messages struct {
+	Subject string `yaml:"subject"`
+}
+
+func GetFeathersFromFile() (*Feathers, error) {
+	exists, err := utils.Exists(feathersPath)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.Errorf("could not find %s", configPath)
+		return nil, errors.Errorf("could not find %s", feathersPath)
 	}
 
-	cfg := new(Feathers)
-	err = cleanenv.ReadConfig(configPath, cfg)
+	data, err := os.ReadFile(feathersPath)
 	if err != nil {
 		return nil, err
 	}
-	return cfg, cfg.validate()
+
+	return GetFeathersFromBytes(data)
+}
+
+func GetFeathersFromBytes(data []byte) (*Feathers, error) {
+	feathers := new(Feathers)
+	err := yaml.Unmarshal(data, &feathers)
+	if err != nil {
+		return nil, err
+	}
+	return feathers, feathers.validate()
 }
 
 func (f *Feathers) validate() error {
@@ -89,6 +108,25 @@ func (f *Feathers) GetContactTypesByTeamNames(names ...string) []string {
 	return types
 }
 
+func (f *Feathers) ExistsInFeathers(teamNames ...string) error {
+	allTeamsInFeathers := f.GetAllTeamNames()
+	for _, name := range teamNames {
+		if !utils.ExistsInSlice(name, allTeamsInFeathers) {
+			return errors.Errorf("team %s does not exist in feathers", name)
+		}
+	}
+	return nil
+}
+
+func (f *Feathers) GetAddressPoolByTeamNames(teamNames ...string) map[string][]string {
+	wantedTeams := f.GetTeamsByNames(teamNames...)
+	addressPool := make(map[string][]string, len(f.GetAllContactTypes()))
+	for _, team := range wantedTeams {
+		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
+	}
+	return addressPool
+}
+
 func (t *Team) validate() error {
 	if t.Name == "" {
 		return errors.New("no team name found")
@@ -102,7 +140,7 @@ func (t *Team) validate() error {
 
 	// We should check that the contactType actually has a handler
 	var valid bool
-	for _, h := range handlers.Valid {
+	for _, h := range models.Valid {
 		if t.ContactType == h {
 			valid = true
 		}
@@ -118,7 +156,7 @@ func (t *Team) validate() error {
 	}
 	for _, address := range t.Addresses {
 		switch t.ContactType {
-		case handlers.Slack:
+		case models.Slack:
 			match := slackRegex.MatchString(address)
 			if !match {
 				return errors.Errorf("failed to parse slack channel ID \"%s\" for team \"%s\"", address, t.Name)

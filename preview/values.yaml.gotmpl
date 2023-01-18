@@ -1,0 +1,14 @@
+jxRequirements:
+  ingress:
+    namespaceSubDomain: "-pr{{ requiredEnv "PULL_NUMBER" }}."
+
+image:
+  repository: "{{ requiredEnv "DOCKER_REGISTRY" }}/{{ requiredEnv "DOCKER_REGISTRY_ORG" }}/{{ requiredEnv "APP_NAME" }}"
+  tag: "{{ requiredEnv "VERSION" }}"
+  pullPolicy: "Always"
+
+logLevel: "debug"
+gitUser: "peacock-bot"
+
+webhookUrl: "https://api-staging.jx.mqube.build/EmailService/api/SendEmail/Peacock"
+serviceSecretName: "peacock"
