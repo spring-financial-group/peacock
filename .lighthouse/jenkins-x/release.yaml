@@ -11,7 +11,7 @@ spec:
       taskSpec:
         metadata: {}
         stepTemplate:
-          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-cli/release.yaml@versionStream
+          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go/release.yaml@versionStream
           name: ""
           resources:
             # override limits for all containers here
