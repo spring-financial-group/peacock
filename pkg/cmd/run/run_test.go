@@ -284,7 +284,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some infrastructure\nrelated things",
 				},
 			},
-			expectedBreakdown: "[Peacock] Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 type: breakdown -->\n",
+			expectedBreakdown: "Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 type: breakdown -->\n",
 		},
 		{
 			name: "MultipleMessages&MultipleTeams",
@@ -307,7 +307,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some ml\nrelated things",
 				},
 			},
-			expectedBreakdown: "[Peacock] Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 type: breakdown -->\n",
+			expectedBreakdown: "Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 type: breakdown -->\n",
 		},
 	}
 
