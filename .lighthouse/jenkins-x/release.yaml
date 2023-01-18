@@ -41,8 +41,7 @@ spec:
           resources: {}
           script: |
             #!/bin/sh
-            make release linux win darwin
-            ./build/linux/peacock version
+            make build
         - image: ghcr.io/jenkins-x/jx-changelog:0.0.47
           name: promote-changelog
           script: |
