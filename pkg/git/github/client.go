@@ -67,7 +67,7 @@ func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (
 	}
 	log.Infof("Found %d pull request(s) containing that commit", len(prsWithCommit))
 
-	// If there is only one PR then that must be is
+	// If there is only one PR then that must be it
 	if len(prsWithCommit) == 1 {
 		return prsWithCommit[0].Body, nil
 	}
