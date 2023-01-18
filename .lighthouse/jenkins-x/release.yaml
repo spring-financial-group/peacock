@@ -74,7 +74,7 @@ spec:
             #!/usr/bin/env bash
             source .jx/variables.sh
 
-            gh auth login --with-token < /workspace/source/bot-token.gt
+            gh auth login --with-token $GIT_TOKEN
             echo "uploading to release v$VERSION"
             gh release upload v$VERSION ./build/linux/peacock
             gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
