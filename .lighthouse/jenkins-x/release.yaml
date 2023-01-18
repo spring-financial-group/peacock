@@ -60,6 +60,8 @@ spec:
             git push origin v$VERSION
 
             jx changelog create --version v${VERSION}
+        - name: promote-helm-release
+          resources: {}
         - image: tomhobson/github-cli:latest
           name: push-release
           script: |
@@ -88,6 +90,8 @@ spec:
             echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GIT_TOKEN\"}}}" > /kaniko/.docker/config.json
             rm /workspace/source/bot-token.gt
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
+        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
+          resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 12h0m0s
