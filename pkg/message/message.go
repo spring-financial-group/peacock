@@ -16,6 +16,19 @@ import (
 const (
 	teamNameHeaderRegex = "### Notify(.*)\\n"
 	commaSeparated      = ","
+
+	breakdownTemplate = `Successfully validated {{ len .messages }} message(s).
+{{ range $idx, $val := .messages }}
+***
+Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
+<details>
+<summary>Message Breakdown</summary>
+
+{{ $val.Content }}
+
+</details>
+
+{{ end -}}`
 )
 
 type Message struct {
@@ -77,25 +90,12 @@ func GenerateHash(messages []Message) (string, error) {
 }
 
 func GenerateBreakdown(messages []Message, totalTeams int) (string, error) {
-	breakdownTmpl := `[Peacock] Successfully validated {{ len .messages }} message(s).
-{{ range $idx, $val := .messages }}
-***
-Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
-<details>
-<summary>Message Breakdown</summary>
-
-{{ $val.Content }}
-
-</details>
-
-{{ end -}}`
-
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
 		"commaSep": func(i []string) string { return utils.CommaSeparated(i) },
 	}
 
-	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTmpl)
+	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTemplate)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse template")
 	}
