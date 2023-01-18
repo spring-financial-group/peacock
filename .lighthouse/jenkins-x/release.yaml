@@ -61,6 +61,13 @@ spec:
             jx changelog create --version v${VERSION}
         - name: promote-helm-release
           resources: {}
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: git-token-export
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            jx gitops variables
+            echo "export GIT_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
         - image: tomhobson/github-cli:latest
           name: push-release
           script: |
@@ -73,13 +80,6 @@ spec:
             gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
             mv ./build/darwin/peacock ./build/darwin/peacock-darwin
             gh release upload v$VERSION ./build/darwin/peacock-darwin
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: git-token-export
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            jx gitops variables
-            echo "export GIT_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
         - image: gcr.io/kaniko-project/executor:v1.6.0-debug
           name: build-push-container
           resources: {}
