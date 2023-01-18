@@ -15,7 +15,7 @@ import (
 
 const (
 	teamNameHeaderRegex = "### Notify(.*)\\n"
-	commaSeperated      = ","
+	commaSeparated      = ","
 )
 
 type Message struct {
@@ -59,7 +59,7 @@ func parseTeamNames(teamNameReg *regexp.Regexp, markdown string) [][]string {
 	teamsInMessages := make([][]string, len(notifyHeaders))
 	for i, header := range notifyHeaders {
 		// The actual team name is always the sub match, so it's the second element
-		teamNames := strings.Split(header[1], commaSeperated)
+		teamNames := strings.Split(header[1], commaSeparated)
 		teamNames = utils.TrimSpaceInSlice(teamNames)
 		teamsInMessages[i] = teamNames
 	}
@@ -92,7 +92,7 @@ Message {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
-		"commaSep": func(i []string) string { return utils.CommaSeperated(i) },
+		"commaSep": func(i []string) string { return utils.CommaSeparated(i) },
 	}
 
 	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTmpl)
