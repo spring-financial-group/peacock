@@ -20,7 +20,7 @@ spec:
               script: |
                 #!/usr/bin/env sh
                 jx gitops variables --commit=false
-                
+
                 ## Export secrets for use in peacock
                 echo "export GITHUB_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
                 echo "export SLACK_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['slack-token']}" | base64 -d)\"" >> .jx/variables.sh
