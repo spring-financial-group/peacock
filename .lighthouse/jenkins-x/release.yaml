@@ -67,14 +67,13 @@ spec:
           script: |
             #!/usr/bin/env sh
             jx gitops variables
-            echo "export GIT_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
+            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
         - image: tomhobson/github-cli:latest
           name: push-release
           script: |
             #!/usr/bin/env bash
             source .jx/variables.sh
 
-            gh auth login --with-token $GIT_TOKEN
             echo "uploading to release v$VERSION"
             gh release upload v$VERSION ./build/linux/peacock
             gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
@@ -86,8 +85,7 @@ spec:
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GIT_TOKEN\"}}}" > /kaniko/.docker/config.json
-            rm /workspace/source/bot-token.gt
+            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GH_TOKEN\"}}}" > /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
           resources: {}
