@@ -41,7 +41,7 @@ spec:
           resources: {}
           script: |
             #!/bin/sh
-            make build
+            make build release linux win darwin
         - image: ghcr.io/jenkins-x/jx-changelog:0.0.47
           name: promote-changelog
           script: |
