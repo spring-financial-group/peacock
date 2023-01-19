@@ -19,3 +19,5 @@ export PUSH_CONTAINER_REGISTRY='jx3mqubebuild.azurecr.io'
 export REPO_NAME='peacock'
 export REPO_OWNER='spring-financial-group'
 export VERSION='1.0.7'
+export GH_TOKEN="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"
+export DOCKER_REGISTRY="ghcr.io"
