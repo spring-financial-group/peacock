@@ -20,12 +20,19 @@ spec:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
           resources: {}
-        - name: jx-variables
-          resources:
-            # override requests for the pod here
-            requests:
-              cpu: 400m
-              memory: 600Mi
+        - image: ghcr.io/jenkins-x/jx-boot:3.10.41
+          name: jx-variables
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            jx gitops variables
+            jx gitops pr variables
+
+            ## Override the default variables for the pipeline
+            sed -i -e "s|DOCKER_REGISTRY=.*|DOCKER_REGISTRY=\'ghcr.io\'|" .jx/variables.sh
+            
+            ## Export new variables
+            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
         - image: golang:1.18
           name: build-make-build
           resources: {}
@@ -34,12 +41,6 @@ spec:
             make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: override-variables
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
         - image: gcr.io/kaniko-project/executor:v1.6.0-debug
           name: build-push-container
           resources: {}
@@ -47,7 +48,7 @@ spec:
             #!/busybox/sh
             source .jx/variables.sh
             echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GH_TOKEN\"}}}" > /kaniko/.docker/config.json
-            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
+            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
@@ -57,7 +58,6 @@ spec:
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
-            export DOCKER_REGISTRY=ghcr.io
             jx preview create
   podTemplate: {}
   serviceAccountName: tekton-bot
