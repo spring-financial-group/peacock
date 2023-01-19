@@ -26,13 +26,6 @@ spec:
             requests:
               cpu: 400m
               memory: 600Mi
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: override-variables
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
-            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
         - image: golang:1.18
           name: build-make-build
           resources: {}
@@ -41,6 +34,13 @@ spec:
             make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: export-token
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
+            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
         - image: gcr.io/kaniko-project/executor:v1.6.0-debug
           name: build-push-container
           resources: {}

@@ -33,13 +33,6 @@ spec:
             requests:
               cpu: 400m
               memory: 600Mi
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: override-variables
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
-            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
         - image: uses:spring-financial-group/DevOps/pipelines/golang-lint.yaml@main
           name: ""
           resources: {}
@@ -57,7 +50,6 @@ spec:
 
             if [ -d "charts/$REPO_NAME" ]; then
             sed -i -e "s/^version:.*/version: $VERSION/" ./charts/$REPO_NAME/Chart.yaml
-            sed -i -e "s/repository:.*/repository: $DOCKER_REGISTRY\/$DOCKER_REGISTRY_ORG\/$APP_NAME/" ./charts/$REPO_NAME/values.yaml
             sed -i -e "s/tag:.*/tag: $VERSION/" ./charts/$REPO_NAME/values.yaml;
             else echo no charts; fi
 
@@ -68,6 +60,13 @@ spec:
             jx changelog create --version v${VERSION}
         - name: promote-helm-release
           resources: {}
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: export-token
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
+            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
         - image: tomhobson/github-cli:latest
           name: push-release
           script: |
