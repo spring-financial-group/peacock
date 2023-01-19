@@ -28,6 +28,7 @@ func NewHandler(cfg *config.SCM, group *gin.RouterGroup, uc *webhookuc.WebHookUs
 }
 
 func (h *Handler) RegisterGitHubHooks() {
+	h.OnPullRequestEventAny(h.logPullRequestEvent)
 	h.OnPullRequestEventOpened(h.handlePullRequestOpenedEvent)
 	h.OnPullRequestEventReopened(h.handlePullRequestOpenedEvent)
 	h.OnPullRequestEventClosed(h.handlePullRequestClosedEvent)
@@ -49,22 +50,27 @@ func (h *Handler) HandleEvents(c *gin.Context) {
 	}
 }
 
+func (h *Handler) logPullRequestEvent(_ string, eventName string, event *github.PullRequestEvent) error {
+	log.Infof("Received %s event for %s-PR%d", eventName, *event.Repo.Name, *event.PullRequest.Number)
+	return nil
+}
+
 func (h *Handler) handlePullRequestOpenedEvent(_ string, _ string, event *github.PullRequestEvent) error {
-	log.Infof("%s-PR%d was opened. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
+	log.Info("PR opened. Starting dry-run.")
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
 
 func (h *Handler) handlePullRequestClosedEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	if !*event.PullRequest.Merged {
-		log.Infof("%s-PR%d was closed without merging. Skipping.", *event.Repo.FullName, *event.PullRequest.Number)
+		log.Info("PR closed without merging. Skipping.")
 		h.useCase.CleanUp(*event.PullRequest.Head.Ref)
 		return nil
 	}
-	log.Infof("%s-PR%d was merged. Starting full run.", *event.Repo.FullName, *event.PullRequest.Number)
+	log.Info("PR merged. Starting full run.")
 	return h.useCase.RunPeacock(models.MarshalPullRequestEvent(event))
 }
 
 func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.PullRequestEvent) error {
-	log.Infof("%s-PR%d has been edited. Starting dry-run.", *event.Repo.FullName, *event.PullRequest.Number)
+	log.Info("PR edited. Starting dry-run.")
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
