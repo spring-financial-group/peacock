@@ -33,6 +33,13 @@ spec:
             requests:
               cpu: 400m
               memory: 600Mi
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: override-variables
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
+            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
         - image: uses:spring-financial-group/DevOps/pipelines/golang-lint.yaml@main
           name: ""
           resources: {}
@@ -61,13 +68,6 @@ spec:
             jx changelog create --version v${VERSION}
         - name: promote-helm-release
           resources: {}
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: git-token-export
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            jx gitops variables
-            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
         - image: tomhobson/github-cli:latest
           name: push-release
           script: |
@@ -86,7 +86,7 @@ spec:
             #!/busybox/sh
             source .jx/variables.sh
             echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GH_TOKEN\"}}}" > /kaniko/.docker/config.json
-            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=ghcr.io/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
+            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
           resources: {}
   podTemplate: {}
