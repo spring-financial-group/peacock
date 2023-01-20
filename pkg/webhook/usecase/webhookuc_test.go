@@ -29,6 +29,7 @@ var (
 	mockCTX = context.Background()
 
 	mockPullRequestEventDTO = &models.PullRequestEventDTO{
+		PullRequestID: 100,
 		Owner:         RepoOwner,
 		RepoName:      RepoName,
 		Body:          "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks",
@@ -125,7 +126,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		defaultSHA := "default-SHA"
 		mockSCM.On("GetLatestCommitSHAInBranch", mockCTX, mockEvent.DefaultBranch).Return(defaultSHA, nil).Once()
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, defaultSHA, domain.PendingState, domain.ReleaseContext).Return(nil).Once()
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.DefaultBranch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 
