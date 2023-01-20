@@ -57,7 +57,7 @@ func (h *Handler) handlePullRequestOpenedEvent(_ string, _ string, event *github
 func (h *Handler) handlePullRequestClosedEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	if !*event.PullRequest.Merged {
 		log.Infof("%s/PR-%d closed without merging. Skipping.", *event.Repo.Name, *event.PullRequest.Number)
-		h.useCase.CleanUp(*event.PullRequest.Head.Ref)
+		h.useCase.CleanUp(*event.PullRequest.ID)
 		return nil
 	}
 	log.Infof("%s/PR-%d closed with merge. Starting full run.", *event.Repo.Name, *event.PullRequest.Number)

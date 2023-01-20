@@ -18,7 +18,7 @@ type WebHookUseCase struct {
 	scmFactory domain.SCMClientFactory
 	msgHandler domain.MessageHandler
 
-	feathers map[string]*feathersMeta
+	feathers map[int64]*feathersMeta
 }
 
 func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, msgHandler domain.MessageHandler) *WebHookUseCase {
@@ -26,7 +26,7 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, msgHandler 
 		cfg:        cfg,
 		scmFactory: scmFactory,
 		msgHandler: msgHandler,
-		feathers:   make(map[string]*feathersMeta),
+		feathers:   make(map[int64]*feathersMeta),
 	}
 }
 
@@ -50,7 +50,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
-	feathers, err := w.getFeathers(ctx, scm, e.Branch, e.SHA)
+	feathers, err := w.getFeathers(ctx, scm, e.Branch, e)
 	if err != nil {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, err)
 	}
@@ -123,7 +123,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
 	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
 	defer w.scmFactory.RemoveClient(scm.GetKey())
-	defer w.CleanUp(e.Branch)
+	defer w.CleanUp(e.PullRequestID)
 
 	// We can use the most recent commit in the default branch to display the status. This way we don't have to worry about
 	// merge method used on the PR. We'll continue to use the last commit SHA in the PR for error handling/feathers etc.
@@ -148,7 +148,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
-	feathers, err := w.getFeathers(ctx, scm, e.Branch, e.SHA)
+	feathers, err := w.getFeathers(ctx, scm, e.DefaultBranch, e)
 	if err != nil {
 		return scm.HandleError(ctx, domain.ReleaseContext, domain.ValidationContext, err)
 	}
@@ -188,15 +188,15 @@ type feathersMeta struct {
 	sha      string
 }
 
-func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch, sha string) (*feather.Feathers, error) {
+func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch string, event *models.PullRequestEventDTO) (*feather.Feathers, error) {
 	// Get the feathers for the branch and check that it matches the sha
-	meta, ok := w.feathers[branch]
-	if ok && meta.sha == sha {
+	meta, ok := w.feathers[event.PullRequestID]
+	if ok && meta.sha == event.SHA {
 		return meta.feathers, nil
 	}
 
 	meta = &feathersMeta{
-		sha: sha,
+		sha: event.SHA,
 	}
 
 	data, err := scm.GetFileFromBranch(ctx, branch, ".peacock/feathers.yaml")
@@ -213,10 +213,10 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch
 	if err != nil {
 		return nil, err
 	}
-	w.feathers[branch] = meta
+	w.feathers[event.PullRequestID] = meta
 	return meta.feathers, nil
 }
 
-func (w *WebHookUseCase) CleanUp(branch string) {
-	delete(w.feathers, branch)
+func (w *WebHookUseCase) CleanUp(pullRequestID int64) {
+	delete(w.feathers, pullRequestID)
 }
