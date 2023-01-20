@@ -40,6 +40,15 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
+	messages, err := message.ParseMessagesFromMarkdown(e.Body)
+	if err != nil {
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
+	}
+	if messages == nil {
+		log.Infof("no messages found in PR body, skipping")
+		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
+	}
+
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, e.Branch, e.SHA)
 	if err != nil {
@@ -55,15 +64,6 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		if !w.msgHandler.IsInitialised(t) {
 			return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
-	}
-
-	messages, err := message.ParseMessagesFromMarkdown(e.Body)
-	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
-	}
-	if messages == nil {
-		log.Infof("no messages found in PR body, skipping")
-		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 	}
 
 	// Check that the teams in the messages exist in the feathers
@@ -137,6 +137,16 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
+	// Parse the PR body for any messages
+	messages, err := message.ParseMessagesFromMarkdown(e.Body)
+	if err != nil {
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
+	}
+	if messages == nil {
+		log.Infof("no messages found in PR body, skipping")
+		return scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
+	}
+
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, e.Branch, e.SHA)
 	if err != nil {
@@ -152,16 +162,6 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		if !w.msgHandler.IsInitialised(t) {
 			return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
 		}
-	}
-
-	// Parse the PR body for any messages
-	messages, err := message.ParseMessagesFromMarkdown(e.Body)
-	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
-	}
-	if messages == nil {
-		log.Infof("no messages found in PR body, skipping")
-		return scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
 	}
 
 	// Check that the teams in the messages exist in the feathers
