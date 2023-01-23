@@ -28,6 +28,7 @@ func NewHandler(cfg *config.SCM, group *gin.RouterGroup, uc *webhookuc.WebHookUs
 }
 
 func (h *Handler) RegisterGitHubHooks() {
+	h.OnPullRequestEventSynchronize(h.handlePullRequestSyncEvent)
 	h.OnPullRequestEventOpened(h.handlePullRequestOpenedEvent)
 	h.OnPullRequestEventReopened(h.handlePullRequestOpenedEvent)
 	h.OnPullRequestEventClosed(h.handlePullRequestClosedEvent)
@@ -49,11 +50,20 @@ func (h *Handler) HandleEvents(c *gin.Context) {
 	}
 }
 
+// handlePullRequestSyncEvent starts a dry-run when a PR has been synchronized (e.g. new commits pushed)
+func (h *Handler) handlePullRequestSyncEvent(_ string, _ string, event *github.PullRequestEvent) error {
+	log.Infof("%s/PR-%d synced. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
+	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
+}
+
+// handlePullRequestOpenedEvent starts a dry-run when a PR has been opened
 func (h *Handler) handlePullRequestOpenedEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	log.Infof("%s/PR-%d opened. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
 
+// handlePullRequestClosedEvent starts a full peacock run if the PR was merged, otherwise it removes the dangling
+// feathers etc.
 func (h *Handler) handlePullRequestClosedEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	if !*event.PullRequest.Merged {
 		log.Infof("%s/PR-%d closed without merging. Skipping.", *event.Repo.Name, *event.PullRequest.Number)
@@ -64,6 +74,7 @@ func (h *Handler) handlePullRequestClosedEvent(_ string, _ string, event *github
 	return h.useCase.RunPeacock(models.MarshalPullRequestEvent(event))
 }
 
+// handlePullRequestEditEvent starts a dry-run when a PR has been edited (e.g. body/title changed)
 func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	log.Infof("%s/PR-%d edited. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
