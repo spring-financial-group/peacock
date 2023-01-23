@@ -6,7 +6,8 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/health"
 	"github.com/spring-financial-group/peacock/pkg/logger"
-	"github.com/spring-financial-group/peacock/pkg/msgclient"
+	"github.com/spring-financial-group/peacock/pkg/releasenotes/delivery/msgclients"
+	releasenotesuc "github.com/spring-financial-group/peacock/pkg/releasenotes/usecase"
 	"github.com/spring-financial-group/peacock/pkg/webhook/handler"
 	"github.com/spring-financial-group/peacock/pkg/webhook/usecase"
 )
@@ -21,9 +22,11 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 
 	scmFactory := github.NewClientFactory(cfg.SCM.Token)
 
-	msgHandler := msgclient.NewMessageHandler(&cfg.MessageHandlers)
+	msgHandler := msgclients.NewMessageHandler(&cfg.MessageHandlers)
 
-	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmFactory, msgHandler)
+	notesUC := releasenotesuc.NewUseCase(msgHandler)
+
+	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmFactory, notesUC)
 
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)

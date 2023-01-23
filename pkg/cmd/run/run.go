@@ -12,8 +12,9 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/git"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
-	"github.com/spring-financial-group/peacock/pkg/message"
-	"github.com/spring-financial-group/peacock/pkg/msgclient"
+	"github.com/spring-financial-group/peacock/pkg/models"
+	"github.com/spring-financial-group/peacock/pkg/releasenotes/delivery/msgclients"
+	"github.com/spring-financial-group/peacock/pkg/releasenotes/usecase"
 	"github.com/spring-financial-group/peacock/pkg/rootcmd"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/spring-financial-group/peacock/pkg/utils/templates"
@@ -42,7 +43,7 @@ type Options struct {
 
 	GitServerClient domain.SCM
 	Git             domain.Git
-	MSGHandler      domain.MessageHandler
+	NotesUC         domain.ReleaseNotesUseCase
 	Feathers        *feathers.Feathers
 }
 
@@ -157,23 +158,10 @@ func (o *Options) Run() error {
 		}
 	}
 
-	if o.MSGHandler == nil {
-		o.MSGHandler = msgclient.NewMessageHandler(&config.MessageHandlers{
-			Slack: config.Slack{
-				Token: o.SlackToken,
-			},
-			Webhook: config.Webhook{
-				URL:    o.WebhookURL,
-				Token:  o.WebhookToken,
-				Secret: o.WebhookSecret,
-			},
-		})
-	}
-
 	log.Info("Parsing messages from pull request body")
-	messages, err := message.ParseMessagesFromMarkdown(*prBody)
+	messages, err := o.NotesUC.ParseNotesFromMarkdown(*prBody)
 	if err != nil {
-		err = errors.Wrapf(err, "failed to parse messages from pull request")
+		err = errors.Wrapf(err, "failed to parse release notes from pull request")
 		o.PostErrorToPR(ctx, err)
 		return err
 	}
@@ -184,7 +172,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Info("Validating messages")
-	err = o.ValidateMessagesWithConfig(messages)
+	err = o.NotesUC.ValidateReleaseNotesWithFeathers(o.Feathers, messages)
 	if err != nil {
 		err = errors.Wrapf(err, "failed validate messages with feathers")
 		o.PostErrorToPR(ctx, err)
@@ -214,7 +202,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Info("Sending messages")
-	err = o.MSGHandler.SendMessages(o.Feathers, messages)
+	err = o.NotesUC.SendReleaseNotes(o.Feathers, messages)
 	if err != nil {
 		return err
 	}
@@ -248,32 +236,9 @@ func (o *Options) GenerateSubject() {
 	o.Subject = fmt.Sprintf("New Release Notes for %s", o.RepoName)
 }
 
-// ValidateMessagesWithConfig checks that the messages found in the pr meet the requirements of the feathers
-func (o *Options) ValidateMessagesWithConfig(messages []message.Message) error {
-	allTeamsInConfig := o.Feathers.GetAllTeamNames()
-	for _, m := range messages {
-		// Check the team name actually exists in feathers
-		for _, msgTeamName := range m.TeamNames {
-			exist := utils.ExistsInSlice(msgTeamName, allTeamsInConfig)
-			if !exist {
-				return errors.Errorf("Team %s does not exist in feathers.yaml:\n%v", msgTeamName, allTeamsInConfig)
-			}
-		}
-
-		// Check that the handler for the teams contact type is initialised
-		teams := o.Feathers.GetTeamsByNames(m.TeamNames...)
-		for _, team := range teams {
-			if !o.MSGHandler.IsInitialised(team.ContactType) {
-				return errors.Errorf("Team \"%s\" has contact type \"%s\", handler not initialised for this type - check input flags", team.Name, team.ContactType)
-			}
-		}
-	}
-	return nil
-}
-
 // GetMessageBreakdown creates a breakdown of the messages found in the pr description if the messages have changed
 // since the last run
-func (o *Options) GetMessageBreakdown(ctx context.Context, messages []message.Message) (string, error) {
+func (o *Options) GetMessageBreakdown(ctx context.Context, messages []models.ReleaseNote) (string, error) {
 	changed, hash, err := o.HaveMessagesChanged(ctx, messages)
 	if err != nil {
 		return "", err
@@ -281,17 +246,13 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []message.Me
 	if !changed {
 		return "", nil
 	}
-	breakdown, err := message.GenerateBreakdown(messages, len(o.Feathers.GetAllTeamNames()))
-	if err != nil {
-		return "", err
-	}
-	return comment.AddMetadataToComment(breakdown, hash, comment.BreakdownCommentType), nil
+	return o.NotesUC.GenerateBreakdown(messages, hash, len(o.Feathers.GetAllTeamNames()))
 }
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR
-func (o *Options) HaveMessagesChanged(ctx context.Context, messages []message.Message) (bool, string, error) {
+func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.ReleaseNote) (bool, string, error) {
 	log.Info("Checking if messages have changed")
-	currentHash, err := message.GenerateHash(messages)
+	currentHash, err := o.NotesUC.GenerateHash(messages)
 	if err != nil {
 		return false, "", err
 	}
@@ -370,6 +331,20 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	if o.GitServerClient == nil {
 		o.GitServerClient = github.NewClient(o.RepoOwner, o.RepoName, o.GitUser, o.GitHubToken, o.PRNumber)
+	}
+
+	if o.NotesUC == nil {
+		msgHandler := msgclients.NewMessageHandler(&config.MessageHandlers{
+			Slack: config.Slack{
+				Token: o.SlackToken,
+			},
+			Webhook: config.Webhook{
+				URL:    o.WebhookURL,
+				Token:  o.WebhookToken,
+				Secret: o.WebhookSecret,
+			},
+		})
+		o.NotesUC = releasenotesuc.NewUseCase(msgHandler)
 	}
 	return nil
 }
