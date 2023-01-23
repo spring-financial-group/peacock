@@ -2,30 +2,28 @@ package webhookuc
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	feather "github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
-	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/models"
 )
 
 type WebHookUseCase struct {
 	cfg        *config.SCM
 	scmFactory domain.SCMClientFactory
-	msgHandler domain.MessageHandler
+	notesUC    domain.ReleaseNotesUseCase
 
 	feathers map[int64]*feathersMeta
 }
 
-func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, msgHandler domain.MessageHandler) *WebHookUseCase {
+func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, notesUC domain.ReleaseNotesUseCase) *WebHookUseCase {
 	return &WebHookUseCase{
 		cfg:        cfg,
 		scmFactory: scmFactory,
-		msgHandler: msgHandler,
+		notesUC:    notesUC,
 		feathers:   make(map[int64]*feathersMeta),
 	}
 }
@@ -40,12 +38,12 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
-	messages, err := message.ParseMessagesFromMarkdown(e.Body)
+	releaseNotes, err := w.notesUC.ParseNotesFromMarkdown(e.Body)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
 	}
-	if messages == nil {
-		log.Infof("no messages found in PR body, skipping")
+	if releaseNotes == nil {
+		log.Infof("no releaseNotes found in PR body, skipping")
 		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 	}
 
@@ -56,25 +54,12 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Check that the relevant communication methods have been configured for the feathers
-	types := feathers.GetAllContactTypes()
-	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to get contact types"))
-	}
-	for _, t := range types {
-		if !w.msgHandler.IsInitialised(t) {
-			return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
-		}
+	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to validate release notes with feathers"))
 	}
 
-	// Check that the teams in the messages exist in the feathers
-	for _, m := range messages {
-		if err = feathers.ExistsInFeathers(m.TeamNames...); err != nil {
-			return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to find team in feathers"))
-		}
-	}
-
-	// Create a hash of the messages. Probably should cache these as well.
-	newHash, err := message.GenerateHash(messages)
+	// Create a hash of the releaseNotes. Probably should cache these as well.
+	newHash, err := w.notesUC.GenerateHash(releaseNotes)
 	if err != nil {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to generate message hash"))
 	}
@@ -94,7 +79,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		}
 	}
 
-	breakdown, err := message.GenerateBreakdown(messages, len(feathers.Teams))
+	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, len(feathers.Teams))
 	if err != nil {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to generate message breakdown"))
 	}
@@ -137,13 +122,13 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
 	}
 
-	// Parse the PR body for any messages
-	messages, err := message.ParseMessagesFromMarkdown(e.Body)
+	// Parse the PR body for any releaseNotes
+	releaseNotes, err := w.notesUC.ParseNotesFromMarkdown(e.Body)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to parse messages from markdown"))
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
 	}
-	if messages == nil {
-		log.Infof("no messages found in PR body, skipping")
+	if releaseNotes == nil {
+		log.Infof("no release notes found in PR body, skipping")
 		return scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
 	}
 
@@ -153,28 +138,14 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ReleaseContext, domain.ValidationContext, err)
 	}
 
-	// Check that the relevant communication methods have been configured for the feathers
-	types := feathers.GetAllContactTypes()
-	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to get contact types"))
-	}
-	for _, t := range types {
-		if !w.msgHandler.IsInitialised(t) {
-			return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.New(fmt.Sprintf("message handler %s not found", t)))
-		}
+	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to validate release notes with feathers"))
 	}
 
-	// Check that the teams in the messages exist in the feathers
-	for _, m := range messages {
-		if err = feathers.ExistsInFeathers(m.TeamNames...); err != nil {
-			return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to find team in feathers"))
-		}
+	if err = w.notesUC.SendReleaseNotes(feathers, releaseNotes); err != nil {
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to send releaseNotes"))
 	}
-
-	if err = w.msgHandler.SendMessages(feathers, messages); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to send messages"))
-	}
-	log.Infof("%d message(s) sent", len(messages))
+	log.Infof("%d message(s) sent", len(releaseNotes))
 
 	err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
 	if err != nil {

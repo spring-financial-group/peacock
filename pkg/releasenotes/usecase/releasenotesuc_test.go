@@ -1,23 +1,25 @@
-package message_test
+package releasenotesuc
 
 import (
 	"fmt"
-	"github.com/spring-financial-group/peacock/pkg/message"
+	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestParse(t *testing.T) {
+	uc := NewUseCase()
+
 	testCases := []struct {
 		name             string
 		inputMarkdown    string
-		expectedMessages []message.Message
+		expectedMessages []models.ReleaseNote
 		shouldError      bool
 	}{
 		{
 			name:          "Passing",
 			inputMarkdown: "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "devs"},
 					Content:   "Test Content",
@@ -32,7 +34,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "CommaSeperatedVaryingWhiteSpace",
 			inputMarkdown: "### Notify infrastructure,devs, ml , product\nTest Content\n",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "devs", "ml", "product"},
 					Content:   "Test Content",
@@ -43,7 +45,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "HeadingsInContent",
 			inputMarkdown: "### Notify infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "### Test Content\nThis is some content with headers\n#### Another different header",
@@ -54,7 +56,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "PrefaceToMessages",
 			inputMarkdown: "# Title to the PR\nSome information about the pr\n### Notify infrastructure\nTest Content",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -83,7 +85,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "MultipleMessages",
 			inputMarkdown: "### Notify infrastructure\nTest Content\n### Notify ML\nMore test content\n",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -98,7 +100,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "MultipleTeamsInOneMessage",
 			inputMarkdown: "### Notify infrastructure, ml, allDevs\nTest Content\n",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "ml", "allDevs"},
 					Content:   "Test Content",
@@ -109,7 +111,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "AdditionalNewLines",
 			inputMarkdown: "\n\n### Notify infrastructure\nTest Content\n\n\n",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -120,7 +122,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "MultiLineContent",
 			inputMarkdown: "### Notify infrastructure\nThis is an example\nThat runs\nAcross multiple\nlines",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "This is an example\nThat runs\nAcross multiple\nlines",
@@ -131,7 +133,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "Lists",
 			inputMarkdown: "### Notify infrastructure\nHere's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Here's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
@@ -142,7 +144,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "WhitespaceAfterTeamName",
 			inputMarkdown: "\n### Notify infrastructure   \nTest Content",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -153,7 +155,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "ExtraWhitespaceBetweenTeamNames",
 			inputMarkdown: "\n### Notify infrastructure   ,    ml ,   product\nTest Content",
-			expectedMessages: []message.Message{
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "ml", "product"},
 					Content:   "Test Content",
@@ -163,8 +165,8 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "NoWhitespaceBeforeTeamName",
-			inputMarkdown: "# Peacock\r\n## Message\n### Notifyinfrastructure\nTest Content",
-			expectedMessages: []message.Message{
+			inputMarkdown: "# Peacock\r\n## ReleaseNote\n### Notifyinfrastructure\nTest Content",
+			expectedMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -176,7 +178,7 @@ func TestParse(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMessages, err := message.ParseMessagesFromMarkdown(tt.inputMarkdown)
+			actualMessages, err := uc.ParseNotesFromMarkdown(tt.inputMarkdown)
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)
@@ -187,3 +189,4 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+

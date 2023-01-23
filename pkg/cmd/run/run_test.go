@@ -7,7 +7,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
-	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -20,14 +19,14 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 	// Comments returned from the GitHub API are sorted by most recent first
 	testCases := []struct {
 		name             string
-		inputMessages    []message.Message
+		inputMessages    []models.ReleaseNote
 		returnedComments []*github.IssueComment
 		expectedHash     string
 		expectedChanged  bool
 	}{
 		{
 			name: "OneCommentSameHash",
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					Content: "New release of some infrastructure\nrelated things",
 				},
@@ -42,7 +41,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 		},
 		{
 			name: "OneCommentDifferentHash",
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					Content: "New release of some infrastructure\nrelated things",
 				},
@@ -57,7 +56,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 		},
 		{
 			name: "MultipleCommentsDifferentHashes",
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					Content: "New release of some infrastructure\nrelated things",
 				},
@@ -81,7 +80,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 		},
 		{
 			name: "MostRecentCommentSameHash",
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					Content: "New release of some infrastructure\nrelated things",
 				},
@@ -105,7 +104,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 		},
 		{
 			name: "MostRecentCommentDifferentHash",
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					Content: "New release of some infrastructure\nrelated things",
 				},
@@ -129,7 +128,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 		},
 		{
 			name: "NoCommentsContainingMetadata",
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					Content: "New release of some infrastructure\nrelated things",
 				},
@@ -201,7 +200,7 @@ func TestOptions_Run(t *testing.T) {
 					},
 				},
 			},
-			prBody: utils.NewPtr("# Peacock\r\n## Message\n### Notify infrastructure\nTest Content"),
+			prBody: utils.NewPtr("# Peacock\r\n## ReleaseNote\n### Notify infrastructure\nTest Content"),
 		},
 		{
 			name: "DryRun",
@@ -227,7 +226,7 @@ func TestOptions_Run(t *testing.T) {
 					},
 				},
 			},
-			prBody: utils.NewPtr("# Peacock\r\n## Message\n### Notify infrastructure\nTest Content"),
+			prBody: utils.NewPtr("# Peacock\r\n## ReleaseNote\n### Notify infrastructure\nTest Content"),
 		},
 	}
 
@@ -244,7 +243,7 @@ func TestOptions_Run(t *testing.T) {
 		mockHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
 
 		if !tt.opts.DryRun {
-			mockHandler.On("SendMessages", tt.opts.Feathers, mock.AnythingOfType("[]message.Message")).Return(nil).Once()
+			mockHandler.On("SendMessages", tt.opts.Feathers, mock.AnythingOfType("[]message.ReleaseNote")).Return(nil).Once()
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -265,7 +264,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 	testCases := []struct {
 		name              string
 		opts              *run.Options
-		inputMessages     []message.Message
+		inputMessages     []models.ReleaseNote
 		expectedBreakdown string
 	}{
 		{
@@ -278,13 +277,13 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					},
 				},
 			},
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "New release of some infrastructure\nrelated things",
 				},
 			},
-			expectedBreakdown: "Successfully validated 1 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 type: breakdown -->\n",
+			expectedBreakdown: "Successfully validated 1 message(s).\n\n***\nReleaseNote 1 will be sent to: infrastructure\n<details>\n<summary>ReleaseNote Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 type: breakdown -->\n",
 		},
 		{
 			name: "MultipleMessages&MultipleTeams",
@@ -297,7 +296,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					},
 				},
 			},
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "New release of some infrastructure\nrelated things",
@@ -307,7 +306,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 					Content:   "New release of some ml\nrelated things",
 				},
 			},
-			expectedBreakdown: "Successfully validated 2 message(s).\n\n***\nMessage 1 will be sent to: infrastructure\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nMessage 2 will be sent to: ml\n<details>\n<summary>Message Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 type: breakdown -->\n",
+			expectedBreakdown: "Successfully validated 2 message(s).\n\n***\nReleaseNote 1 will be sent to: infrastructure\n<details>\n<summary>ReleaseNote Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nReleaseNote 2 will be sent to: ml\n<details>\n<summary>ReleaseNote Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 type: breakdown -->\n",
 		},
 	}
 
@@ -329,7 +328,7 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 	testCases := []struct {
 		name          string
 		opts          *run.Options
-		inputMessages []message.Message
+		inputMessages []models.ReleaseNote
 		shouldError   bool
 	}{
 		{
@@ -342,7 +341,7 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 					},
 				},
 			},
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "some content",
@@ -360,7 +359,7 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 					},
 				},
 			},
-			inputMessages: []message.Message{
+			inputMessages: []models.ReleaseNote{
 				{
 					TeamNames: []string{"ml"},
 					Content:   "some content",

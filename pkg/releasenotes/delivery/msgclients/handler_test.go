@@ -1,10 +1,9 @@
-package msgclient
+package msgclients
 
 import (
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
-	"github.com/spring-financial-group/peacock/pkg/message"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -21,7 +20,7 @@ func TestHandler_SendMessage(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		inputMessage  message.Message
+		inputMessage  models.ReleaseNote
 		inputFeathers *feathers.Feathers
 	}{
 		{
@@ -34,7 +33,7 @@ func TestHandler_SendMessage(t *testing.T) {
 					{Name: "Support", ContactType: models.Webhook, Addresses: []string{"Webhook3", "Webhook4"}},
 				},
 			},
-			inputMessage: message.Message{
+			inputMessage: models.ReleaseNote{
 				TeamNames: []string{"Infrastructure", "AllDevs", "Product", "Support"},
 				Content:   "Test message content",
 			},
@@ -46,7 +45,7 @@ func TestHandler_SendMessage(t *testing.T) {
 			slack.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2", "#SlackAdd3", "#SlackAdd4"}).Return(nil)
 			webhook.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2", "Webhook3", "Webhook4"}).Return(nil)
 
-			err := handler.SendMessages(tc.inputFeathers, []message.Message{tc.inputMessage})
+			err := handler.SendMessages(tc.inputFeathers, []models.ReleaseNote{tc.inputMessage})
 			assert.NoError(t, err)
 		})
 	}

@@ -131,7 +131,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 
 		mockMessageHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
-		mockMessageHandler.On("SendMessages", mockFeathers, mock.AnythingOfType("[]message.Message")).Return(nil)
+		mockMessageHandler.On("SendMessages", mockFeathers, mock.AnythingOfType("[]message.ReleaseNote")).Return(nil)
 
 		err := uc.RunPeacock(mockEvent)
 		assert.NoError(t, err)

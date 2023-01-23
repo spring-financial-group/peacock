@@ -4,7 +4,7 @@ package mocks
 
 import (
 	feathers "github.com/spring-financial-group/peacock/pkg/feathers"
-	message "github.com/spring-financial-group/peacock/pkg/message"
+	"github.com/spring-financial-group/peacock/pkg/models"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -29,11 +29,11 @@ func (_m *MessageHandler) IsInitialised(contactType string) bool {
 }
 
 // SendMessages provides a mock function with given fields: _a0, messages
-func (_m *MessageHandler) SendMessages(_a0 *feathers.Feathers, messages []message.Message) error {
+func (_m *MessageHandler) SendMessages(_a0 *feathers.Feathers, messages []models.ReleaseNote) error {
 	ret := _m.Called(_a0, messages)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*feathers.Feathers, []message.Message) error); ok {
+	if rf, ok := ret.Get(0).(func(*feathers.Feathers, []models.ReleaseNote) error); ok {
 		r0 = rf(_a0, messages)
 	} else {
 		r0 = ret.Error(0)
