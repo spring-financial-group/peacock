@@ -22,7 +22,7 @@ const (
 	teamNameHeaderRegex = "### Notify(.*)\\n"
 	commaSeparated      = ","
 
-	breakdownTemplate = `Successfully validated {{ len .notes }} release note(s).
+	breakdownTemplate = `Successfully validated {{ len .notes }} release note{{ addPlural (len .notes) }}.
 {{ range $idx, $val := .notes }}
 ***
 Release Note {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
@@ -101,6 +101,13 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
 		"commaSep": func(i []string) string { return utils.CommaSeparated(i) },
+		"addPlural": func(i int) string {
+			var plural string
+			if i > 1 {
+				plural = "s"
+			}
+			return plural
+		},
 	}
 
 	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTemplate)
