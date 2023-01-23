@@ -36,7 +36,7 @@ spec:
         - image: uses:spring-financial-group/DevOps/pipelines/golang-lint.yaml@main
           name: ""
           resources: {}
-        - image: golang:1.18
+        - image: golang:1.19
           name: build-make-build
           resources: {}
           script: |
