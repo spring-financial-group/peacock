@@ -13,7 +13,7 @@ import (
 )
 
 type Handler struct {
-	clients map[string]domain.MessageClient
+	Clients map[string]domain.MessageClient
 }
 
 func NewMessageHandler(cfg *config.MessageHandlers) *Handler {
@@ -27,14 +27,14 @@ func NewMessageHandler(cfg *config.MessageHandlers) *Handler {
 		clients[models.Webhook] = webhook.NewClient(cfg.Webhook.URL, cfg.Webhook.Token, cfg.Webhook.Secret)
 	}
 	return &Handler{
-		clients: clients,
+		Clients: clients,
 	}
 }
 
-func (h *Handler) SendMessages(feathers *feather.Feathers, messages []models.ReleaseNote) error {
+func (h *Handler) SendReleaseNotes(feathers *feather.Feathers, notes []models.ReleaseNote) error {
 	var errCount int
-	for _, m := range messages {
-		err := h.sendMessage(feathers, m)
+	for _, m := range notes {
+		err := h.sendNote(feathers, m)
 		if err != nil {
 			log.Error(err)
 			errCount++
@@ -42,25 +42,25 @@ func (h *Handler) SendMessages(feathers *feather.Feathers, messages []models.Rel
 		}
 	}
 	if errCount > 0 {
-		return errors.New("failed to send messages")
+		return errors.New("failed to send release notes")
 	}
 	return nil
 }
 
-func (h *Handler) sendMessage(feathers *feather.Feathers, message models.ReleaseNote) error {
-	// We should pool the addresses by contact type so that we only send one message per contact type
-	addressPool := feathers.GetAddressPoolByTeamNames(message.TeamNames...)
+func (h *Handler) sendNote(feathers *feather.Feathers, note models.ReleaseNote) error {
+	// We should pool the addresses by contact type so that we only send one note per contact type
+	addressPool := feathers.GetAddressPoolByTeamNames(note.TeamNames...)
 	for contactType, addresses := range addressPool {
-		err := h.clients[contactType].Send(message.Content, feathers.Config.Messages.Subject, addresses)
+		err := h.Clients[contactType].Send(note.Content, feathers.Config.Messages.Subject, addresses)
 		if err != nil {
-			return errors.Wrapf(err, "failed to send message")
+			return errors.Wrapf(err, "failed to send note")
 		}
-		log.Infof("ReleaseNote successfully sent to %s via %s", strings.Join(addresses, ", "), contactType)
+		log.Infof("Release note successfully sent to %s via %s", strings.Join(addresses, ", "), contactType)
 	}
 	return nil
 }
 
 func (h *Handler) IsInitialised(contactType string) bool {
-	_, ok := h.clients[contactType]
+	_, ok := h.Clients[contactType]
 	return ok
 }

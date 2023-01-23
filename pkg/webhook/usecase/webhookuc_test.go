@@ -23,6 +23,9 @@ const (
 
 	InfraTeam    = "Infra"
 	SkisocksTeam = "Skisocks"
+
+	mockHash = "SomeReallyGoodHash"
+	prBody   = "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks"
 )
 
 var (
@@ -58,24 +61,32 @@ var (
 			},
 		},
 	}
-
 	mockFeathersData, _ = yaml.Marshal(mockFeathers)
+
+	mockNotes = []models.ReleaseNote{
+		{
+			TeamNames: []string{"infra"},
+			Content:   "Hello infra",
+		},
+		{
+			TeamNames: []string{"Skisocks"},
+			Content:   "Hello skisocks",
+		},
+	}
 )
 
 func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 	mockSCM := mocks.NewSCM(t)
 	mockFactory := mocks.NewSCMClientFactory(t)
-	mockMessageHandler := mocks.NewMessageHandler(t)
+	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
 
 	cfg := &config.SCM{
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, mockMessageHandler)
+	uc := NewUseCase(cfg, mockFactory, mockNotesUC)
 
 	t.Run("Happy Path", func(t *testing.T) {
-		prBody := "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks"
-
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = prBody
 
@@ -93,7 +104,10 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		mockSCM.On("CommentOnPR", mockCTX, mock.Anything).Return(nil).Once()
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
-		mockMessageHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
+		mockNotesUC.On("ParseNotesFromMarkdown", prBody).Return(mockNotes, nil)
+		mockNotesUC.On("ValidateReleaseNotesWithFeathers", mockFeathers, mockNotes).Return(nil)
+		mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
+		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2).Return("", nil)
 
 		err := uc.ValidatePeacock(mockEvent)
 		assert.NoError(t, err)
@@ -103,17 +117,15 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 func TestWebHookUseCase_RunPeacock(t *testing.T) {
 	mockSCM := mocks.NewSCM(t)
 	mockFactory := mocks.NewSCMClientFactory(t)
-	mockMessageHandler := mocks.NewMessageHandler(t)
+	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
 
 	cfg := &config.SCM{
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, mockMessageHandler)
+	uc := NewUseCase(cfg, mockFactory, mockNotesUC)
 
 	t.Run("Happy Path", func(t *testing.T) {
-		prBody := "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks"
-
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = prBody
 
@@ -130,8 +142,9 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 
-		mockMessageHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
-		mockMessageHandler.On("SendMessages", mockFeathers, mock.AnythingOfType("[]message.ReleaseNote")).Return(nil)
+		mockNotesUC.On("ParseNotesFromMarkdown", prBody).Return(mockNotes, nil)
+		mockNotesUC.On("ValidateReleaseNotesWithFeathers", mockFeathers, mockNotes).Return(nil)
+		mockNotesUC.On("SendReleaseNotes", mockFeathers, mockNotes).Return(nil)
 
 		err := uc.RunPeacock(mockEvent)
 		assert.NoError(t, err)

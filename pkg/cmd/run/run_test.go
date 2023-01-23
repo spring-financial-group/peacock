@@ -15,7 +15,6 @@ import (
 )
 
 func TestOptions_HaveMessagesChanged(t *testing.T) {
-	mockSCM := mocks.NewSCM(t)
 	// Comments returned from the GitHub API are sorted by most recent first
 	testCases := []struct {
 		name             string
@@ -33,7 +32,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: breakdown -->"),
 				},
 			},
 			expectedHash:    "",
@@ -51,7 +50,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Body: utils.NewPtr("<!-- hash: SomeOtherHash type: breakdown -->"),
 				},
 			},
-			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedHash:    "SomeReallyGoodHash",
 			expectedChanged: true,
 		},
 		{
@@ -75,7 +74,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
 				},
 			},
-			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedHash:    "SomeReallyGoodHash",
 			expectedChanged: true,
 		},
 		{
@@ -87,7 +86,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: breakdown -->"),
 				},
 				{
 					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
@@ -114,7 +113,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9 type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: breakdown -->"),
 				},
 				{
 					Body: utils.NewPtr("<!-- hash: HashingHel type: breakdown -->"),
@@ -123,7 +122,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
 				},
 			},
-			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedHash:    "SomeReallyGoodHash",
 			expectedChanged: true,
 		},
 		{
@@ -144,19 +143,26 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 					Body: utils.NewPtr("Really different comment"),
 				},
 			},
-			expectedHash:    "d88cd4f055916a0a0cda7d44644750bf6008db30bbfc4ed8ee1dc8888aa817d9",
+			expectedHash:    "SomeReallyGoodHash",
 			expectedChanged: true,
 		},
 	}
 
-	opts := &run.Options{
-		GitServerClient: mockSCM,
-	}
-
 	for _, tt := range testCases {
-		mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx")).Return(tt.returnedComments, nil).Once()
-
 		t.Run(tt.name, func(t *testing.T) {
+			mockSCM := mocks.NewSCM(t)
+			mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+
+			opts := &run.Options{
+				GitServerClient: mockSCM,
+				NotesUC:         mockNotesUC,
+			}
+
+			mockHash := "SomeReallyGoodHash"
+
+			mockNotesUC.On("GenerateHash", tt.inputMessages).Return(mockHash, nil)
+			mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx")).Return(tt.returnedComments, nil).Once()
+
 			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedChanged, actualChanged)
@@ -168,7 +174,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 func TestOptions_Run(t *testing.T) {
 	mockSCM := mocks.NewSCM(t)
 	mockGitClient := mocks.NewGit(t)
-	mockHandler := mocks.NewMessageHandler(t)
+	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
 
 	testCases := []struct {
 		name        string
@@ -189,7 +195,7 @@ func TestOptions_Run(t *testing.T) {
 				SlackToken:        "testSlackToken",
 				Git:               mockGitClient,
 				GitServerClient:   mockSCM,
-				MSGHandler:        mockHandler,
+				NotesUC:           mockNotesUC,
 				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{
@@ -215,7 +221,7 @@ func TestOptions_Run(t *testing.T) {
 				SlackToken:        "testSlackToken",
 				Git:               mockGitClient,
 				GitServerClient:   mockSCM,
-				MSGHandler:        mockHandler,
+				NotesUC:           mockNotesUC,
 				Feathers: &feathers.Feathers{
 					Teams: []feathers.Team{
 						{
@@ -231,7 +237,20 @@ func TestOptions_Run(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
+		mockNotes := []models.ReleaseNote{
+			{
+				TeamNames: []string{"infrastructure"},
+				Content:   "Test Content",
+			},
+		}
+
+		mockHash := "SomeReallyGoodHash"
+		mockBreakdown := "This is the message breakdown"
+
 		if tt.opts.DryRun {
+			mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
+			mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 1).Return(mockBreakdown, nil)
+
 			mockSCM.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx")).Return(tt.prBody, nil).Once()
 			mockSCM.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), mock.AnythingOfType("string")).Return(nil).Once()
 			mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx")).Return(nil, nil)
@@ -240,140 +259,16 @@ func TestOptions_Run(t *testing.T) {
 			mockSCM.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
 		}
 
-		mockHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
+		mockNotesUC.On("ParseNotesFromMarkdown", *tt.prBody).Return(mockNotes, nil)
+
+		mockNotesUC.On("ValidateReleaseNotesWithFeathers", tt.opts.Feathers, mockNotes).Return(nil)
 
 		if !tt.opts.DryRun {
-			mockHandler.On("SendMessages", tt.opts.Feathers, mock.AnythingOfType("[]message.ReleaseNote")).Return(nil).Once()
+			mockNotesUC.On("SendReleaseNotes", tt.opts.Feathers, mockNotes).Return(nil).Once()
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.opts.Run()
-			if tt.shouldError {
-				fmt.Println("expected error: " + err.Error())
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestOptions_GenerateMessageBreakdown(t *testing.T) {
-	mockSCM := mocks.NewSCM(t)
-
-	testCases := []struct {
-		name              string
-		opts              *run.Options
-		inputMessages     []models.ReleaseNote
-		expectedBreakdown string
-	}{
-		{
-			name: "OneMessage",
-			opts: &run.Options{
-				GitServerClient: mockSCM,
-				Feathers: &feathers.Feathers{
-					Teams: []feathers.Team{
-						{Name: "infrastructure"},
-					},
-				},
-			},
-			inputMessages: []models.ReleaseNote{
-				{
-					TeamNames: []string{"infrastructure"},
-					Content:   "New release of some infrastructure\nrelated things",
-				},
-			},
-			expectedBreakdown: "Successfully validated 1 message(s).\n\n***\nReleaseNote 1 will be sent to: infrastructure\n<details>\n<summary>ReleaseNote Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: 89d156a04847b48a4e68948b83256740662f2212236fb88fa304fb28d6d6d0f6 type: breakdown -->\n",
-		},
-		{
-			name: "MultipleMessages&MultipleTeams",
-			opts: &run.Options{
-				GitServerClient: mockSCM,
-				Feathers: &feathers.Feathers{
-					Teams: []feathers.Team{
-						{Name: "infrastructure"},
-						{Name: "ml"},
-					},
-				},
-			},
-			inputMessages: []models.ReleaseNote{
-				{
-					TeamNames: []string{"infrastructure"},
-					Content:   "New release of some infrastructure\nrelated things",
-				},
-				{
-					TeamNames: []string{"ml"},
-					Content:   "New release of some ml\nrelated things",
-				},
-			},
-			expectedBreakdown: "Successfully validated 2 message(s).\n\n***\nReleaseNote 1 will be sent to: infrastructure\n<details>\n<summary>ReleaseNote Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nReleaseNote 2 will be sent to: ml\n<details>\n<summary>ReleaseNote Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ea4bb9fd21b0a8eb32c437883158bd6ace2969022216a1106cbefe379ad95149 type: breakdown -->\n",
-		},
-	}
-
-	mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx")).Return(nil, nil)
-
-	for _, tt := range testCases {
-
-		t.Run(tt.name, func(t *testing.T) {
-			actualBreakdown, err := tt.opts.GetMessageBreakdown(context.Background(), tt.inputMessages)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedBreakdown, actualBreakdown)
-		})
-	}
-}
-
-func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
-	mockHandler := mocks.NewMessageHandler(t)
-
-	testCases := []struct {
-		name          string
-		opts          *run.Options
-		inputMessages []models.ReleaseNote
-		shouldError   bool
-	}{
-		{
-			name: "Passing",
-			opts: &run.Options{
-				MSGHandler: mockHandler,
-				Feathers: &feathers.Feathers{
-					Teams: []feathers.Team{
-						{Name: "infrastructure", ContactType: models.Slack},
-					},
-				},
-			},
-			inputMessages: []models.ReleaseNote{
-				{
-					TeamNames: []string{"infrastructure"},
-					Content:   "some content",
-				},
-			},
-			shouldError: false,
-		},
-		{
-			name: "TeamDoesNotExist",
-			opts: &run.Options{
-				MSGHandler: mockHandler,
-				Feathers: &feathers.Feathers{
-					Teams: []feathers.Team{
-						{Name: "infrastructure", ContactType: models.Slack},
-					},
-				},
-			},
-			inputMessages: []models.ReleaseNote{
-				{
-					TeamNames: []string{"ml"},
-					Content:   "some content",
-				},
-			},
-			shouldError: true,
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			mockHandler.On("IsInitialised", mock.AnythingOfType("string")).Return(true)
-
-			err := tt.opts.ValidateMessagesWithConfig(tt.inputMessages)
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)

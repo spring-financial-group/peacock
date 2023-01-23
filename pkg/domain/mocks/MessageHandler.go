@@ -29,7 +29,7 @@ func (_m *MessageHandler) IsInitialised(contactType string) bool {
 }
 
 // SendMessages provides a mock function with given fields: _a0, messages
-func (_m *MessageHandler) SendMessages(_a0 *feathers.Feathers, messages []models.ReleaseNote) error {
+func (_m *MessageHandler) SendReleaseNotes(_a0 *feathers.Feathers, messages []models.ReleaseNote) error {
 	ret := _m.Called(_a0, messages)
 
 	var r0 error

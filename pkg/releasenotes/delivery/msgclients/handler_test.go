@@ -13,7 +13,7 @@ func TestHandler_SendMessage(t *testing.T) {
 	slack := mocks.NewMessageClient(t)
 	webhook := mocks.NewMessageClient(t)
 
-	handler := &Handler{clients: map[string]domain.MessageClient{
+	handler := &Handler{Clients: map[string]domain.MessageClient{
 		models.Slack:   slack,
 		models.Webhook: webhook,
 	}}
@@ -45,7 +45,7 @@ func TestHandler_SendMessage(t *testing.T) {
 			slack.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2", "#SlackAdd3", "#SlackAdd4"}).Return(nil)
 			webhook.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2", "Webhook3", "Webhook4"}).Return(nil)
 
-			err := handler.SendMessages(tc.inputFeathers, []models.ReleaseNote{tc.inputMessage})
+			err := handler.SendReleaseNotes(tc.inputFeathers, []models.ReleaseNote{tc.inputMessage})
 			assert.NoError(t, err)
 		})
 	}

@@ -123,7 +123,7 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 }
 
 func (uc *UseCase) SendReleaseNotes(feathers *feathers.Feathers, notes []models.ReleaseNote) error {
-	return uc.MsgClientsHandler.SendMessages(feathers, notes)
+	return uc.MsgClientsHandler.SendReleaseNotes(feathers, notes)
 }
 
 func (uc *UseCase) ValidateReleaseNotesWithFeathers(feathers *feathers.Feathers, notes []models.ReleaseNote) error {

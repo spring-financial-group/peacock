@@ -2,24 +2,28 @@ package releasenotesuc
 
 import (
 	"fmt"
+	"github.com/spring-financial-group/peacock/pkg/domain"
+	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
+	"github.com/spring-financial-group/peacock/pkg/msgclients/slack"
+	"github.com/spring-financial-group/peacock/pkg/releasenotes/delivery/msgclients"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestParse(t *testing.T) {
-	uc := NewUseCase()
+	uc := NewUseCase(nil)
 
 	testCases := []struct {
-		name             string
-		inputMarkdown    string
-		expectedMessages []models.ReleaseNote
-		shouldError      bool
+		name          string
+		inputMarkdown string
+		expectedNotes []models.ReleaseNote
+		shouldError   bool
 	}{
 		{
 			name:          "Passing",
 			inputMarkdown: "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "devs"},
 					Content:   "Test Content",
@@ -34,7 +38,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "CommaSeperatedVaryingWhiteSpace",
 			inputMarkdown: "### Notify infrastructure,devs, ml , product\nTest Content\n",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "devs", "ml", "product"},
 					Content:   "Test Content",
@@ -45,7 +49,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "HeadingsInContent",
 			inputMarkdown: "### Notify infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "### Test Content\nThis is some content with headers\n#### Another different header",
@@ -56,7 +60,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "PrefaceToMessages",
 			inputMarkdown: "# Title to the PR\nSome information about the pr\n### Notify infrastructure\nTest Content",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -65,27 +69,27 @@ func TestParse(t *testing.T) {
 			shouldError: false,
 		},
 		{
-			name:             "NoInputMarkdown",
-			inputMarkdown:    "",
-			expectedMessages: nil,
-			shouldError:      false,
+			name:          "NoInputMarkdown",
+			inputMarkdown: "",
+			expectedNotes: nil,
+			shouldError:   false,
 		},
 		{
-			name:             "NoMessages",
-			inputMarkdown:    "# Title to the PR\nSome information about the pr\n",
-			expectedMessages: nil,
-			shouldError:      false,
+			name:          "NoMessages",
+			inputMarkdown: "# Title to the PR\nSome information about the pr\n",
+			expectedNotes: nil,
+			shouldError:   false,
 		},
 		{
-			name:             "NoTeams",
-			inputMarkdown:    "### Notify ",
-			expectedMessages: nil,
-			shouldError:      false,
+			name:          "NoTeams",
+			inputMarkdown: "### Notify ",
+			expectedNotes: nil,
+			shouldError:   false,
 		},
 		{
 			name:          "MultipleMessages",
 			inputMarkdown: "### Notify infrastructure\nTest Content\n### Notify ML\nMore test content\n",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -100,7 +104,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "MultipleTeamsInOneMessage",
 			inputMarkdown: "### Notify infrastructure, ml, allDevs\nTest Content\n",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "ml", "allDevs"},
 					Content:   "Test Content",
@@ -111,7 +115,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "AdditionalNewLines",
 			inputMarkdown: "\n\n### Notify infrastructure\nTest Content\n\n\n",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -122,7 +126,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "MultiLineContent",
 			inputMarkdown: "### Notify infrastructure\nThis is an example\nThat runs\nAcross multiple\nlines",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "This is an example\nThat runs\nAcross multiple\nlines",
@@ -133,7 +137,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "Lists",
 			inputMarkdown: "### Notify infrastructure\nHere's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Here's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
@@ -144,7 +148,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "WhitespaceAfterTeamName",
 			inputMarkdown: "\n### Notify infrastructure   \nTest Content",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -155,7 +159,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "ExtraWhitespaceBetweenTeamNames",
 			inputMarkdown: "\n### Notify infrastructure   ,    ml ,   product\nTest Content",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure", "ml", "product"},
 					Content:   "Test Content",
@@ -166,7 +170,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "NoWhitespaceBeforeTeamName",
 			inputMarkdown: "# Peacock\r\n## ReleaseNote\n### Notifyinfrastructure\nTest Content",
-			expectedMessages: []models.ReleaseNote{
+			expectedNotes: []models.ReleaseNote{
 				{
 					TeamNames: []string{"infrastructure"},
 					Content:   "Test Content",
@@ -185,8 +189,120 @@ func TestParse(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.Equal(t, tt.expectedMessages, actualMessages)
+			assert.Equal(t, tt.expectedNotes, actualMessages)
 		})
 	}
 }
 
+func TestOptions_GenerateMessageBreakdown(t *testing.T) {
+	uc := NewUseCase(nil)
+
+	testCases := []struct {
+		name              string
+		inputNotes        []models.ReleaseNote
+		numberOfTeams     int
+		expectedBreakdown string
+	}{
+		{
+			name: "SingleMessage",
+			inputNotes: []models.ReleaseNote{
+				{
+					TeamNames: []string{"infrastructure"},
+					Content:   "New release of some infrastructure\nrelated things",
+				},
+			},
+			numberOfTeams:     1,
+			expectedBreakdown: "Successfully validated 1 release note(s).\n\n***\nRelease Note 1 will be sent to: infrastructure\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: ReallyGoodHash type: breakdown -->\n",
+		},
+		{
+			name: "MultipleMessages",
+			inputNotes: []models.ReleaseNote{
+				{
+					TeamNames: []string{"infrastructure"},
+					Content:   "New release of some infrastructure\nrelated things",
+				},
+				{
+					TeamNames: []string{"ml"},
+					Content:   "New release of some ml\nrelated things",
+				},
+			},
+			numberOfTeams:     2,
+			expectedBreakdown: "Successfully validated 2 release note(s).\n\n***\nRelease Note 1 will be sent to: infrastructure\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nRelease Note 2 will be sent to: ml\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ReallyGoodHash type: breakdown -->\n",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			mockHash := "ReallyGoodHash"
+
+			actualBreakdown, err := uc.GenerateBreakdown(tt.inputNotes, mockHash, tt.numberOfTeams)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedBreakdown, actualBreakdown)
+		})
+	}
+}
+
+func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
+	testCases := []struct {
+		name              string
+		msgClientsHandler msgclients.Handler
+		inputNotes        []models.ReleaseNote
+		inputFeathers     *feathers.Feathers
+		shouldError       bool
+	}{
+		{
+			name: "Passing",
+			msgClientsHandler: msgclients.Handler{
+				Clients: map[string]domain.MessageClient{
+					models.Slack: slack.NewClient(""),
+				},
+			},
+			inputFeathers: &feathers.Feathers{
+				Teams: []feathers.Team{
+					{Name: "infrastructure", ContactType: models.Slack},
+				},
+			},
+			inputNotes: []models.ReleaseNote{
+				{
+					TeamNames: []string{"infrastructure"},
+					Content:   "some content",
+				},
+			},
+			shouldError: false,
+		},
+		{
+			name: "TeamDoesNotExist",
+			msgClientsHandler: msgclients.Handler{
+				Clients: map[string]domain.MessageClient{
+					models.Slack: slack.NewClient(""),
+				},
+			},
+			inputFeathers: &feathers.Feathers{
+				Teams: []feathers.Team{
+					{Name: "infrastructure", ContactType: models.Slack},
+				},
+			},
+			inputNotes: []models.ReleaseNote{
+				{
+					TeamNames: []string{"ml"},
+					Content:   "some content",
+				},
+			},
+			shouldError: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			uc := NewUseCase(&tt.msgClientsHandler)
+
+			err := uc.ValidateReleaseNotesWithFeathers(tt.inputFeathers, tt.inputNotes)
+			if tt.shouldError {
+				fmt.Println("expected error: " + err.Error())
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

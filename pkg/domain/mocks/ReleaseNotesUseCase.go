@@ -14,20 +14,20 @@ type ReleaseNotesUseCase struct {
 	mock.Mock
 }
 
-// GenerateBreakdown provides a mock function with given fields: notes, totalTeams
-func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, totalTeams int) (string, error) {
-	ret := _m.Called(notes, totalTeams)
+// GenerateBreakdown provides a mock function with given fields: notes, hash, totalTeams
+func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
+	ret := _m.Called(notes, hash, totalTeams)
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, int) string); ok {
-		r0 = rf(notes, totalTeams)
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, string, int) string); ok {
+		r0 = rf(notes, hash, totalTeams)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func([]models.ReleaseNote, int) error); ok {
-		r1 = rf(notes, totalTeams)
+	if rf, ok := ret.Get(1).(func([]models.ReleaseNote, string, int) error); ok {
+		r1 = rf(notes, hash, totalTeams)
 	} else {
 		r1 = ret.Error(1)
 	}

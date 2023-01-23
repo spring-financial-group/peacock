@@ -11,7 +11,7 @@ type ReleaseNotesUseCase interface {
 	// GenerateHash generates a SHA256 hash of the json of a slice of release notes
 	GenerateHash(messages []models.ReleaseNote) (string, error)
 	// GenerateBreakdown generates a markdown string breaking down the release notes
-	GenerateBreakdown(notes []models.ReleaseNote, totalTeams int) (string, error)
+	GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error)
 	// SendReleaseNotes sends release notes to their respective teams
 	SendReleaseNotes(feathers *feathers.Feathers, messages []models.ReleaseNote) error
 	// ValidateReleaseNotesWithFeathers checks that the relevant handlers have been registered and that the teams exist

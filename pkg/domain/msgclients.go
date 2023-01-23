@@ -6,7 +6,7 @@ import (
 )
 
 type MessageHandler interface {
-	SendMessages(feathers *feather.Feathers, messages []models.ReleaseNote) error
+	SendReleaseNotes(feathers *feather.Feathers, messages []models.ReleaseNote) error
 	IsInitialised(contactType string) bool
 }
 
