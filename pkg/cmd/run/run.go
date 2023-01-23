@@ -246,11 +246,7 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []models.Rel
 	if !changed {
 		return "", nil
 	}
-	breakdown, err := o.NotesUC.GenerateBreakdown(messages, len(o.Feathers.GetAllTeamNames()))
-	if err != nil {
-		return "", err
-	}
-	return comment.AddMetadataToComment(breakdown, hash, comment.BreakdownCommentType), nil
+	return o.NotesUC.GenerateBreakdown(messages, hash, len(o.Feathers.GetAllTeamNames()))
 }
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR

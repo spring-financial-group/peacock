@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
+	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"regexp"
@@ -24,9 +25,9 @@ const (
 	breakdownTemplate = `Successfully validated {{ len .notes }} release note(s).
 {{ range $idx, $val := .notes }}
 ***
-ReleaseNote {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
+Release Note {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
 <details>
-<summary>ReleaseNote Breakdown</summary>
+<summary>Release Note Breakdown</summary>
 
 {{ $val.Content }}
 
@@ -86,8 +87,8 @@ func (uc *UseCase) parseTeamNames(teamNameReg *regexp.Regexp, markdown string) [
 	return teamsInNotes
 }
 
-func (uc *UseCase) GenerateHash(messages []models.ReleaseNote) (string, error) {
-	data, err := json.Marshal(messages)
+func (uc *UseCase) GenerateHash(notes []models.ReleaseNote) (string, error) {
+	data, err := json.Marshal(notes)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal notes")
 	}
@@ -96,7 +97,7 @@ func (uc *UseCase) GenerateHash(messages []models.ReleaseNote) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, totalTeams int) (string, error) {
+func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
 	tmplFuncs := template.FuncMap{
 		"inc":      func(i int) int { return i + 1 },
 		"commaSep": func(i []string) string { return utils.CommaSeparated(i) },
@@ -115,7 +116,10 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, totalTeams int)
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(buf.String()), nil
+
+	breakdown := strings.TrimSpace(buf.String())
+	breakdown = comment.AddMetadataToComment(breakdown, hash, comment.BreakdownCommentType)
+	return breakdown, nil
 }
 
 func (uc *UseCase) SendReleaseNotes(feathers *feathers.Feathers, notes []models.ReleaseNote) error {

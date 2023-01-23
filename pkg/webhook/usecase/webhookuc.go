@@ -79,11 +79,10 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		}
 	}
 
-	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, len(feathers.Teams))
+	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, newHash, len(feathers.Teams))
 	if err != nil {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to generate message breakdown"))
 	}
-	breakdown = comment.AddMetadataToComment(breakdown, newHash, comment.BreakdownCommentType)
 
 	// We should prune the previous comments
 	err = scm.DeleteUsersComments(ctx)
