@@ -66,9 +66,10 @@ func (f *Feathers) validate() error {
 		return errors.New("no teams found in feathers")
 	}
 
+	const name, apiKey = "Name", "APIKey"
 	unique := map[string]map[string]bool{
-		"Name":   make(map[string]bool),
-		"APIKey": make(map[string]bool),
+		name:   make(map[string]bool),
+		apiKey: make(map[string]bool),
 	}
 
 	for _, team := range f.Teams {
@@ -79,14 +80,14 @@ func (f *Feathers) validate() error {
 		}
 
 		// Check the team names and API keys are unique
-		if _, exists := unique["Name"][team.Name]; exists {
+		if _, exists := unique[name][team.Name]; exists {
 			return fmt.Errorf("duplicate team name found: %s", team.Name)
 		}
-		if _, exists := unique["APIKey"][team.APIKey]; exists {
+		if _, exists := unique[apiKey][team.APIKey]; exists {
 			return fmt.Errorf("duplicate apiKey found: %s", team.APIKey)
 		}
-		unique["Name"][team.Name] = true
-		unique["APIKey"][team.APIKey] = true
+		unique[name][team.Name] = true
+		unique[apiKey][team.APIKey] = true
 	}
 	return nil
 }
