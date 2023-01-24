@@ -1,13 +1,16 @@
 teams:
   - name: TestWebhook1
+    apiKey: 1f55fdae-1987-4b6c-af0d-90ede32ac8ba
     contactType: webhook
     addresses:
       - MockWebhookAddress
   - name: TestWebhook2
+    apiKey: 2a5990b9-73eb-4d19-ab90-8d414f39174e
     contactType: webhook
     addresses:
       - MockWebhookAddress
   - name: TestSlack1
+    apiKey: 1f55fdae-1987-4b6c-af0d-90ede32ac8ba
     contactType: slack
     addresses:
       - MockSlackAddress

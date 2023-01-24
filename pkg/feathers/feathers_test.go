@@ -23,10 +23,12 @@ func TestLoadConfig(t *testing.T) {
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						Addresses:   []string{"C02BA9FHMD0"},
 					},
 					{
 						Name:        "AllDevs",
+						APIKey:      "24cacb0f-e186-4766-a444-14f028db63bd",
 						ContactType: "slack",
 						Addresses:   []string{"CLHLDNT9Q"},
 					},
@@ -40,6 +42,7 @@ func TestLoadConfig(t *testing.T) {
 				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						ContactType: "MorseCode",
 						Addresses:   []string{"..-..-.--"},
 					},
@@ -53,6 +56,7 @@ func TestLoadConfig(t *testing.T) {
 				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						ContactType: "slack",
 						Addresses:   []string{"C02DA9QHMD023"},
 					},
@@ -66,6 +70,7 @@ func TestLoadConfig(t *testing.T) {
 				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						ContactType: "slack",
 						Addresses:   []string{"C02BA9QhMD"},
 					},
@@ -79,6 +84,7 @@ func TestLoadConfig(t *testing.T) {
 				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						ContactType: "slack",
 						Addresses:   []string{"C02BA9QH"},
 					},
@@ -92,6 +98,7 @@ func TestLoadConfig(t *testing.T) {
 				Teams: []feathers.Team{
 					{
 						Name:        "infrastructure",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						ContactType: "slack",
 						Addresses:   []string{"C02!?/QHM"},
 					},
@@ -104,6 +111,7 @@ func TestLoadConfig(t *testing.T) {
 			expectedConfig: feathers.Feathers{
 				Teams: []feathers.Team{
 					{
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						ContactType: "email",
 						Addresses:   []string{"sam.morse-dash.com"},
 					},
@@ -117,6 +125,7 @@ func TestLoadConfig(t *testing.T) {
 				Teams: []feathers.Team{
 					{
 						Name:      "infrastructure",
+						APIKey:    "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						Addresses: []string{"sam.morse-dash.com"},
 					},
 				},
@@ -130,16 +139,58 @@ func TestLoadConfig(t *testing.T) {
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						Addresses:   []string{"C02BA9QHMD0"},
 					},
 					{
 						Name:        "machine-learning",
+						APIKey:      "eb7c0ee7-4ec2-474c-855f-51ab9c181cfa",
 						ContactType: "slack",
 						Addresses:   []string{"C02BA9QHMD0"},
 					},
 				},
 			},
 			shouldError: false,
+		},
+		{
+			name: "DuplicateTeamNames",
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
+					{
+						Name:        "infrastructure",
+						ContactType: "slack",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
+						Addresses:   []string{"C02BA9QHMD0"},
+					},
+					{
+						Name:        "infrastructure",
+						APIKey:      "eb7c0ee7-4ec2-474c-855f-51ab9c181cfa",
+						ContactType: "slack",
+						Addresses:   []string{"C02BA9QHMD0"},
+					},
+				},
+			},
+			shouldError: true,
+		},
+		{
+			name: "DuplicateAPIKeys",
+			expectedConfig: feathers.Feathers{
+				Teams: []feathers.Team{
+					{
+						Name:        "infrastructure",
+						ContactType: "slack",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
+						Addresses:   []string{"C02BA9QHMD0"},
+					},
+					{
+						Name:        "infrastructure",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
+						ContactType: "slack",
+						Addresses:   []string{"C02BA9QHMD0"},
+					},
+				},
+			},
+			shouldError: true,
 		},
 	}
 
@@ -154,16 +205,16 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		bytes, err := yaml.Marshal(tt.expectedConfig)
-		if err != nil {
-			panic(err)
-		}
-		err = os.WriteFile(testPath, bytes, 0775)
-		if err != nil {
-			panic(err)
-		}
-
 		t.Run(tt.name, func(t *testing.T) {
+			bytes, err := yaml.Marshal(tt.expectedConfig)
+			if err != nil {
+				panic(err)
+			}
+			err = os.WriteFile(testPath, bytes, 0775)
+			if err != nil {
+				panic(err)
+			}
+
 			actualConfig, err := feathers.GetFeathersFromFile()
 			if tt.shouldError {
 				assert.Error(t, err)
@@ -171,12 +222,12 @@ func TestLoadConfig(t *testing.T) {
 				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.expectedConfig, *actualConfig)
-		})
 
-		err = os.RemoveAll(testPath)
-		if err != nil {
-			panic(err)
-		}
+			err = os.RemoveAll(testPath)
+			if err != nil {
+				panic(err)
+			}
+		})
 	}
 
 	err = os.RemoveAll(baseDir)

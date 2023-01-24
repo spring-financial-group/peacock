@@ -46,11 +46,13 @@ var (
 		Teams: []feathers.Team{
 			{
 				Name:        InfraTeam,
+				APIKey:      "AKey",
 				ContactType: models.Slack,
 				Addresses:   []string{"C1234567890"},
 			},
 			{
 				Name:        SkisocksTeam,
+				APIKey:      "AnotherKey",
 				ContactType: models.Webhook,
 				Addresses:   []string{"skisocks@github.com"},
 			},
