@@ -111,42 +111,42 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 
 	// We can use the most recent commit in the default branch to display the status. This way we don't have to worry about
 	// merge method used on the PR. We'll continue to use the last commit SHA in the PR for error handling/feathers etc.
-	defaultBranchSHA, err := scm.GetLatestCommitSHAInBranch(ctx, e.DefaultBranch)
+	defaultSHA, err := scm.GetLatestCommitSHAInBranch(ctx, e.DefaultBranch)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to get latest commit in default branch"))
+		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to get latest commit in default branch"))
 	}
 
 	// Set the current pipeline status to pending
-	if err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.PendingState, domain.ReleaseContext); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
+	if err = scm.CreatePeacockCommitStatus(ctx, defaultSHA, domain.PendingState, domain.ReleaseContext); err != nil {
+		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
 	}
 
 	// Parse the PR body for any releaseNotes
 	releaseNotes, err := w.notesUC.ParseNotesFromMarkdown(e.Body)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
+		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
 	}
 	if releaseNotes == nil {
 		log.Infof("no release notes found in PR body, skipping")
-		return scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
+		return scm.CreatePeacockCommitStatus(ctx, defaultSHA, domain.SuccessState, domain.ReleaseContext)
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, e.DefaultBranch, e)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, err)
+		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, err)
 	}
 
 	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to validate release notes with feathers"))
+		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to validate release notes with feathers"))
 	}
 
 	if err = w.notesUC.SendReleaseNotes(feathers, releaseNotes); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to send releaseNotes"))
+		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to send releaseNotes"))
 	}
 	log.Infof("%d message(s) sent", len(releaseNotes))
 
-	err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.SuccessState, domain.ReleaseContext)
+	err = scm.CreatePeacockCommitStatus(ctx, defaultSHA, domain.SuccessState, domain.ReleaseContext)
 	if err != nil {
 		log.Errorf("failed to create success status: %v", err)
 	}
