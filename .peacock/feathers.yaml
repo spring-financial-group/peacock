@@ -1,13 +1,16 @@
 teams:
   - name: TestWebhook1
+    apiKey: MockAPIKey1
     contactType: webhook
     addresses:
       - MockWebhookAddress
   - name: TestWebhook2
+    apiKey: MockAPIKey2
     contactType: webhook
     addresses:
       - MockWebhookAddress
   - name: TestSlack1
+    apiKey: MockAPIKey3
     contactType: slack
     addresses:
       - MockSlackAddress
