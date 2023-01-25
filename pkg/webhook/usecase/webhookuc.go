@@ -134,7 +134,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, e.DefaultBranch, e)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, domain.ValidationContext, err)
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, err)
 	}
 
 	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
