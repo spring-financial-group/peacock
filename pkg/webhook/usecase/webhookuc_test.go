@@ -33,7 +33,7 @@ var (
 
 	mockPullRequestEventDTO = &models.PullRequestEventDTO{
 		PullRequestID: 100,
-		Owner:         RepoOwner,
+		RepoOwner:     RepoOwner,
 		RepoName:      RepoName,
 		Body:          "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks",
 		PRNumber:      PRNumber,
@@ -90,7 +90,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = prBody
 
-		mockFactory.On("GetClient", mockEvent.Owner, mockEvent.RepoName, cfg.User, mockEvent.PRNumber).Return(mockSCM).Once()
+		mockFactory.On("GetClient", mockEvent.RepoOwner, mockEvent.RepoName, cfg.User, mockEvent.PRNumber).Return(mockSCM).Once()
 
 		clientKey := "key"
 		mockSCM.On("GetKey").Return(clientKey).Once()
@@ -129,7 +129,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = prBody
 
-		mockFactory.On("GetClient", mockEvent.Owner, mockEvent.RepoName, cfg.User, mockEvent.PRNumber).Return(mockSCM).Once()
+		mockFactory.On("GetClient", mockEvent.RepoOwner, mockEvent.RepoName, cfg.User, mockEvent.PRNumber).Return(mockSCM).Once()
 
 		clientKey := "key"
 		mockSCM.On("GetKey").Return(clientKey).Once()

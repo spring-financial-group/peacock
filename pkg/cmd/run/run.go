@@ -294,8 +294,7 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.Rel
 func (o *Options) PostErrorToPR(ctx context.Context, err error) {
 	// If it's not a DryRun then we shouldn't post the error back to the pr
 	if o.DryRun {
-		errorMsg := fmt.Sprintf("[Peacock] Validation Failed:\n%s", err.Error())
-		err = o.GitServerClient.CommentOnPR(ctx, errorMsg)
+		err = o.GitServerClient.CommentError(ctx, "", err)
 		if err != nil {
 			panic(err)
 		}

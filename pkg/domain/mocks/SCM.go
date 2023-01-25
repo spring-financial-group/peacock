@@ -16,13 +16,13 @@ type SCM struct {
 	mock.Mock
 }
 
-// CommentError provides a mock function with given fields: ctx, err
-func (_m *SCM) CommentError(ctx context.Context, err error) error {
-	ret := _m.Called(ctx, err)
+// CommentError provides a mock function with given fields: ctx, prOwner, err
+func (_m *SCM) CommentError(ctx context.Context, prOwner string, err error) error {
+	ret := _m.Called(ctx, prOwner, err)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, error) error); ok {
-		r0 = rf(ctx, err)
+	if rf, ok := ret.Get(0).(func(context.Context, string, error) error); ok {
+		r0 = rf(ctx, prOwner, err)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -222,13 +222,13 @@ func (_m *SCM) GetPullRequestBodyFromPRNumber(ctx context.Context) (*string, err
 	return r0, r1
 }
 
-// HandleError provides a mock function with given fields: ctx, statusContext, headSHA, err
-func (_m *SCM) HandleError(ctx context.Context, statusContext string, headSHA string, err error) error {
-	ret := _m.Called(ctx, statusContext, headSHA, err)
+// HandleError provides a mock function with given fields: ctx, statusContext, headSHA, prOwner, err
+func (_m *SCM) HandleError(ctx context.Context, statusContext string, headSHA string, prOwner string, err error) error {
+	ret := _m.Called(ctx, statusContext, headSHA, prOwner, err)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, error) error); ok {
-		r0 = rf(ctx, statusContext, headSHA, err)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, error) error); ok {
+		r0 = rf(ctx, statusContext, headSHA, prOwner, err)
 	} else {
 		r0 = ret.Error(0)
 	}

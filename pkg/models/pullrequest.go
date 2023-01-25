@@ -8,7 +8,8 @@ import (
 // by the service.
 type PullRequestEventDTO struct {
 	PullRequestID int64
-	Owner         string
+	PROwner       string
+	RepoOwner     string
 	RepoName      string
 	Body          string
 	PRNumber      int
@@ -21,7 +22,8 @@ type PullRequestEventDTO struct {
 func MarshalPullRequestEvent(event *github.PullRequestEvent) *PullRequestEventDTO {
 	return &PullRequestEventDTO{
 		PullRequestID: *event.PullRequest.ID,
-		Owner:         *event.Repo.Owner.Login,
+		PROwner:       *event.PullRequest.User.Login,
+		RepoOwner:     *event.Repo.Owner.Login,
 		RepoName:      *event.Repo.Name,
 		Body:          event.PullRequest.GetBody(),
 		PRNumber:      *event.PullRequest.Number,
