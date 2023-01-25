@@ -25,7 +25,7 @@ func Run() {
 
 	logger.SetLevel(cfg.LogLevel)
 
-	sources, err := initDataSources(cfg)
+	sources, err := NewDataSources(&cfg.DataSources)
 	if err != nil {
 		log.Fatalf("Unable to initialise data sources: %v\n", err)
 	}

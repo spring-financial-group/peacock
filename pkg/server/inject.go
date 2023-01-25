@@ -12,7 +12,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/webhook/usecase"
 )
 
-func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
+func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	// Setup router
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()

@@ -6,6 +6,13 @@ type Config struct {
 	LogLevel        string `env:"LOG_LEVEL"`
 	SCM             SCM
 	MessageHandlers MessageHandlers
+	DataSources     DataSources
+}
+
+type DataSources struct {
+	MongoDB struct {
+		ConnectionString string `env:"MONGODB_CONNECTION_STRING"`
+	}
 }
 
 type SCM struct {
