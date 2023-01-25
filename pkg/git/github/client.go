@@ -90,8 +90,12 @@ func (c *Client) CommentOnPR(ctx context.Context, body string) error {
 	return nil
 }
 
-func (c *Client) CommentError(ctx context.Context, err error) error {
-	errorMsg := fmt.Sprintf("Validation Failed:\n%s", err.Error())
+func (c *Client) CommentError(ctx context.Context, prOwner string, err error) error {
+	var tagString string
+	if prOwner != "" {
+		tagString = fmt.Sprintf("@%s: ", prOwner)
+	}
+	errorMsg := fmt.Sprintf("%sValidation failed for the release notes in this PR:\n%s", tagString, err.Error())
 	return c.CommentOnPR(ctx, errorMsg)
 }
 
@@ -190,8 +194,8 @@ func (c *Client) GetKey() string {
 	return fmt.Sprintf("%s/%s/%s/%d", c.user, c.owner, c.repo, c.prNumber)
 }
 
-func (c *Client) HandleError(ctx context.Context, statusContext, headSHA string, err error) error {
-	commentErr := c.CommentError(ctx, err)
+func (c *Client) HandleError(ctx context.Context, statusContext, headSHA, prOwner string, err error) error {
+	commentErr := c.CommentError(ctx, prOwner, err)
 	if commentErr != nil {
 		log.Errorf("Failed to comment error on PR: %s", commentErr.Error())
 	}

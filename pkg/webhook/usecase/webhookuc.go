@@ -30,17 +30,17 @@ func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, notesUC dom
 
 func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
-	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
+	scm := w.scmFactory.GetClient(e.RepoOwner, e.RepoName, w.cfg.User, e.PRNumber)
 	defer w.scmFactory.RemoveClient(scm.GetKey())
 
 	// Set the current pipeline status to pending
 	if err := scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.PendingState, domain.ValidationContext); err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
 	}
 
 	releaseNotes, err := w.notesUC.ParseNotesFromMarkdown(e.Body)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
 	}
 	if releaseNotes == nil {
 		log.Infof("no releaseNotes found in PR body, skipping")
@@ -50,24 +50,24 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, e.Branch, e)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, err)
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, err)
 	}
 
 	// Check that the relevant communication methods have been configured for the feathers
 	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to validate release notes with feathers"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to validate release notes with feathers"))
 	}
 
 	// Create a hash of the releaseNotes. Probably should cache these as well.
 	newHash, err := w.notesUC.GenerateHash(releaseNotes)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to generate message hash"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to generate message hash"))
 	}
 
 	// Get the hash from the last comment and compare
 	comments, err := scm.GetPRCommentsByUser(ctx)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to get comments"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to get comments"))
 	}
 	// Currently we only support one type of comment, so we can just get the most recent and check that
 	if len(comments) > 0 {
@@ -81,20 +81,20 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 
 	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, newHash, len(feathers.Teams))
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to generate message breakdown"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to generate message breakdown"))
 	}
 
 	// We should prune the previous comments
 	err = scm.DeleteUsersComments(ctx)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to delete previous comments"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to delete previous comments"))
 	}
 
 	// Comment on the PR with the breakdown
 	log.Info("commenting on PR with message breakdown")
 	err = scm.CommentOnPR(ctx, breakdown)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, errors.Wrap(err, "failed to comment breakdown on PR"))
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to comment breakdown on PR"))
 	}
 	err = scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 	if err != nil {
@@ -105,7 +105,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 
 func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
-	scm := w.scmFactory.GetClient(e.Owner, e.RepoName, w.cfg.User, e.PRNumber)
+	scm := w.scmFactory.GetClient(e.RepoOwner, e.RepoName, w.cfg.User, e.PRNumber)
 	defer w.scmFactory.RemoveClient(scm.GetKey())
 	defer w.CleanUp(e.PullRequestID)
 
@@ -113,18 +113,18 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	// merge method used on the PR. We'll continue to use the last commit SHA in the PR for error handling/feathers etc.
 	defaultBranchSHA, err := scm.GetLatestCommitSHAInBranch(ctx, e.DefaultBranch)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to get latest commit in default branch"))
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to get latest commit in default branch"))
 	}
 
 	// Set the current pipeline status to pending
 	if err = scm.CreatePeacockCommitStatus(ctx, defaultBranchSHA, domain.PendingState, domain.ReleaseContext); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to create pending status"))
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
 	}
 
 	// Parse the PR body for any releaseNotes
 	releaseNotes, err := w.notesUC.ParseNotesFromMarkdown(e.Body)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
 	}
 	if releaseNotes == nil {
 		log.Infof("no release notes found in PR body, skipping")
@@ -134,15 +134,15 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, e.DefaultBranch, e)
 	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, err)
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, err)
 	}
 
 	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to validate release notes with feathers"))
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to validate release notes with feathers"))
 	}
 
 	if err = w.notesUC.SendReleaseNotes(feathers, releaseNotes); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, errors.Wrap(err, "failed to send releaseNotes"))
+		return scm.HandleError(ctx, domain.ReleaseContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to send releaseNotes"))
 	}
 	log.Infof("%d message(s) sent", len(releaseNotes))
 

@@ -40,7 +40,7 @@ type SCM interface {
 	// CommentOnPR posts a comment on a pull request given the pr number
 	CommentOnPR(ctx context.Context, body string) error
 	// CommentError posts an error comment on a pull request given the pr number
-	CommentError(ctx context.Context, err error) error
+	CommentError(ctx context.Context, prOwner string, err error) error
 	// GetPRComments returns all comments on a pull request given the pr number sorted by most recent comment first
 	GetPRComments(ctx context.Context) ([]*github.IssueComment, error)
 	// GetFileFromBranch returns the file as a string from a branch
@@ -56,7 +56,7 @@ type SCM interface {
 	// GetKey returns the identifier of the SCM
 	GetKey() string
 	// HandleError handles an error by commenting on the PR and creating a commit status on the given SHA
-	HandleError(ctx context.Context, statusContext, headSHA string, err error) error
+	HandleError(ctx context.Context, statusContext, headSHA, prOwner string, err error) error
 }
 
 type SCMClientFactory interface {
