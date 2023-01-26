@@ -27,6 +27,18 @@ func NewDataSources(cfg *config.DataSources) (*DataSources, error) {
 	return ds, nil
 }
 
+// Close disconnects any open connections to the data sources.
+func (ds *DataSources) Close(ctx context.Context) {
+	if err := ds.MongoDBClient.Disconnect(ctx); err != nil {
+		switch errors.Cause(err) {
+		case mongo.ErrClientDisconnected:
+			// Already disconnected so nothing to do
+		default:
+			log.Errorf("Failed to close mongo client: %v", err)
+		}
+	}
+}
+
 func (ds *DataSources) initialiseMongoDB() error {
 	client, err := mongo.NewClient(options.Client().ApplyURI(ds.cfg.MongoDB.ConnectionString))
 	if err != nil {

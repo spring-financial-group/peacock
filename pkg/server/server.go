@@ -22,13 +22,13 @@ func Run() {
 	if err != nil {
 		log.Fatalf("Unable to initialize config: %v\n", err)
 	}
-
 	logger.SetLevel(cfg.LogLevel)
 
 	sources, err := NewDataSources(&cfg.DataSources)
 	if err != nil {
 		log.Fatalf("Unable to initialise data sources: %v\n", err)
 	}
+	defer sources.Close(context.Background())
 
 	router, err := inject(cfg, sources)
 	if err != nil {
@@ -56,10 +56,12 @@ func Run() {
 	stop()
 	log.Info("Shutting down gracefully, press Ctrl+C again to force")
 
-	// The context is used to inform the server it has 5 seconds to finish
+	// The context is used to inform the server & data sources they have 5 seconds to finish
 	// the request it is currently handling
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	sources.Close(ctx)
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v\n", err)
 	}
