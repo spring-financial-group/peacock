@@ -39,6 +39,11 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
 	}
 
+	if e.Body == "" {
+		log.Infof("no text found in PR body, skipping")
+		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
+	}
+
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, scm, e.Branch, e)
 	if err != nil {
@@ -115,6 +120,11 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	// Set the current pipeline status to pending
 	if err = scm.CreatePeacockCommitStatus(ctx, defaultSHA, domain.PendingState, domain.ReleaseContext); err != nil {
 		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
+	}
+
+	if e.Body == "" {
+		log.Infof("no text found in PR body, skipping")
+		return scm.CreatePeacockCommitStatus(ctx, defaultSHA, domain.SuccessState, domain.ReleaseContext)
 	}
 
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
