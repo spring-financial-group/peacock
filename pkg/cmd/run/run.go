@@ -160,7 +160,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Info("Parsing messages from pull request body")
-	messages, err := o.NotesUC.ParseNotesFromMarkdown(*prBody)
+	messages, err := o.NotesUC.GetReleaseNotesFromMDAndTeams(*prBody, o.Feathers.Teams)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse release notes from pull request")
 		o.PostErrorToPR(ctx, err)
@@ -170,14 +170,6 @@ func (o *Options) Run() error {
 	if messages == nil {
 		log.Info("No messages found in markdown, exiting")
 		return nil
-	}
-
-	log.Info("Validating messages")
-	err = o.NotesUC.ValidateReleaseNotesWithFeathers(o.Feathers, messages)
-	if err != nil {
-		err = errors.Wrapf(err, "failed validate messages with feathers")
-		o.PostErrorToPR(ctx, err)
-		return err
 	}
 
 	if o.DryRun {
@@ -203,7 +195,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Info("Sending messages")
-	err = o.NotesUC.SendReleaseNotes(o.Feathers, messages)
+	err = o.NotesUC.SendReleaseNotes(o.Subject, messages)
 	if err != nil {
 		return err
 	}

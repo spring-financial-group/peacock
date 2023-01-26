@@ -181,7 +181,7 @@ func TestParse(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMessages, err := uc.ParseNotesFromMarkdown(tt.inputMarkdown)
+			actualMessages, err := uc.GetReleaseNotesFromMDAndTeams(tt.inputMarkdown)
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)

@@ -43,30 +43,48 @@ func NewUseCase(msgClientsHandler domain.MessageHandler) *UseCase {
 	return &UseCase{msgClientsHandler}
 }
 
-func (uc *UseCase) ParseNotesFromMarkdown(markdown string) ([]models.ReleaseNote, error) {
+func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
 	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
 	if err != nil {
 		return nil, err
 	}
 
 	log.Debug("Parsing release notes from markdown")
-	teamsInMessages := uc.parseTeamNames(teamNameReg, markdown)
-	if len(teamsInMessages) < 1 {
+	teamNames := uc.parseTeamNames(teamNameReg, markdown)
+	if len(teamNames) < 1 {
 		return nil, nil
 	}
-	log.Debugf("%d notes found in markdown", len(teamsInMessages))
+	log.Debugf("%d notes found in markdown", len(teamNames))
 
 	// Get the contents for each message & trim to remove any text before the first message
 	contents := teamNameReg.Split(markdown, -1)
 	contents = contents[1:]
 
-	messages := make([]models.ReleaseNote, len(contents))
+	notes := make([]models.ReleaseNote, len(contents))
 	for i, m := range contents {
-		messages[i].Content = strings.TrimSpace(m)
-		messages[i].TeamNames = teamsInMessages[i]
-		log.Debugf("Found %d team(s) to notify in notes %d\n", len(messages[i].TeamNames), i+1)
+		teamsNamesInNote := teamNames[i]
+		teamsInNote, err := uc.getAndValidateTeamsByNames(teamsNamesInNote, teamsInFeathers)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get teams by name")
+		}
+
+		notes[i].Content = strings.TrimSpace(m)
+		notes[i].Teams = teamsInNote
 	}
-	return messages, nil
+	return notes, nil
+}
+
+func (uc *UseCase) getAndValidateTeamsByNames(teamNames []string, teamsInFeathers models.Teams) (models.Teams, error) {
+	if err := teamsInFeathers.Contains(teamNames...); err != nil {
+		return nil, err
+	}
+	wantedTeams := teamsInFeathers.GetTeamsByNames(teamNames...)
+	for _, team := range wantedTeams {
+		if !uc.MsgClientsHandler.IsInitialised(team.ContactType) {
+			return nil, errors.New(fmt.Sprintf("communication method %s has not been configured", team.ContactType))
+		}
+	}
+	return wantedTeams, nil
 }
 
 func (uc *UseCase) parseTeamNames(teamNameReg *regexp.Regexp, markdown string) [][]string {
@@ -128,24 +146,6 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 	return breakdown, nil
 }
 
-func (uc *UseCase) SendReleaseNotes(feathers *models.Feathers, notes []models.ReleaseNote) error {
-	return uc.MsgClientsHandler.SendReleaseNotes(feathers, notes)
-}
-
-func (uc *UseCase) ValidateReleaseNotesWithFeathers(feathers *models.Feathers, notes []models.ReleaseNote) error {
-	// Check that the relevant communication methods have been configured for the feathers
-	types := feathers.Teams.GetAllContactTypes()
-	for _, t := range types {
-		if !uc.MsgClientsHandler.IsInitialised(t) {
-			return errors.New(fmt.Sprintf("communication method %s has not been configured", t))
-		}
-	}
-
-	// Check that the teams in the releaseNotes exist in the feathers
-	for _, m := range notes {
-		if err := feathers.Teams.Exists(m.TeamNames...); err != nil {
-			return err
-		}
-	}
-	return nil
+func (uc *UseCase) SendReleaseNotes(subject string, notes []models.ReleaseNote) error {
+	return uc.MsgClientsHandler.SendReleaseNotes(subject, notes)
 }

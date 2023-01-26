@@ -258,7 +258,7 @@ func TestOptions_Run(t *testing.T) {
 			mockSCM.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
 		}
 
-		mockNotesUC.On("ParseNotesFromMarkdown", *tt.prBody).Return(mockNotes, nil)
+		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", *tt.prBody).Return(mockNotes, nil)
 
 		mockNotesUC.On("ValidateReleaseNotesWithFeathers", tt.opts.Feathers, mockNotes).Return(nil)
 

@@ -106,7 +106,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		mockSCM.On("CommentOnPR", mockCTX, mock.Anything).Return(nil).Once()
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
-		mockNotesUC.On("ParseNotesFromMarkdown", prBody).Return(mockNotes, nil)
+		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody).Return(mockNotes, nil)
 		mockNotesUC.On("ValidateReleaseNotesWithFeathers", mockFeathers, mockNotes).Return(nil)
 		mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
 		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2).Return("", nil)
@@ -144,7 +144,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 
-		mockNotesUC.On("ParseNotesFromMarkdown", prBody).Return(mockNotes, nil)
+		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody).Return(mockNotes, nil)
 		mockNotesUC.On("ValidateReleaseNotesWithFeathers", mockFeathers, mockNotes).Return(nil)
 		mockNotesUC.On("SendReleaseNotes", mockFeathers, mockNotes).Return(nil)
 
