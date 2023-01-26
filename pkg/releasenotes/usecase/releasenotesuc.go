@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/domain"
-	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
@@ -129,13 +128,13 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 	return breakdown, nil
 }
 
-func (uc *UseCase) SendReleaseNotes(feathers *feathers.Feathers, notes []models.ReleaseNote) error {
+func (uc *UseCase) SendReleaseNotes(feathers *models.Feathers, notes []models.ReleaseNote) error {
 	return uc.MsgClientsHandler.SendReleaseNotes(feathers, notes)
 }
 
-func (uc *UseCase) ValidateReleaseNotesWithFeathers(feathers *feathers.Feathers, notes []models.ReleaseNote) error {
+func (uc *UseCase) ValidateReleaseNotesWithFeathers(feathers *models.Feathers, notes []models.ReleaseNote) error {
 	// Check that the relevant communication methods have been configured for the feathers
-	types := feathers.GetAllContactTypes()
+	types := feathers.Teams.GetAllContactTypes()
 	for _, t := range types {
 		if !uc.MsgClientsHandler.IsInitialised(t) {
 			return errors.New(fmt.Sprintf("communication method %s has not been configured", t))
@@ -144,7 +143,7 @@ func (uc *UseCase) ValidateReleaseNotesWithFeathers(feathers *feathers.Feathers,
 
 	// Check that the teams in the releaseNotes exist in the feathers
 	for _, m := range notes {
-		if err := feathers.ExistsInFeathers(m.TeamNames...); err != nil {
+		if err := feathers.Teams.Exists(m.TeamNames...); err != nil {
 			return err
 		}
 	}

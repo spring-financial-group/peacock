@@ -5,7 +5,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
-	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -42,8 +41,8 @@ var (
 		DefaultBranch: DefaultBranch,
 	}
 
-	mockFeathers = &feathers.Feathers{
-		Teams: []feathers.Team{
+	mockFeathers = &models.Feathers{
+		Teams: []models.Team{
 			{
 				Name:        InfraTeam,
 				APIKey:      "AKey",
@@ -57,8 +56,8 @@ var (
 				Addresses:   []string{"skisocks@github.com"},
 			},
 		},
-		Config: feathers.Config{
-			Messages: feathers.Messages{
+		Config: models.Config{
+			Messages: models.Messages{
 				Subject: "Subject",
 			},
 		},

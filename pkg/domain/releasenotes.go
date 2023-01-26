@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 )
 
@@ -13,7 +12,7 @@ type ReleaseNotesUseCase interface {
 	// GenerateBreakdown generates a markdown string breaking down the release notes
 	GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error)
 	// SendReleaseNotes sends release notes to their respective teams
-	SendReleaseNotes(feathers *feathers.Feathers, messages []models.ReleaseNote) error
+	SendReleaseNotes(feathers *models.Feathers, messages []models.ReleaseNote) error
 	// ValidateReleaseNotesWithFeathers checks that the relevant handlers have been registered and that the teams exist
-	ValidateReleaseNotesWithFeathers(feathers *feathers.Feathers, notes []models.ReleaseNote) error
+	ValidateReleaseNotesWithFeathers(feathers *models.Feathers, notes []models.ReleaseNote) error
 }
