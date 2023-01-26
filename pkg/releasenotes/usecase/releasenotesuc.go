@@ -24,7 +24,7 @@ const (
 	breakdownTemplate = `Successfully validated {{ len .notes }} release note{{ addPlural (len .notes) }}.
 {{ range $idx, $val := .notes }}
 ***
-Release Note {{ inc $idx }} will be sent to: {{ commaSep $val.TeamNames }}
+Release Note {{ inc $idx }} will be sent to: {{ getTeamNames $val.Teams }}
 <details>
 <summary>Release Note Breakdown</summary>
 
@@ -116,8 +116,8 @@ func (uc *UseCase) GenerateHash(notes []models.ReleaseNote) (string, error) {
 
 func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
 	tmplFuncs := template.FuncMap{
-		"inc":      func(i int) int { return i + 1 },
-		"commaSep": func(i []string) string { return utils.CommaSeparated(i) },
+		"inc":          func(i int) int { return i + 1 },
+		"getTeamNames": func(ts models.Teams) string { return utils.CommaSeparated(ts.GetAllTeamNames()) },
 		"addPlural": func(i int) string {
 			var plural string
 			if i > 1 {
