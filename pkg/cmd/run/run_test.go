@@ -13,6 +13,25 @@ import (
 	"testing"
 )
 
+var (
+	infraTeam = models.Team{
+		Name:        "infrastructure",
+		APIKey:      "some-api-key",
+		Addresses:   []string{},
+		ContactType: models.Slack,
+	}
+	productTeam = models.Team{
+		Name:        "product",
+		APIKey:      "another-api-key",
+		Addresses:   []string{},
+		ContactType: models.Webhook,
+	}
+	allTeams = models.Teams{
+		infraTeam,
+		productTeam,
+	}
+)
+
 func TestOptions_HaveMessagesChanged(t *testing.T) {
 	// Comments returned from the GitHub API are sorted by most recent first
 	testCases := []struct {
@@ -196,13 +215,7 @@ func TestOptions_Run(t *testing.T) {
 				GitServerClient:   mockSCM,
 				NotesUC:           mockNotesUC,
 				Feathers: &models.Feathers{
-					Teams: []models.Team{
-						{
-							Name:        "infrastructure",
-							ContactType: models.Slack,
-							Addresses:   []string{"TestAdd", "TestAdd2"},
-						},
-					},
+					Teams: allTeams,
 				},
 			},
 			prBody: utils.NewPtr("# Peacock\r\n## ReleaseNote\n### Notify infrastructure\nTest Content"),
@@ -222,13 +235,7 @@ func TestOptions_Run(t *testing.T) {
 				GitServerClient:   mockSCM,
 				NotesUC:           mockNotesUC,
 				Feathers: &models.Feathers{
-					Teams: []models.Team{
-						{
-							Name:        "infrastructure",
-							ContactType: models.Slack,
-							Addresses:   []string{"TestAdd", "TestAdd2"},
-						},
-					},
+					Teams: allTeams,
 				},
 			},
 			prBody: utils.NewPtr("# Peacock\r\n## ReleaseNote\n### Notify infrastructure\nTest Content"),
@@ -238,8 +245,10 @@ func TestOptions_Run(t *testing.T) {
 	for _, tt := range testCases {
 		mockNotes := []models.ReleaseNote{
 			{
-				TeamNames: []string{"infrastructure"},
-				Content:   "Test Content",
+				Teams: models.Teams{
+					infraTeam,
+				},
+				Content: "Test Content",
 			},
 		}
 
@@ -248,7 +257,7 @@ func TestOptions_Run(t *testing.T) {
 
 		if tt.opts.DryRun {
 			mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
-			mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 1).Return(mockBreakdown, nil)
+			mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, len(allTeams)).Return(mockBreakdown, nil)
 
 			mockSCM.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx")).Return(tt.prBody, nil).Once()
 			mockSCM.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), mock.AnythingOfType("string")).Return(nil).Once()
@@ -258,12 +267,10 @@ func TestOptions_Run(t *testing.T) {
 			mockSCM.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "SHA").Return(tt.prBody, nil).Once()
 		}
 
-		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", *tt.prBody).Return(mockNotes, nil)
-
-		mockNotesUC.On("ValidateReleaseNotesWithFeathers", tt.opts.Feathers, mockNotes).Return(nil)
+		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", *tt.prBody, allTeams).Return(mockNotes, nil)
 
 		if !tt.opts.DryRun {
-			mockNotesUC.On("SendReleaseNotes", tt.opts.Feathers, mockNotes).Return(nil).Once()
+			mockNotesUC.On("SendReleaseNotes", "New Release Notes for peacock", mockNotes).Return(nil).Once()
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
