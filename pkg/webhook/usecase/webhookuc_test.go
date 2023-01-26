@@ -5,6 +5,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
+	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -85,7 +86,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, mockNotesUC)
+	uc := NewUseCase(cfg, mockFactory, mockNotesUC, feathers.NewUseCase())
 
 	t.Run("Happy Path", func(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
@@ -124,7 +125,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, mockNotesUC)
+	uc := NewUseCase(cfg, mockFactory, mockNotesUC, feathers.NewUseCase())
 
 	t.Run("Happy Path", func(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO

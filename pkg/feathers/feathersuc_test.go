@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestLoadConfig(t *testing.T) {
+func Test_GetFeathersFromFile_Validate(t *testing.T) {
 	testCases := []struct {
 		name           string
 		expectedConfig models.Feathers
@@ -207,6 +207,8 @@ func TestLoadConfig(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			uc := feathers.NewUseCase()
+
 			bytes, err := yaml.Marshal(tt.expectedConfig)
 			if err != nil {
 				panic(err)
@@ -216,7 +218,7 @@ func TestLoadConfig(t *testing.T) {
 				panic(err)
 			}
 
-			actualConfig, err := feathers.GetFeathersFromFile()
+			actualConfig, err := uc.GetFeathersFromFile()
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
@@ -234,92 +236,5 @@ func TestLoadConfig(t *testing.T) {
 	err = os.RemoveAll(baseDir)
 	if err != nil {
 		panic(err)
-	}
-}
-
-func TestGetTeamsByNames(t *testing.T) {
-	testCases := []struct {
-		name           string
-		inputTeamNames []string
-		teams          []models.Team
-		expectedTeams  []models.Team
-	}{
-		{
-			name:           "Passing",
-			inputTeamNames: []string{"infrastructure"},
-			teams: []models.Team{
-				{Name: "infrastructure"},
-			},
-			expectedTeams: []models.Team{{Name: "infrastructure"}},
-		},
-		{
-			name:           "MultipleTeams",
-			inputTeamNames: []string{"infrastructure"},
-			teams: []models.Team{
-				{Name: "infrastructure"},
-				{Name: "ml"},
-				{Name: "allDevs"},
-			},
-			expectedTeams: []models.Team{{Name: "infrastructure"}},
-		},
-		{
-			name:           "NoTeamByThatName",
-			inputTeamNames: []string{"DS"},
-			teams: []models.Team{
-				{Name: "infrastructure"},
-				{Name: "ml"},
-				{Name: "allDevs"},
-			},
-			expectedTeams: []models.Team(nil),
-		},
-		{
-			name:           "NoTeams",
-			inputTeamNames: []string{"infrastructure"},
-			teams:          []models.Team{},
-			expectedTeams:  []models.Team(nil),
-		},
-	}
-
-	for _, tt := range testCases {
-		cfg := models.Feathers{Teams: tt.teams}
-
-		t.Run(tt.name, func(t *testing.T) {
-			actualTeam := cfg.GetTeamsByNames(tt.inputTeamNames...)
-			assert.Equal(t, tt.expectedTeams, actualTeam)
-		})
-	}
-}
-
-func TestGetAllTeamNames(t *testing.T) {
-	testCases := []struct {
-		name          string
-		teams         []models.Team
-		expectedNames []string
-	}{
-		{
-			name: "Passing",
-			teams: []models.Team{
-				{Name: "infrastructure"},
-			},
-			expectedNames: []string{"infrastructure"},
-		},
-		{
-			name: "MultipleTeams",
-			teams: []models.Team{
-				{Name: "infrastructure"},
-				{Name: "ml"},
-				{Name: "allDevs"},
-			},
-			expectedNames: []string{"infrastructure", "ml", "allDevs"},
-		},
-	}
-
-	for _, tt := range testCases {
-		cfg := models.Feathers{Teams: tt.teams}
-
-		t.Run(tt.name, func(t *testing.T) {
-			actualNames := cfg.GetAllTeamNames()
-			assert.Equal(t, tt.expectedNames, actualNames)
-		})
 	}
 }
