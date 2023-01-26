@@ -8,6 +8,35 @@ import (
 	"testing"
 )
 
+var (
+	infraTeam = models.Team{
+		Name:        "infrastructure",
+		ContactType: models.Slack,
+		Addresses:   []string{"#SlackAdd1", "#SlackAdd2"},
+	}
+	devsTeam = models.Team{
+		Name:        "devs",
+		ContactType: models.Slack,
+		Addresses:   []string{"#SlackAdd3", "#SlackAdd4"},
+	}
+	supportTeam = models.Team{
+		Name:        "support",
+		ContactType: models.Webhook,
+		Addresses:   []string{"Webhook1", "Webhook2"},
+	}
+	productTeam = models.Team{
+		Name:        "product",
+		ContactType: models.Webhook,
+		Addresses:   []string{"Webhook3", "Webhook4"},
+	}
+	allTeams = models.Teams{
+		infraTeam,
+		devsTeam,
+		supportTeam,
+		productTeam,
+	}
+)
+
 func TestHandler_SendMessage(t *testing.T) {
 	slack := mocks.NewMessageClient(t)
 	webhook := mocks.NewMessageClient(t)
@@ -18,23 +47,14 @@ func TestHandler_SendMessage(t *testing.T) {
 	}}
 
 	testCases := []struct {
-		name          string
-		inputMessage  models.ReleaseNote
-		inputFeathers *models.Feathers
+		name         string
+		inputMessage models.ReleaseNote
 	}{
 		{
 			name: "Default",
-			inputFeathers: &models.Feathers{
-				Teams: []models.Team{
-					{Name: "Infrastructure", ContactType: models.Slack, Addresses: []string{"#SlackAdd1", "#SlackAdd2"}},
-					{Name: "AllDevs", ContactType: models.Slack, Addresses: []string{"#SlackAdd3", "#SlackAdd4"}},
-					{Name: "Product", ContactType: models.Webhook, Addresses: []string{"Webhook1", "Webhook2"}},
-					{Name: "Support", ContactType: models.Webhook, Addresses: []string{"Webhook3", "Webhook4"}},
-				},
-			},
 			inputMessage: models.ReleaseNote{
-				TeamNames: []string{"Infrastructure", "AllDevs", "Product", "Support"},
-				Content:   "Test message content",
+				Teams:   allTeams,
+				Content: "Test message content",
 			},
 		},
 	}
@@ -44,7 +64,7 @@ func TestHandler_SendMessage(t *testing.T) {
 			slack.On("Send", tc.inputMessage.Content, "", []string{"#SlackAdd1", "#SlackAdd2", "#SlackAdd3", "#SlackAdd4"}).Return(nil)
 			webhook.On("Send", tc.inputMessage.Content, "", []string{"Webhook1", "Webhook2", "Webhook3", "Webhook4"}).Return(nil)
 
-			err := handler.SendReleaseNotes(tc.inputFeathers, []models.ReleaseNote{tc.inputMessage})
+			err := handler.SendReleaseNotes("", []models.ReleaseNote{tc.inputMessage})
 			assert.NoError(t, err)
 		})
 	}
