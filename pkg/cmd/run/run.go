@@ -44,7 +44,8 @@ type Options struct {
 	GitServerClient domain.SCM
 	Git             domain.Git
 	NotesUC         domain.ReleaseNotesUseCase
-	Feathers        *feathers.Feathers
+	FeathersUC      domain.FeathersUseCase
+	Feathers        *models.Feathers
 }
 
 var (
@@ -150,7 +151,7 @@ func (o *Options) Run() error {
 
 	if o.Feathers == nil {
 		log.Info("Loading feathers from local instance")
-		o.Feathers, err = feathers.GetFeathersFromFile()
+		o.Feathers, err = o.FeathersUC.GetFeathersFromFile()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
 			o.PostErrorToPR(ctx, err)
@@ -246,7 +247,7 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []models.Rel
 	if !changed {
 		return "", nil
 	}
-	return o.NotesUC.GenerateBreakdown(messages, hash, len(o.Feathers.GetAllTeamNames()))
+	return o.NotesUC.GenerateBreakdown(messages, hash, len(o.Feathers.Teams.GetAllTeamNames()))
 }
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR
@@ -344,6 +345,10 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 			},
 		})
 		o.NotesUC = releasenotesuc.NewUseCase(msgHandler)
+	}
+
+	if o.FeathersUC == nil {
+		o.FeathersUC = feathers.NewUseCase()
 	}
 	return nil
 }

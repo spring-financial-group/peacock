@@ -5,7 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
-	feather "github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/msgclients/slack"
 	"github.com/spring-financial-group/peacock/pkg/msgclients/webhook"
@@ -31,7 +30,7 @@ func NewMessageHandler(cfg *config.MessageHandlers) *Handler {
 	}
 }
 
-func (h *Handler) SendReleaseNotes(feathers *feather.Feathers, notes []models.ReleaseNote) error {
+func (h *Handler) SendReleaseNotes(feathers *models.Feathers, notes []models.ReleaseNote) error {
 	var errCount int
 	for _, m := range notes {
 		err := h.sendNote(feathers, m)
@@ -47,9 +46,9 @@ func (h *Handler) SendReleaseNotes(feathers *feather.Feathers, notes []models.Re
 	return nil
 }
 
-func (h *Handler) sendNote(feathers *feather.Feathers, note models.ReleaseNote) error {
+func (h *Handler) sendNote(feathers *models.Feathers, note models.ReleaseNote) error {
 	// We should pool the addresses by contact type so that we only send one note per contact type
-	addressPool := feathers.GetAddressPoolByTeamNames(note.TeamNames...)
+	addressPool := feathers.Teams.GetAddressPoolByTeamNames(note.TeamNames...)
 	for contactType, addresses := range addressPool {
 		err := h.Clients[contactType].Send(note.Content, feathers.Config.Messages.Subject, addresses)
 		if err != nil {

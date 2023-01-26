@@ -15,27 +15,14 @@ const (
 	slackChannelIDRegex = "^[A-Z0-9]{9,11}$"
 )
 
-type Feathers struct {
-	Teams  []Team `yaml:"teams"`
-	Config Config `yaml:"config"`
+type UseCase struct {
 }
 
-type Team struct {
-	Name        string   `yaml:"name"`
-	APIKey      string   `yaml:"apiKey"`
-	ContactType string   `yaml:"contactType"`
-	Addresses   []string `yaml:"addresses"`
+func NewUseCase() *UseCase {
+	return &UseCase{}
 }
 
-type Config struct {
-	Messages Messages `yaml:"messages"`
-}
-
-type Messages struct {
-	Subject string `yaml:"subject"`
-}
-
-func GetFeathersFromFile() (*Feathers, error) {
+func (uc *UseCase) GetFeathersFromFile() (*models.Feathers, error) {
 	exists, err := utils.Exists(feathersPath)
 	if err != nil {
 		return nil, err
@@ -48,20 +35,19 @@ func GetFeathersFromFile() (*Feathers, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return GetFeathersFromBytes(data)
+	return uc.GetFeathersFromBytes(data)
 }
 
-func GetFeathersFromBytes(data []byte) (*Feathers, error) {
-	feathers := new(Feathers)
+func (uc *UseCase) GetFeathersFromBytes(data []byte) (*models.Feathers, error) {
+	feathers := new(models.Feathers)
 	err := yaml.Unmarshal(data, &feathers)
 	if err != nil {
 		return nil, err
 	}
-	return feathers, feathers.validate()
+	return feathers, uc.ValidateFeathers(feathers)
 }
 
-func (f *Feathers) validate() error {
+func (uc *UseCase) ValidateFeathers(f *models.Feathers) error {
 	if f.Teams == nil {
 		return errors.New("no teams found in feathers")
 	}
@@ -74,7 +60,7 @@ func (f *Feathers) validate() error {
 
 	for _, team := range f.Teams {
 		// Check that the individual teams are set up correctly
-		err := team.validate()
+		err := uc.validateTeam(team)
 		if err != nil {
 			return err
 		}
@@ -92,63 +78,8 @@ func (f *Feathers) validate() error {
 	return nil
 }
 
-func (f *Feathers) GetTeamsByNames(name ...string) []Team {
-	var teams []Team
-	for _, tName := range name {
-		for _, t := range f.Teams {
-			if t.Name == tName {
-				teams = append(teams, t)
-			}
-		}
-	}
-	return teams
-}
-
-func (f *Feathers) GetAllTeamNames() []string {
-	var names []string
-	for _, t := range f.Teams {
-		names = append(names, t.Name)
-	}
-	return names
-}
-
-func (f *Feathers) GetAllContactTypes() []string {
-	var types []string
-	for _, t := range f.Teams {
-		types = append(types, t.ContactType)
-	}
-	return types
-}
-
-func (f *Feathers) GetContactTypesByTeamNames(names ...string) []string {
-	var types []string
-	for _, t := range f.GetTeamsByNames(names...) {
-		types = append(types, t.ContactType)
-	}
-	return types
-}
-
-func (f *Feathers) ExistsInFeathers(teamNames ...string) error {
-	allTeamsInFeathers := f.GetAllTeamNames()
-	for _, name := range teamNames {
-		if !utils.ExistsInSlice(name, allTeamsInFeathers) {
-			return errors.Errorf("team %s does not exist in feathers", name)
-		}
-	}
-	return nil
-}
-
-func (f *Feathers) GetAddressPoolByTeamNames(teamNames ...string) map[string][]string {
-	wantedTeams := f.GetTeamsByNames(teamNames...)
-	addressPool := make(map[string][]string, len(f.GetAllContactTypes()))
-	for _, team := range wantedTeams {
-		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
-	}
-	return addressPool
-}
-
 // validate checks that a team is set up correctly and contains all the required fields
-func (t *Team) validate() error {
+func (uc *UseCase) validateTeam(t models.Team) error {
 	// Check that none of the required fields are empty
 	if t.Name == "" {
 		return errors.New("no team name found")
