@@ -15,15 +15,15 @@ type Team struct {
 type Teams []Team
 
 func (ts Teams) GetTeamsByNames(names ...string) Teams {
-	var teams Teams
+	var wantedTeams Teams
 	for _, name := range names {
 		for _, t := range ts {
 			if t.Name == name {
-				teams = append(teams, t)
+				wantedTeams = append(wantedTeams, t)
 			}
 		}
 	}
-	return teams
+	return wantedTeams
 }
 
 func (ts Teams) GetAllTeamNames() []string {
@@ -50,7 +50,7 @@ func (ts Teams) GetContactTypesByTeamNames(names ...string) []string {
 	return types
 }
 
-func (ts Teams) Exists(teamNames ...string) error {
+func (ts Teams) Contains(teamNames ...string) error {
 	allTeamsInFeathers := ts.GetAllTeamNames()
 	for _, name := range teamNames {
 		if !utils.ExistsInSlice(name, allTeamsInFeathers) {
@@ -60,10 +60,9 @@ func (ts Teams) Exists(teamNames ...string) error {
 	return nil
 }
 
-func (ts Teams) GetAddressPoolByTeamNames(teamNames ...string) map[string][]string {
-	wantedTeams := ts.GetTeamsByNames(teamNames...)
+func (ts Teams) GetAddressPool() map[string][]string {
 	addressPool := make(map[string][]string, len(ts.GetAllContactTypes()))
-	for _, team := range wantedTeams {
+	for _, team := range ts {
 		addressPool[team.ContactType] = append(addressPool[team.ContactType], team.Addresses...)
 	}
 	return addressPool

@@ -30,10 +30,10 @@ func NewMessageHandler(cfg *config.MessageHandlers) *Handler {
 	}
 }
 
-func (h *Handler) SendReleaseNotes(feathers *models.Feathers, notes []models.ReleaseNote) error {
+func (h *Handler) SendReleaseNotes(subject string, notes []models.ReleaseNote) error {
 	var errCount int
-	for _, m := range notes {
-		err := h.sendNote(feathers, m)
+	for _, n := range notes {
+		err := h.sendNote(n, subject)
 		if err != nil {
 			log.Error(err)
 			errCount++
@@ -46,11 +46,11 @@ func (h *Handler) SendReleaseNotes(feathers *models.Feathers, notes []models.Rel
 	return nil
 }
 
-func (h *Handler) sendNote(feathers *models.Feathers, note models.ReleaseNote) error {
+func (h *Handler) sendNote(note models.ReleaseNote, subject string) error {
 	// We should pool the addresses by contact type so that we only send one note per contact type
-	addressPool := feathers.Teams.GetAddressPoolByTeamNames(note.TeamNames...)
+	addressPool := note.Teams.GetAddressPool()
 	for contactType, addresses := range addressPool {
-		err := h.Clients[contactType].Send(note.Content, feathers.Config.Messages.Subject, addresses)
+		err := h.Clients[contactType].Send(note.Content, subject, addresses)
 		if err != nil {
 			return errors.Wrapf(err, "failed to send note")
 		}

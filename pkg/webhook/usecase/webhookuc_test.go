@@ -35,28 +35,32 @@ var (
 		PullRequestID: 100,
 		RepoOwner:     RepoOwner,
 		RepoName:      RepoName,
-		Body:          "### Notify Infra\n\nHello infra\n\n### Notify Skisocks\n\nHello skisocks",
+		Body:          "### Notify Infra\n\nHello infra\n\n### Notify product\n\nHello product",
 		PRNumber:      PRNumber,
 		SHA:           SHA,
 		Branch:        Branch,
 		DefaultBranch: DefaultBranch,
 	}
 
+	infraTeam = models.Team{
+		Name:        "infrastructure",
+		APIKey:      "some-api-key",
+		Addresses:   []string{},
+		ContactType: models.Slack,
+	}
+	productTeam = models.Team{
+		Name:        "product",
+		APIKey:      "another-api-key",
+		Addresses:   []string{},
+		ContactType: models.Webhook,
+	}
+	allTeams = models.Teams{
+		infraTeam,
+		productTeam,
+	}
+
 	mockFeathers = &models.Feathers{
-		Teams: []models.Team{
-			{
-				Name:        InfraTeam,
-				APIKey:      "AKey",
-				ContactType: models.Slack,
-				Addresses:   []string{"C1234567890"},
-			},
-			{
-				Name:        SkisocksTeam,
-				APIKey:      "AnotherKey",
-				ContactType: models.Webhook,
-				Addresses:   []string{"skisocks@github.com"},
-			},
-		},
+		Teams: allTeams,
 		Config: models.Config{
 			Messages: models.Messages{
 				Subject: "Subject",
@@ -67,12 +71,12 @@ var (
 
 	mockNotes = []models.ReleaseNote{
 		{
-			TeamNames: []string{"infra"},
-			Content:   "Hello infra",
+			Teams:   models.Teams{infraTeam},
+			Content: "Hello infra",
 		},
 		{
-			TeamNames: []string{"Skisocks"},
-			Content:   "Hello skisocks",
+			Teams:   models.Teams{productTeam},
+			Content: "Hello product",
 		},
 	}
 )
@@ -106,8 +110,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		mockSCM.On("CommentOnPR", mockCTX, mock.Anything).Return(nil).Once()
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
-		mockNotesUC.On("ParseNotesFromMarkdown", prBody).Return(mockNotes, nil)
-		mockNotesUC.On("ValidateReleaseNotesWithFeathers", mockFeathers, mockNotes).Return(nil)
+		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
 		mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
 		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2).Return("", nil)
 
@@ -144,9 +147,8 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 
-		mockNotesUC.On("ParseNotesFromMarkdown", prBody).Return(mockNotes, nil)
-		mockNotesUC.On("ValidateReleaseNotesWithFeathers", mockFeathers, mockNotes).Return(nil)
-		mockNotesUC.On("SendReleaseNotes", mockFeathers, mockNotes).Return(nil)
+		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
+		mockNotesUC.On("SendReleaseNotes", mockFeathers.Config.Messages.Subject, mockNotes).Return(nil)
 
 		err := uc.RunPeacock(mockEvent)
 		assert.NoError(t, err)

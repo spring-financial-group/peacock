@@ -39,12 +39,8 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
 	}
 
-	releaseNotes, err := w.notesUC.ParseNotesFromMarkdown(e.Body)
-	if err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
-	}
-	if releaseNotes == nil {
-		log.Infof("no releaseNotes found in PR body, skipping")
+	if e.Body == "" {
+		log.Infof("no text found in PR body, skipping")
 		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 	}
 
@@ -54,9 +50,13 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, err)
 	}
 
-	// Check that the relevant communication methods have been configured for the feathers
-	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
-		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to validate release notes with feathers"))
+	releaseNotes, err := w.notesUC.GetReleaseNotesFromMDAndTeams(e.Body, feathers.Teams)
+	if err != nil {
+		return scm.HandleError(ctx, domain.ValidationContext, e.SHA, e.PROwner, errors.Wrap(err, "failed to parse release notes from markdown"))
+	}
+	if releaseNotes == nil {
+		log.Infof("no releaseNotes found in PR body, skipping")
+		return scm.CreatePeacockCommitStatus(ctx, e.SHA, domain.SuccessState, domain.ValidationContext)
 	}
 
 	// Create a hash of the releaseNotes. Probably should cache these as well.
@@ -122,13 +122,8 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to create pending status"))
 	}
 
-	// Parse the PR body for any releaseNotes
-	releaseNotes, err := w.notesUC.ParseNotesFromMarkdown(e.Body)
-	if err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to parse releaseNotes from markdown"))
-	}
-	if releaseNotes == nil {
-		log.Infof("no release notes found in PR body, skipping")
+	if e.Body == "" {
+		log.Infof("no text found in PR body, skipping")
 		return scm.CreatePeacockCommitStatus(ctx, defaultSHA, domain.SuccessState, domain.ReleaseContext)
 	}
 
@@ -138,11 +133,17 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, err)
 	}
 
-	if err = w.notesUC.ValidateReleaseNotesWithFeathers(feathers, releaseNotes); err != nil {
-		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to validate release notes with feathers"))
+	// Parse the PR body for any releaseNotes
+	releaseNotes, err := w.notesUC.GetReleaseNotesFromMDAndTeams(e.Body, feathers.Teams)
+	if err != nil {
+		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to parse release notes from markdown"))
+	}
+	if releaseNotes == nil {
+		log.Infof("no release notes found in PR body, skipping")
+		return scm.CreatePeacockCommitStatus(ctx, defaultSHA, domain.SuccessState, domain.ReleaseContext)
 	}
 
-	if err = w.notesUC.SendReleaseNotes(feathers, releaseNotes); err != nil {
+	if err = w.notesUC.SendReleaseNotes(feathers.Config.Messages.Subject, releaseNotes); err != nil {
 		return scm.HandleError(ctx, domain.ReleaseContext, defaultSHA, e.PROwner, errors.Wrap(err, "failed to send releaseNotes"))
 	}
 	log.Infof("%d message(s) sent", len(releaseNotes))

@@ -1,6 +1,6 @@
 package models
 
 type ReleaseNote struct {
-	TeamNames []string
-	Content   string
+	Teams   Teams
+	Content string
 }
