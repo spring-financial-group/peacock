@@ -1,12 +1,11 @@
 package domain
 
 import (
-	feather "github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 )
 
 type MessageHandler interface {
-	SendReleaseNotes(feathers *feather.Feathers, messages []models.ReleaseNote) error
+	SendReleaseNotes(feathers *models.Feathers, messages []models.ReleaseNote) error
 	IsInitialised(contactType string) bool
 }
 

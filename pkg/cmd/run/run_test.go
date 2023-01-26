@@ -6,7 +6,6 @@ import (
 	"github.com/google/go-github/v48/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
-	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -196,8 +195,8 @@ func TestOptions_Run(t *testing.T) {
 				Git:               mockGitClient,
 				GitServerClient:   mockSCM,
 				NotesUC:           mockNotesUC,
-				Feathers: &feathers.Feathers{
-					Teams: []feathers.Team{
+				Feathers: &models.Feathers{
+					Teams: []models.Team{
 						{
 							Name:        "infrastructure",
 							ContactType: models.Slack,
@@ -222,8 +221,8 @@ func TestOptions_Run(t *testing.T) {
 				Git:               mockGitClient,
 				GitServerClient:   mockSCM,
 				NotesUC:           mockNotesUC,
-				Feathers: &feathers.Feathers{
-					Teams: []feathers.Team{
+				Feathers: &models.Feathers{
+					Teams: []models.Team{
 						{
 							Name:        "infrastructure",
 							ContactType: models.Slack,

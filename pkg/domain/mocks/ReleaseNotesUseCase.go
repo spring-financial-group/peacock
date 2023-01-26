@@ -3,7 +3,6 @@
 package mocks
 
 import (
-	feathers "github.com/spring-financial-group/peacock/pkg/feathers"
 	mock "github.com/stretchr/testify/mock"
 
 	models "github.com/spring-financial-group/peacock/pkg/models"
@@ -80,11 +79,11 @@ func (_m *ReleaseNotesUseCase) ParseNotesFromMarkdown(markdown string) ([]models
 }
 
 // SendReleaseNotes provides a mock function with given fields: _a0, messages
-func (_m *ReleaseNotesUseCase) SendReleaseNotes(_a0 *feathers.Feathers, messages []models.ReleaseNote) error {
+func (_m *ReleaseNotesUseCase) SendReleaseNotes(_a0 *models.Feathers, messages []models.ReleaseNote) error {
 	ret := _m.Called(_a0, messages)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*feathers.Feathers, []models.ReleaseNote) error); ok {
+	if rf, ok := ret.Get(0).(func(*models.Feathers, []models.ReleaseNote) error); ok {
 		r0 = rf(_a0, messages)
 	} else {
 		r0 = ret.Error(0)
@@ -94,11 +93,11 @@ func (_m *ReleaseNotesUseCase) SendReleaseNotes(_a0 *feathers.Feathers, messages
 }
 
 // ValidateReleaseNotesWithFeathers provides a mock function with given fields: _a0, notes
-func (_m *ReleaseNotesUseCase) ValidateReleaseNotesWithFeathers(_a0 *feathers.Feathers, notes []models.ReleaseNote) error {
+func (_m *ReleaseNotesUseCase) ValidateReleaseNotesWithFeathers(_a0 *models.Feathers, notes []models.ReleaseNote) error {
 	ret := _m.Called(_a0, notes)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*feathers.Feathers, []models.ReleaseNote) error); ok {
+	if rf, ok := ret.Get(0).(func(*models.Feathers, []models.ReleaseNote) error); ok {
 		r0 = rf(_a0, notes)
 	} else {
 		r0 = ret.Error(0)

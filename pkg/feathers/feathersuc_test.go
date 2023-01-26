@@ -2,6 +2,7 @@ package feathers_test
 
 import (
 	"github.com/spring-financial-group/peacock/pkg/feathers"
+	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
@@ -10,16 +11,16 @@ import (
 	"testing"
 )
 
-func TestLoadConfig(t *testing.T) {
+func Test_GetFeathersFromFile_Validate(t *testing.T) {
 	testCases := []struct {
 		name           string
-		expectedConfig feathers.Feathers
+		expectedConfig models.Feathers
 		shouldError    bool
 	}{
 		{
 			name: "Passing",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -38,8 +39,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "InvalidContactType",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
@@ -52,8 +53,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "SlackIDTooLong",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
@@ -66,8 +67,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "LowerCaseInSlackID",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
@@ -80,8 +81,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "SlackIDTooShort",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
@@ -94,8 +95,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "SlackIDWithNonAlphanumerics",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
@@ -108,8 +109,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "NoTeamName",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
 						ContactType: "email",
@@ -121,8 +122,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "NoContactType",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:      "infrastructure",
 						APIKey:    "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
@@ -134,8 +135,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "MultipleTeams",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -154,8 +155,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "DuplicateTeamNames",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -174,8 +175,8 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name: "DuplicateAPIKeys",
-			expectedConfig: feathers.Feathers{
-				Teams: []feathers.Team{
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
 					{
 						Name:        "infrastructure",
 						ContactType: "slack",
@@ -206,6 +207,8 @@ func TestLoadConfig(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			uc := feathers.NewUseCase()
+
 			bytes, err := yaml.Marshal(tt.expectedConfig)
 			if err != nil {
 				panic(err)
@@ -215,7 +218,7 @@ func TestLoadConfig(t *testing.T) {
 				panic(err)
 			}
 
-			actualConfig, err := feathers.GetFeathersFromFile()
+			actualConfig, err := uc.GetFeathersFromFile()
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
@@ -233,92 +236,5 @@ func TestLoadConfig(t *testing.T) {
 	err = os.RemoveAll(baseDir)
 	if err != nil {
 		panic(err)
-	}
-}
-
-func TestGetTeamsByNames(t *testing.T) {
-	testCases := []struct {
-		name           string
-		inputTeamNames []string
-		teams          []feathers.Team
-		expectedTeams  []feathers.Team
-	}{
-		{
-			name:           "Passing",
-			inputTeamNames: []string{"infrastructure"},
-			teams: []feathers.Team{
-				{Name: "infrastructure"},
-			},
-			expectedTeams: []feathers.Team{{Name: "infrastructure"}},
-		},
-		{
-			name:           "MultipleTeams",
-			inputTeamNames: []string{"infrastructure"},
-			teams: []feathers.Team{
-				{Name: "infrastructure"},
-				{Name: "ml"},
-				{Name: "allDevs"},
-			},
-			expectedTeams: []feathers.Team{{Name: "infrastructure"}},
-		},
-		{
-			name:           "NoTeamByThatName",
-			inputTeamNames: []string{"DS"},
-			teams: []feathers.Team{
-				{Name: "infrastructure"},
-				{Name: "ml"},
-				{Name: "allDevs"},
-			},
-			expectedTeams: []feathers.Team(nil),
-		},
-		{
-			name:           "NoTeams",
-			inputTeamNames: []string{"infrastructure"},
-			teams:          []feathers.Team{},
-			expectedTeams:  []feathers.Team(nil),
-		},
-	}
-
-	for _, tt := range testCases {
-		cfg := feathers.Feathers{Teams: tt.teams}
-
-		t.Run(tt.name, func(t *testing.T) {
-			actualTeam := cfg.GetTeamsByNames(tt.inputTeamNames...)
-			assert.Equal(t, tt.expectedTeams, actualTeam)
-		})
-	}
-}
-
-func TestGetAllTeamNames(t *testing.T) {
-	testCases := []struct {
-		name          string
-		teams         []feathers.Team
-		expectedNames []string
-	}{
-		{
-			name: "Passing",
-			teams: []feathers.Team{
-				{Name: "infrastructure"},
-			},
-			expectedNames: []string{"infrastructure"},
-		},
-		{
-			name: "MultipleTeams",
-			teams: []feathers.Team{
-				{Name: "infrastructure"},
-				{Name: "ml"},
-				{Name: "allDevs"},
-			},
-			expectedNames: []string{"infrastructure", "ml", "allDevs"},
-		},
-	}
-
-	for _, tt := range testCases {
-		cfg := feathers.Feathers{Teams: tt.teams}
-
-		t.Run(tt.name, func(t *testing.T) {
-			actualNames := cfg.GetAllTeamNames()
-			assert.Equal(t, tt.expectedNames, actualNames)
-		})
 	}
 }

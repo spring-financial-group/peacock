@@ -3,7 +3,6 @@ package releasenotesuc
 import (
 	"fmt"
 	"github.com/spring-financial-group/peacock/pkg/domain"
-	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/msgclients/slack"
 	"github.com/spring-financial-group/peacock/pkg/releasenotes/delivery/msgclients"
@@ -247,7 +246,7 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 		name              string
 		msgClientsHandler msgclients.Handler
 		inputNotes        []models.ReleaseNote
-		inputFeathers     *feathers.Feathers
+		inputFeathers     *models.Feathers
 		shouldError       bool
 	}{
 		{
@@ -257,8 +256,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 					models.Slack: slack.NewClient(""),
 				},
 			},
-			inputFeathers: &feathers.Feathers{
-				Teams: []feathers.Team{
+			inputFeathers: &models.Feathers{
+				Teams: []models.Team{
 					{Name: "infrastructure", ContactType: models.Slack},
 				},
 			},
@@ -277,8 +276,8 @@ func TestOptions_ValidateMessagesWithConfig(t *testing.T) {
 					models.Slack: slack.NewClient(""),
 				},
 			},
-			inputFeathers: &feathers.Feathers{
-				Teams: []feathers.Team{
+			inputFeathers: &models.Feathers{
+				Teams: []models.Team{
 					{Name: "infrastructure", ContactType: models.Slack},
 				},
 			},

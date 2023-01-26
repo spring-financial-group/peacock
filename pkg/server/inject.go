@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/spring-financial-group/peacock/pkg/config"
+	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/health"
 	"github.com/spring-financial-group/peacock/pkg/logger"
@@ -26,7 +27,9 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 
 	notesUC := releasenotesuc.NewUseCase(msgHandler)
 
-	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmFactory, notesUC)
+	feathersUC := feathers.NewUseCase()
+
+	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmFactory, notesUC, feathersUC)
 
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)

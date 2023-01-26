@@ -42,8 +42,8 @@ var (
 		DefaultBranch: DefaultBranch,
 	}
 
-	mockFeathers = &feathers.Feathers{
-		Teams: []feathers.Team{
+	mockFeathers = &models.Feathers{
+		Teams: []models.Team{
 			{
 				Name:        InfraTeam,
 				APIKey:      "AKey",
@@ -57,8 +57,8 @@ var (
 				Addresses:   []string{"skisocks@github.com"},
 			},
 		},
-		Config: feathers.Config{
-			Messages: feathers.Messages{
+		Config: models.Config{
+			Messages: models.Messages{
 				Subject: "Subject",
 			},
 		},
@@ -86,7 +86,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, mockNotesUC)
+	uc := NewUseCase(cfg, mockFactory, mockNotesUC, feathers.NewUseCase())
 
 	t.Run("Happy Path", func(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
@@ -125,7 +125,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockFactory, mockNotesUC)
+	uc := NewUseCase(cfg, mockFactory, mockNotesUC, feathers.NewUseCase())
 
 	t.Run("Happy Path", func(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO

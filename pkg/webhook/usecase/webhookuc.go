@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
-	feather "github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/models"
 )
@@ -15,15 +14,17 @@ type WebHookUseCase struct {
 	cfg        *config.SCM
 	scmFactory domain.SCMClientFactory
 	notesUC    domain.ReleaseNotesUseCase
+	featherUC  domain.FeathersUseCase
 
 	feathers map[int64]*feathersMeta
 }
 
-func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, notesUC domain.ReleaseNotesUseCase) *WebHookUseCase {
+func NewUseCase(cfg *config.SCM, scmFactory domain.SCMClientFactory, notesUC domain.ReleaseNotesUseCase, feathersUC domain.FeathersUseCase) *WebHookUseCase {
 	return &WebHookUseCase{
 		cfg:        cfg,
 		scmFactory: scmFactory,
 		notesUC:    notesUC,
+		featherUC:  feathersUC,
 		feathers:   make(map[int64]*feathersMeta),
 	}
 }
@@ -154,11 +155,11 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 }
 
 type feathersMeta struct {
-	feathers *feather.Feathers
+	feathers *models.Feathers
 	sha      string
 }
 
-func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch string, event *models.PullRequestEventDTO) (*feather.Feathers, error) {
+func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch string, event *models.PullRequestEventDTO) (*models.Feathers, error) {
 	// Get the feathers for the branch and check that it matches the sha
 	meta, ok := w.feathers[event.PullRequestID]
 	if ok && meta.sha == event.SHA {
@@ -179,7 +180,7 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, scm domain.SCM, branch
 		}
 	}
 
-	meta.feathers, err = feather.GetFeathersFromBytes(data)
+	meta.feathers, err = w.featherUC.GetFeathersFromBytes(data)
 	if err != nil {
 		return nil, err
 	}
