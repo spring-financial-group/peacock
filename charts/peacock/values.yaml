@@ -20,6 +20,26 @@ webhookToken: ""
 # Existing secret to use for the service
 serviceSecretName: ""
 
+mongodb:
+  replicas: 1
+  persistence:
+    enabled: false
+  auth:
+    rootPassword: DefaultPass
+  livenessProbe:
+    enabled: false
+  readinessProbe:
+    enabled: false
+  arbiter:
+    enabled: false
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 10Mi
+
 # Additional annotations & labels to be added to the peacock deployment
 podAnnotations: {}
 podsLabels: {}
