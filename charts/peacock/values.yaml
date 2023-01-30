@@ -17,7 +17,7 @@ webhookSecret: ""
 # Token for authenticating the message webhook
 webhookToken: ""
 
-# The connection string used for the database
+# The connection string used for the database, if
 mongodbConnectionString: ""
 
 # Existing secret to use for the service
