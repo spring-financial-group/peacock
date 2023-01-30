@@ -30,9 +30,12 @@ mongodb:
     enabled: false
   auth:
     enabled: true
-    database: releaseNotes
-    username: mongodb
-    password: password
+    databases:
+      - releaseNotes
+    usernames:
+      - peacock
+    passwords:
+      - password
   livenessProbe:
     enabled: false
   readinessProbe:
