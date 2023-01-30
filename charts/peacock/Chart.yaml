@@ -8,3 +8,4 @@ dependencies:
   - name: mongodb
     version: '^13' # Any 13.x.x version, but not version 12 or 11
     repository: "https://charts.bitnami.com/bitnami"
+    condition: mongodb.useInternalInstance

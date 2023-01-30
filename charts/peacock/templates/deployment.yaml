@@ -71,6 +71,11 @@ spec:
               secretKeyRef:
                 name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: webhook-token
+          - name: "MONGODB_CONNECTION_STRING"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.serviceSecretName | default "peacock" }}
+                key: mongodb-connection-string
 {{- range $pkey, $pval := .Values.env }}
         - name: {{ $pkey }}
           value: {{ quote $pval }}
