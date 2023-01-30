@@ -26,9 +26,7 @@ serviceSecretName: ""
 # Settings for overriding the internal mongodb instance
 mongodb:
   useInternalInstance: true
-  service:
-    nameOverride: peacock-mongodb
-  replicas: 1
+  replicaCount: 1
   persistence:
     enabled: false
   auth:
