@@ -28,7 +28,8 @@ mongodb:
   useInternalInstance: true
   replicaCount: 1
   persistence:
-    enabled: false
+    enabled: true
+    size: 2Gi
   auth:
     enabled: true
     databases:
