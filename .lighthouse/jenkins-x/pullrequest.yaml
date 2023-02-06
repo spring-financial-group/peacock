@@ -43,17 +43,13 @@ spec:
             make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
-        - image: gcr.io/kaniko-project/executor:v1.6.0-debug
+        - image: gcr.io/kaniko-project/executor:v1.9.1
           name: build-push-container
           resources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "Testing root config"
-            cat /dockerconfigjson/config.json
-            echo "Testing copied config"
             cp /dockerconfigjson/config.json /kaniko/.docker/config.json
-            cat /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
