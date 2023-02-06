@@ -16,11 +16,9 @@ spec:
             # override limits for all containers here
             limits: {}
           workingDir: /workspace/source
-          volume:
-            - name: "docker-config"
-              subPath: /.dockerconfigjson
-              secret:
-                secretName: tekton-oss-container-registry-auth
+          volumeMounts:
+            - mountPath: /dockerconfigjson
+              name: docker-config
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
@@ -51,7 +49,7 @@ spec:
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            cp /.dockerconfigjson /kaniko/.docker/config.json
+            cp /dockerconfigjson /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
@@ -63,6 +61,10 @@ spec:
             #!/usr/bin/env sh
             source .jx/variables.sh
             jx preview create
+        volumes:
+          - name: docker-config
+            secret:
+              secretName: tekton-oss-container-registry-auth
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s
