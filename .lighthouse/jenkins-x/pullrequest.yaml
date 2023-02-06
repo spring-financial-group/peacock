@@ -35,6 +35,7 @@ spec:
           script: |
             #!/usr/bin/env sh
             sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
+            sed -i -E "s/JX_CHART_REPOSITORY=(.*?)/JX_CHART_REPOSITORY='mqubeoss.azurecr.io'/g" .jx/variables.sh
         - image: golang:1.19
           name: build-make-build
           resources: {}
@@ -51,6 +52,13 @@ spec:
             source .jx/variables.sh
             cp /oss-docker-config/config.json /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
+        - image: ghcr.io/jenkins-x/jx-boot:3.10.45
+          name: promote-helm-release
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            source .jx/variables.sh
+            jx gitops helm release --registry-config /oss-docker-config/config.json --oci --version $VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
