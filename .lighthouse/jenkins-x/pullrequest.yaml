@@ -17,8 +17,8 @@ spec:
             limits: {}
           workingDir: /workspace/source
           volumeMounts:
-            - mountPath: /dockerconfigjson
-              name: docker-config
+            - mountPath: /oss-docker-config
+              name: oss-docker-config
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
@@ -49,7 +49,7 @@ spec:
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            cp /dockerconfigjson/config.json /kaniko/.docker/config.json
+            cp /oss-docker-config/config.json /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
@@ -62,7 +62,7 @@ spec:
             source .jx/variables.sh
             jx preview create
         volumes:
-          - name: docker-config
+          - name: oss-docker-config
             secret:
               secretName: tekton-oss-container-registry-auth
               items:
