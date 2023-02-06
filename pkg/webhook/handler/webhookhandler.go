@@ -53,6 +53,10 @@ func (h *Handler) HandleEvents(c *gin.Context) {
 // handlePullRequestSyncEvent starts a dry-run when a PR has been synchronized (e.g. new commits pushed)
 func (h *Handler) handlePullRequestSyncEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	log.Infof("%s/PR-%d synced. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
+	if *event.PullRequest.State == models.ClosedState {
+		log.Info("PR is closed. Skipping.")
+		return nil
+	}
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
 
@@ -77,5 +81,10 @@ func (h *Handler) handlePullRequestClosedEvent(_ string, _ string, event *github
 // handlePullRequestEditEvent starts a dry-run when a PR has been edited (e.g. body/title changed)
 func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	log.Infof("%s/PR-%d edited. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
+	if *event.PullRequest.State == models.ClosedState {
+		// No need to handle closed
+		log.Info("PR is closed. Skipping.")
+		return nil
+	}
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
