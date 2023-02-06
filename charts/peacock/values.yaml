@@ -26,7 +26,7 @@ podsLabels: {}
 deploymentLabels: {}
 
 image:
-  repository: "ghcr.io/spring-financial-group/peacock"
+  repository: "mqubeoss.azurecr.io/spring-financial-group/peacock"
   tag: dev
   pullPolicy: IfNotPresent
 

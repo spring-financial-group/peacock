@@ -16,6 +16,9 @@ spec:
             # override limits for all containers here
             limits: {}
           workingDir: /workspace/source
+          volumeMounts:
+            - mountPath: /oss-docker-config
+              name: oss-docker-config
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
@@ -26,6 +29,12 @@ spec:
             requests:
               cpu: 400m
               memory: 600Mi
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: override-variables
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
         - image: golang:1.19
           name: build-make-build
           resources: {}
@@ -34,21 +43,14 @@ spec:
             make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: export-token
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
-            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
-        - image: gcr.io/kaniko-project/executor:v1.6.0-debug
-          name: build-push-container
+        - image: gcr.io/kaniko-project/executor:v1.9.1-debug
+          name: build-container-build
           resources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GH_TOKEN\"}}}" > /kaniko/.docker/config.json
-            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
+            cp /oss-docker-config/config.json /kaniko/.docker/config.json
+            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
@@ -59,6 +61,13 @@ spec:
             #!/usr/bin/env sh
             source .jx/variables.sh
             jx preview create
+        volumes:
+          - name: oss-docker-config
+            secret:
+              secretName: tekton-oss-container-registry-auth
+              items:
+                - key: .dockerconfigjson
+                  path: config.json
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s

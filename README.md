@@ -27,7 +27,7 @@ make install
 
 To run Peacock in a CI/CD pipeline:
 ```yaml
-- image: ghcr.io/spring-financial-group/peacock:latest
+- image: mqubeoss.azurecr.io/spring-financial-group/peacock:latest
 ```
 Checkout [our pipeline definitions](https://github.com/spring-financial-group/peacock/tree/main/.lighthouse/jenkins-x/peacock)
 for an example of how it can be used.
