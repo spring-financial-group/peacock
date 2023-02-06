@@ -36,6 +36,7 @@ spec:
             #!/usr/bin/env sh
             sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
             sed -i -E "s/JX_CHART_REPOSITORY=(.*?)/JX_CHART_REPOSITORY='mqubeoss.azurecr.io'/g" .jx/variables.sh
+            cat .jx/variables.sh
         - image: golang:1.19
           name: build-make-build
           resources: {}
