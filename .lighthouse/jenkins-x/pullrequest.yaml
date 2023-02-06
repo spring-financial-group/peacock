@@ -16,6 +16,12 @@ spec:
             # override limits for all containers here
             limits: {}
           workingDir: /workspace/source
+          env:
+            - name: "REGISTRY_AUTH"
+              valueFrom:
+                secretKeyRef:
+                  name: tekton-oss-container-registry-auth
+                  key: .dockerconfigjson
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
@@ -34,20 +40,13 @@ spec:
             make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: export-token
-          resources: {}
-          script: |
-            #!/usr/bin/env sh
-            echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
-            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
         - image: gcr.io/kaniko-project/executor:v1.6.0-debug
           name: build-push-container
           resources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GH_TOKEN\"}}}" > /kaniko/.docker/config.json
+            echo $REGISTRY_AUTH > /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --build-arg=VERSION=$VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
