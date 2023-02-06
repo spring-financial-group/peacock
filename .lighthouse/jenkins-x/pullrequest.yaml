@@ -59,7 +59,7 @@ spec:
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
-            jx gitops helm release --registry-config /oss-docker-config/config.json --oci --version $VERSION --repo-name mqubeoss.azurecr.io
+            jx gitops helm release --registry-config /oss-docker-config/config.json --oci --version $VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
