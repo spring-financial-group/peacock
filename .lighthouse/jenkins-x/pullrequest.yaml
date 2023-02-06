@@ -63,7 +63,7 @@ spec:
             USER=$(kubectl get secret tekton-oss-container-registry-auth -n jx -o jsonpath="{.data['adminuser']}" | base64 -d)
             PASS=$(kubectl get secret tekton-oss-container-registry-auth -n jx -o jsonpath="{.data['adminpass']}" | base64 -d)
             
-            jx gitops helm release --oci --version $VERSION -u https://mqubeoss.azurecr.io/spring-financial-group --repo-username $USER --repo-password $PASS
+            jx gitops helm release --oci --version $VERSION -u mqubeoss.azurecr.io/spring-financial-group --repo-username $USER --repo-password $PASS
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
