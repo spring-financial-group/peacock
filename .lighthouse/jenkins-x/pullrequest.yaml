@@ -32,6 +32,12 @@ spec:
             requests:
               cpu: 400m
               memory: 600Mi
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: override-variables
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
         - image: golang:1.19
           name: build-make-build
           resources: {}
