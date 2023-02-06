@@ -59,7 +59,11 @@ spec:
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
-            jx gitops helm release --registry-config /oss-docker-config/config.json --oci --version $VERSION -u https://mqubeoss.azurecr.io/
+            
+            USER=$(kubectl get secret tekton-oss-container-registry-auth -n jx -o jsonpath="{.data['adminuser']}" | base64 -d)
+            PASS=$(kubectl get secret tekton-oss-container-registry-auth -n jx -o jsonpath="{.data['adminpass']}" | base64 -d)
+            
+            jx gitops helm release --oci --version $VERSION -u https://mqubeoss.azurecr.io/ --repo-username $USER --repo-password $PASS
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
