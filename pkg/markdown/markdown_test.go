@@ -23,7 +23,7 @@ func TestMarkdown_Converters(t *testing.T) {
 			name:          "CarriageReturn",
 			inputMarkdown: "First Sentence\r\nSecond Sentence\r\n",
 			expectedSlack: "First Sentence\nSecond Sentence\n",
-			expectedHTML:  "<p>First Sentence\nSecond Sentence</p>\n",
+			expectedHTML:  "<p>First Sentence<br>\nSecond Sentence</p>\n",
 		},
 		{
 			name:          "HeadingReplacement",
@@ -47,13 +47,13 @@ func TestMarkdown_Converters(t *testing.T) {
 			name:          "BoldReplacement(**)",
 			inputMarkdown: "**Bold Title**\n**Other Bold Title**",
 			expectedSlack: "*Bold Title*\n*Other Bold Title*",
-			expectedHTML:  "<p><strong>Bold Title</strong>\n<strong>Other Bold Title</strong></p>\n",
+			expectedHTML:  "<p><strong>Bold Title</strong><br>\n<strong>Other Bold Title</strong></p>\n",
 		},
 		{
 			name:          "BoldReplacement(__)",
 			inputMarkdown: "__Bold Title__\n__Other Bold Title__",
 			expectedSlack: "*Bold Title*\n*Other Bold Title*",
-			expectedHTML:  "<p><strong>Bold Title</strong>\n<strong>Other Bold Title</strong></p>\n",
+			expectedHTML:  "<p><strong>Bold Title</strong><br>\n<strong>Other Bold Title</strong></p>\n",
 		},
 		{
 			name:          "URLReplacement",
