@@ -55,7 +55,7 @@ func ConvertToSlack(markdown string) string {
 
 // ConvertToHTML converts the Markdown syntax into HTML and sanitises the result.
 func ConvertToHTML(markdown string) string {
-	mdParser := md.New(md.HTML(true))
+	mdParser := md.New(md.HTML(true), md.Breaks(true))
 	unsafeHTML := mdParser.RenderToString([]byte(markdown))
 	safeHTML := bluemonday.UGCPolicy().Sanitize(unsafeHTML)
 
