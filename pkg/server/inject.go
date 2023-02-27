@@ -21,7 +21,7 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 	publicGroup.Use(logger.Middleware())
 	infraGroup := router.Group("/")
 
-	scmFactory := github.NewClientFactory(cfg.SCM.Token)
+	scmClient := github.NewClientFactory(cfg.SCM.Token)
 
 	msgHandler := msgclients.NewMessageHandler(&cfg.MessageHandlers)
 
