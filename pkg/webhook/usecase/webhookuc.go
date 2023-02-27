@@ -29,10 +29,6 @@ func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseC
 	}
 }
 
-func (w *WebHookUseCase) createCommitStatus(ctx context.Context, e *models.PullRequestEventDTO, state domain.State, sha, context string) error {
-	return w.scm.CreatePeacockCommitStatus(ctx, e.RepoOwner, e.RepoName, sha, state, context)
-}
-
 func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
 
@@ -195,4 +191,8 @@ func (w *WebHookUseCase) CleanUp(pullRequestID int64) {
 
 func (w *WebHookUseCase) handleError(ctx context.Context, statusContext string, e *models.PullRequestEventDTO, err error) error {
 	return w.scm.HandleError(ctx, statusContext, e.RepoOwner, e.RepoName, e.PRNumber, e.SHA, e.PROwner, err)
+}
+
+func (w *WebHookUseCase) createCommitStatus(ctx context.Context, e *models.PullRequestEventDTO, state domain.State, sha, context string) error {
+	return w.scm.CreatePeacockCommitStatus(ctx, e.RepoOwner, e.RepoName, sha, state, context)
 }
