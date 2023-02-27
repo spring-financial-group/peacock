@@ -21,7 +21,7 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 	publicGroup.Use(logger.Middleware())
 	infraGroup := router.Group("/")
 
-	scmFactory := github.NewClientFactory(cfg.SCM.Token)
+	scmClient := github.NewClient(cfg.SCM.User, cfg.SCM.Token)
 
 	msgHandler := msgclients.NewMessageHandler(&cfg.MessageHandlers)
 
@@ -29,7 +29,7 @@ func inject(cfg *config.Config, sources *DataSources) (*gin.Engine, error) {
 
 	feathersUC := feathers.NewUseCase()
 
-	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmFactory, notesUC, feathersUC)
+	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmClient, notesUC, feathersUC)
 
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)
