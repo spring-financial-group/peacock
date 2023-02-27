@@ -56,10 +56,3 @@ type SCM interface {
 	// HandleError handles an error by commenting on the PR and creating a commit status on the given SHA
 	HandleError(ctx context.Context, statusContext, owner, repoName string, prNumber int, headSHA, prOwner string, err error) error
 }
-
-type SCMClientFactory interface {
-	// GetClient returns a client for interacting with the SCM
-	GetClient(owner, repo, user string, prNumber int) SCM
-	// RemoveClient removes a client from memory
-	RemoveClient(key string)
-}
