@@ -95,13 +95,13 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = prBody
 
-		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
+		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
 
-		mockSCM.On("GetPRCommentsByUser", mockCTX, mockEvent.RepoName, mockEvent.PRNumber).Return(nil, nil).Once()
-		mockSCM.On("DeleteUsersComments", mockCTX, mockEvent.RepoName, mockEvent.PRNumber).Return(nil).Once()
-		mockSCM.On("CommentOnPR", mockCTX, mockEvent.RepoName, mockEvent.PRNumber, mock.Anything).Return(nil).Once()
-		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoName, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
+		mockSCM.On("GetPRCommentsByUser", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil, nil).Once()
+		mockSCM.On("DeleteUsersComments", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil).Once()
+		mockSCM.On("CommentOnPR", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mock.Anything).Return(nil).Once()
+		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
 		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
 		mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
@@ -127,11 +127,11 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		mockEvent.Body = prBody
 
 		defaultSHA := "default-SHA"
-		mockSCM.On("GetLatestCommitSHAInBranch", mockCTX, mockEvent.RepoName, mockEvent.DefaultBranch).Return(defaultSHA, nil).Once()
-		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoName, defaultSHA, domain.PendingState, domain.ReleaseContext).Return(nil).Once()
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoName, mockEvent.DefaultBranch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
+		mockSCM.On("GetLatestCommitSHAInBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.DefaultBranch).Return(defaultSHA, nil).Once()
+		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, defaultSHA, domain.PendingState, domain.ReleaseContext).Return(nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.DefaultBranch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
 
-		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoName, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
+		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 
 		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
 		mockNotesUC.On("SendReleaseNotes", mockFeathers.Config.Messages.Subject, mockNotes).Return(nil)
