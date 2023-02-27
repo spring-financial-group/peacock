@@ -16,13 +16,13 @@ type SCM struct {
 	mock.Mock
 }
 
-// CommentError provides a mock function with given fields: ctx, prOwner, err
-func (_m *SCM) CommentError(ctx context.Context, prOwner string, err error) error {
-	ret := _m.Called(ctx, prOwner, err)
+// CommentError provides a mock function with given fields: ctx, repoName, prNumber, prOwner, err
+func (_m *SCM) CommentError(ctx context.Context, repoName string, prNumber int, prOwner string, err error) error {
+	ret := _m.Called(ctx, repoName, prNumber, prOwner, err)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, error) error); ok {
-		r0 = rf(ctx, prOwner, err)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, string, error) error); ok {
+		r0 = rf(ctx, repoName, prNumber, prOwner, err)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -30,13 +30,13 @@ func (_m *SCM) CommentError(ctx context.Context, prOwner string, err error) erro
 	return r0
 }
 
-// CommentOnPR provides a mock function with given fields: ctx, body
-func (_m *SCM) CommentOnPR(ctx context.Context, body string) error {
-	ret := _m.Called(ctx, body)
+// CommentOnPR provides a mock function with given fields: ctx, repoName, prNumber, body
+func (_m *SCM) CommentOnPR(ctx context.Context, repoName string, prNumber int, body string) error {
+	ret := _m.Called(ctx, repoName, prNumber, body)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, body)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, string) error); ok {
+		r0 = rf(ctx, repoName, prNumber, body)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -44,13 +44,13 @@ func (_m *SCM) CommentOnPR(ctx context.Context, body string) error {
 	return r0
 }
 
-// CreatePeacockCommitStatus provides a mock function with given fields: ctx, ref, state, statusContext
-func (_m *SCM) CreatePeacockCommitStatus(ctx context.Context, ref string, state domain.State, statusContext string) error {
-	ret := _m.Called(ctx, ref, state, statusContext)
+// CreatePeacockCommitStatus provides a mock function with given fields: ctx, repoName, ref, state, statusContext
+func (_m *SCM) CreatePeacockCommitStatus(ctx context.Context, repoName string, ref string, state domain.State, statusContext string) error {
+	ret := _m.Called(ctx, repoName, ref, state, statusContext)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, domain.State, string) error); ok {
-		r0 = rf(ctx, ref, state, statusContext)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, domain.State, string) error); ok {
+		r0 = rf(ctx, repoName, ref, state, statusContext)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -58,13 +58,13 @@ func (_m *SCM) CreatePeacockCommitStatus(ctx context.Context, ref string, state 
 	return r0
 }
 
-// DeleteUsersComments provides a mock function with given fields: ctx
-func (_m *SCM) DeleteUsersComments(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// DeleteUsersComments provides a mock function with given fields: ctx, repoName, prNumber
+func (_m *SCM) DeleteUsersComments(ctx context.Context, repoName string, prNumber int) error {
+	ret := _m.Called(ctx, repoName, prNumber)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) error); ok {
+		r0 = rf(ctx, repoName, prNumber)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -72,13 +72,13 @@ func (_m *SCM) DeleteUsersComments(ctx context.Context) error {
 	return r0
 }
 
-// GetFileFromBranch provides a mock function with given fields: ctx, branch, path
-func (_m *SCM) GetFileFromBranch(ctx context.Context, branch string, path string) ([]byte, error) {
-	ret := _m.Called(ctx, branch, path)
+// GetFileFromBranch provides a mock function with given fields: ctx, repoName, branch, path
+func (_m *SCM) GetFileFromBranch(ctx context.Context, repoName string, branch string, path string) ([]byte, error) {
+	ret := _m.Called(ctx, repoName, branch, path)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) []byte); ok {
-		r0 = rf(ctx, branch, path)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) []byte); ok {
+		r0 = rf(ctx, repoName, branch, path)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
@@ -86,8 +86,29 @@ func (_m *SCM) GetFileFromBranch(ctx context.Context, branch string, path string
 	}
 
 	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = rf(ctx, repoName, branch, path)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetLatestCommitSHAInBranch provides a mock function with given fields: ctx, repoName, branch
+func (_m *SCM) GetLatestCommitSHAInBranch(ctx context.Context, repoName string, branch string) (string, error) {
+	ret := _m.Called(ctx, repoName, branch)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
+		r0 = rf(ctx, repoName, branch)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, branch, path)
+		r1 = rf(ctx, repoName, branch)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -95,48 +116,13 @@ func (_m *SCM) GetFileFromBranch(ctx context.Context, branch string, path string
 	return r0, r1
 }
 
-// GetKey provides a mock function with given fields:
-func (_m *SCM) GetKey() string {
-	ret := _m.Called()
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// GetLatestCommitSHAInBranch provides a mock function with given fields: ctx, branch
-func (_m *SCM) GetLatestCommitSHAInBranch(ctx context.Context, branch string) (string, error) {
-	ret := _m.Called(ctx, branch)
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func(context.Context, string) string); ok {
-		r0 = rf(ctx, branch)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, branch)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetPRComments provides a mock function with given fields: ctx
-func (_m *SCM) GetPRComments(ctx context.Context) ([]*github.IssueComment, error) {
-	ret := _m.Called(ctx)
+// GetPRComments provides a mock function with given fields: ctx, repoName, prNumber
+func (_m *SCM) GetPRComments(ctx context.Context, repoName string, prNumber int) ([]*github.IssueComment, error) {
+	ret := _m.Called(ctx, repoName, prNumber)
 
 	var r0 []*github.IssueComment
-	if rf, ok := ret.Get(0).(func(context.Context) []*github.IssueComment); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []*github.IssueComment); ok {
+		r0 = rf(ctx, repoName, prNumber)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*github.IssueComment)
@@ -144,8 +130,8 @@ func (_m *SCM) GetPRComments(ctx context.Context) ([]*github.IssueComment, error
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, repoName, prNumber)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -153,13 +139,13 @@ func (_m *SCM) GetPRComments(ctx context.Context) ([]*github.IssueComment, error
 	return r0, r1
 }
 
-// GetPRCommentsByUser provides a mock function with given fields: ctx
-func (_m *SCM) GetPRCommentsByUser(ctx context.Context) ([]*github.IssueComment, error) {
-	ret := _m.Called(ctx)
+// GetPRCommentsByUser provides a mock function with given fields: ctx, repoName, prNumber
+func (_m *SCM) GetPRCommentsByUser(ctx context.Context, repoName string, prNumber int) ([]*github.IssueComment, error) {
+	ret := _m.Called(ctx, repoName, prNumber)
 
 	var r0 []*github.IssueComment
-	if rf, ok := ret.Get(0).(func(context.Context) []*github.IssueComment); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []*github.IssueComment); ok {
+		r0 = rf(ctx, repoName, prNumber)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*github.IssueComment)
@@ -167,8 +153,8 @@ func (_m *SCM) GetPRCommentsByUser(ctx context.Context) ([]*github.IssueComment,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, repoName, prNumber)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -176,13 +162,13 @@ func (_m *SCM) GetPRCommentsByUser(ctx context.Context) ([]*github.IssueComment,
 	return r0, r1
 }
 
-// GetPullRequestBodyFromCommit provides a mock function with given fields: ctx, sha
-func (_m *SCM) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*string, error) {
-	ret := _m.Called(ctx, sha)
+// GetPullRequestBodyFromCommit provides a mock function with given fields: ctx, repoName, sha
+func (_m *SCM) GetPullRequestBodyFromCommit(ctx context.Context, repoName string, sha string) (*string, error) {
+	ret := _m.Called(ctx, repoName, sha)
 
 	var r0 *string
-	if rf, ok := ret.Get(0).(func(context.Context, string) *string); ok {
-		r0 = rf(ctx, sha)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *string); ok {
+		r0 = rf(ctx, repoName, sha)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*string)
@@ -190,8 +176,8 @@ func (_m *SCM) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*s
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, sha)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, repoName, sha)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -199,13 +185,13 @@ func (_m *SCM) GetPullRequestBodyFromCommit(ctx context.Context, sha string) (*s
 	return r0, r1
 }
 
-// GetPullRequestBodyFromPRNumber provides a mock function with given fields: ctx
-func (_m *SCM) GetPullRequestBodyFromPRNumber(ctx context.Context) (*string, error) {
-	ret := _m.Called(ctx)
+// GetPullRequestBodyFromPRNumber provides a mock function with given fields: ctx, repoName, prNumber
+func (_m *SCM) GetPullRequestBodyFromPRNumber(ctx context.Context, repoName string, prNumber int) (*string, error) {
+	ret := _m.Called(ctx, repoName, prNumber)
 
 	var r0 *string
-	if rf, ok := ret.Get(0).(func(context.Context) *string); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) *string); ok {
+		r0 = rf(ctx, repoName, prNumber)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*string)
@@ -213,8 +199,8 @@ func (_m *SCM) GetPullRequestBodyFromPRNumber(ctx context.Context) (*string, err
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, repoName, prNumber)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -222,13 +208,13 @@ func (_m *SCM) GetPullRequestBodyFromPRNumber(ctx context.Context) (*string, err
 	return r0, r1
 }
 
-// HandleError provides a mock function with given fields: ctx, statusContext, headSHA, prOwner, err
-func (_m *SCM) HandleError(ctx context.Context, statusContext string, headSHA string, prOwner string, err error) error {
-	ret := _m.Called(ctx, statusContext, headSHA, prOwner, err)
+// HandleError provides a mock function with given fields: ctx, statusContext, repoName, prNumber, headSHA, prOwner, err
+func (_m *SCM) HandleError(ctx context.Context, statusContext string, repoName string, prNumber int, headSHA string, prOwner string, err error) error {
+	ret := _m.Called(ctx, statusContext, repoName, prNumber, headSHA, prOwner, err)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, error) error); ok {
-		r0 = rf(ctx, statusContext, headSHA, prOwner, err)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, string, string, error) error); ok {
+		r0 = rf(ctx, statusContext, repoName, prNumber, headSHA, prOwner, err)
 	} else {
 		r0 = ret.Error(0)
 	}
