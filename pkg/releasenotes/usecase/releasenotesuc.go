@@ -12,15 +12,13 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
+	"net/url"
 	"regexp"
 	"strings"
 	"text/template"
 )
 
 const (
-	teamNameHeaderRegex = "### Notify(.*)\\n"
-	commaSeparated      = ","
-
 	breakdownTemplate = `Successfully validated {{ len .notes }} release note{{ addPlural (len .notes) }}.
 {{ range $idx, $val := .notes }}
 ***
@@ -35,6 +33,12 @@ Release Note {{ inc $idx }} will be sent to: {{ getTeamNames $val.Teams }}
 {{ end -}}`
 )
 
+var (
+	teamNameRe    = regexp.MustCompile(`### Notify(.*)\n`)
+	closesIssueRe = regexp.MustCompile(`### Closes\n`)
+	bulletRe      = regexp.MustCompile(`(^|\n)[*|-]\s?(.*)\s?$`)
+)
+
 type UseCase struct {
 	MsgClientsHandler domain.MessageHandler
 }
@@ -44,24 +48,23 @@ func NewUseCase(msgClientsHandler domain.MessageHandler) *UseCase {
 }
 
 func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
-	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
-	if err != nil {
-		return nil, err
-	}
-
 	log.Debug("Parsing release notes from markdown")
-	teamNames := uc.parseTeamNames(teamNameReg, markdown)
+	teamNames := uc.parseTeamNames(teamNameRe, markdown)
 	if len(teamNames) < 1 {
 		return nil, nil
 	}
 	log.Debugf("%d notes found in markdown", len(teamNames))
 
 	// Get the contents for each message & trim to remove any text before the first message
-	contents := teamNameReg.Split(markdown, -1)
-	contents = contents[1:]
+	contents := teamNameRe.Split(markdown, -1)
 
-	notes := make([]models.ReleaseNote, len(contents))
-	for i, m := range contents {
+	preamble := contents[0]
+	uc.getIssueURLsToClose(preamble)
+
+	rnContents := contents[1:]
+
+	notes := make([]models.ReleaseNote, len(rnContents))
+	for i, m := range rnContents {
 		teamsNamesInNote := teamNames[i]
 		teamsInNote, err := uc.getAndValidateTeamsByNames(teamsNamesInNote, teamsInFeathers)
 		if err != nil {
@@ -72,6 +75,26 @@ func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeather
 		notes[i].Teams = teamsInNote
 	}
 	return notes, nil
+}
+
+func (uc *UseCase) getIssueURLsToClose(markdown string) ([]string, error) {
+	issues := closesIssueRe.Split(markdown, -1)
+	if len(issues) < 1 {
+		return nil, nil
+	}
+
+	issueContent := issues[1]
+	bullets := bulletRe.FindAllStringSubmatch(issueContent, -1)
+	var issueURLs []string
+	for _, b := range bullets {
+		urlString := strings.TrimSpace(b[1])
+		if _, err := url.Parse(urlString); err != nil {
+			return nil, errors.Wrapf(err, "failed to parse issue URL %s", urlString)
+		}
+		issueURLs = append(issueURLs, urlString)
+	}
+
+	return issueURLs, nil
 }
 
 func (uc *UseCase) getAndValidateTeamsByNames(teamNames []string, teamsInFeathers models.Teams) (models.Teams, error) {
@@ -97,7 +120,7 @@ func (uc *UseCase) parseTeamNames(teamNameReg *regexp.Regexp, markdown string) [
 	teamsInNotes := make([][]string, len(notifyHeaders))
 	for i, header := range notifyHeaders {
 		// The actual team name is always the sub match, so it's the second element
-		teamNames := strings.Split(header[1], commaSeparated)
+		teamNames := strings.Split(header[1], ",")
 		teamNames = utils.TrimSpaceInSlice(teamNames)
 		teamsInNotes[i] = teamNames
 	}
