@@ -42,6 +42,7 @@ spec:
           script: |
             #!/usr/bin/env sh
             sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
+            git commit -a -m "chore: override default jx variables" --allow-empty
         - image: uses:spring-financial-group/DevOps/pipelines/golang-lint.yaml@main
           name: ""
           resources: {}
