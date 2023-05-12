@@ -40,7 +40,7 @@ spec:
             make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
-        - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss.yaml@d7faa2ba2f35b3e46d90dcbe94d40b0591595b1c
+        - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss.yaml@main
           name: ""
           resources: {}
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
