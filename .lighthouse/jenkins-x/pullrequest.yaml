@@ -16,9 +16,6 @@ spec:
             # override limits for all containers here
             limits: {}
           workingDir: /workspace/source
-          volumeMounts:
-            - mountPath: /oss-docker-config
-              name: oss-docker-config
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
@@ -30,7 +27,7 @@ spec:
               cpu: 400m
               memory: 600Mi
         - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: override-variables
+          name: override-docker-registry
           resources: {}
           script: |
             #!/usr/bin/env sh
@@ -43,31 +40,14 @@ spec:
             make build
         - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
           name: ""
-        - image: gcr.io/kaniko-project/executor:v1.9.1-debug
-          name: build-container-build
+        - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss.yaml@main
+          name: ""
           resources: {}
-          script: |
-            #!/busybox/sh
-            source .jx/variables.sh
-            cp /oss-docker-config/config.json /kaniko/.docker/config.json
-            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
         - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
-        - image: ghcr.io/jenkins-x-plugins/jx-preview:0.0.231
-          name: promote-jx-preview
+        - name: promote-jx-preview
           resources: {}
-          script: |
-            #!/usr/bin/env sh
-            source .jx/variables.sh
-            jx preview create
-        volumes:
-          - name: oss-docker-config
-            secret:
-              secretName: tekton-oss-container-registry-auth
-              items:
-                - key: .dockerconfigjson
-                  path: config.json
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s
