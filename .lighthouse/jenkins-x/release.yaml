@@ -34,7 +34,7 @@ spec:
               cpu: 400m
               memory: 600Mi
         - image: ghcr.io/jenkins-x/jx-boot:3.2.197
-          name: override-variables
+          name: override-docker-registry
           resources: {}
           script: |
             #!/usr/bin/env sh
