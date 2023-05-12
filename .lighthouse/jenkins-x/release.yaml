@@ -83,7 +83,7 @@ spec:
             gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
             mv ./build/darwin/peacock ./build/darwin/peacock-darwin
             gh release upload v$VERSION ./build/darwin/peacock-darwin
-        - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss-release.yaml@db941e6a8f4afdfa109e587677361df4d751ead0
+        - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss-release.yaml@dc434087154afa86fe726de4b438aa4b83c6cf4e
           resources: {}
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
           resources: {}
