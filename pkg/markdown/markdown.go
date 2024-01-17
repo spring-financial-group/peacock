@@ -19,6 +19,16 @@ func ConvertToSlack(markdown string) string {
 		return strings.ReplaceAll(s, "*", "•")
 	})
 
+	// Convert unchecked task box (- [ ] -> ☐)
+	regex = regexp.MustCompile(`(^|\n)(|\s+)- \[ ] `)
+	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
+		return strings.ReplaceAll(s, "- [ ] ", "☐ ")
+	})
+
+	// Convert unchecked task box (- [x] -> ☒)
+	regex = regexp.MustCompile(`-\s\[[xX]]`)
+	markdown = regex.ReplaceAllString(markdown, "☒")
+
 	// Convert bullets (- -> •)
 	regex = regexp.MustCompile(`(^|\n)(|\s+)-\s`)
 	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
@@ -50,6 +60,7 @@ func ConvertToSlack(markdown string) string {
 	// Convert URLs ([text](url) -> <url|text>)
 	regex = regexp.MustCompile(`\[([^]]+)]\(([^)]+)\)`)
 	markdown = regex.ReplaceAllString(markdown, "<$2|$1>")
+
 	return markdown
 }
 
