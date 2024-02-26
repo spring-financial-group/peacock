@@ -1,0 +1,32 @@
+info:
+  contact: {}
+  description: Service for notifying users of changes to your platform
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Peacock API
+  version: 1.6.1-dev+b576b2b
+paths:
+  /health:
+    get:
+      description: get the health of the dependencies of the service
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Gets the health of the service
+      tags:
+      - Health
+  /webhooks:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint for GitHub webhooks
+      responses:
+        "200":
+          description: OK
+      summary: Endpoint for GitHub webhooks
+      tags:
+      - webhook
+swagger: "2.0"

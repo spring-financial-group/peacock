@@ -11,13 +11,14 @@ import (
 	releasenotesuc "github.com/spring-financial-group/peacock/pkg/releasenotes/usecase"
 	"github.com/spring-financial-group/peacock/pkg/webhook/handler"
 	"github.com/spring-financial-group/peacock/pkg/webhook/usecase"
+	"github.com/swaggest/swgui/v3cdn"
 )
 
 func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	// Setup router
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	publicGroup := router.Group("/")
+	publicGroup := router.Group("/api")
 	publicGroup.Use(logger.Middleware())
 	infraGroup := router.Group("/")
 
@@ -34,6 +35,8 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)
 	infraGroup.GET("/health", health.ServeHealth)
+	infraGroup.GET("/swagger/v1/swagger.json", func(c *gin.Context) { c.File("docs/swagger.json") })
+	infraGroup.GET("/swagger/index.html", gin.WrapH(v3cdn.NewHandler("Peacock API", "/swagger/v1/swagger.json", "/")))
 
 	return router, nil
 }

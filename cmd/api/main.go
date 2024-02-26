@@ -6,7 +6,7 @@ import (
 )
 
 // @title Peacock API
-// @version 1.0
+// @version 1.6.1-dev+b576b2b
 // @description Service for notifying users of changes to your platform
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
