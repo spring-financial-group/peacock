@@ -33,6 +33,12 @@ spec:
             requests:
               cpu: 400m
               memory: 600Mi
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.197
+          name: override-docker-registry
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
         - image: uses:spring-financial-group/DevOps/pipelines/golang-lint.yaml@main
           name: ""
           resources: {}
@@ -66,7 +72,6 @@ spec:
           script: |
             #!/usr/bin/env sh
             echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
-            echo "export DOCKER_REGISTRY="\"ghcr.io\""" >> .jx/variables.sh
         - image: tomhobson/github-cli:latest
           name: push-release
           script: |
@@ -78,14 +83,8 @@ spec:
             gh release upload v$VERSION ./build/win/peacock-windows-amd64.exe
             mv ./build/darwin/peacock ./build/darwin/peacock-darwin
             gh release upload v$VERSION ./build/darwin/peacock-darwin
-        - image: gcr.io/kaniko-project/executor:v1.6.0-debug
-          name: build-push-container
+        - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss.yaml@main
           resources: {}
-          script: |
-            #!/busybox/sh
-            source .jx/variables.sh
-            echo "{\"auths\":{\"ghcr.io\":{\"username\":\"peacock-bot\",\"password\":\"$GH_TOKEN\"}}}" > /kaniko/.docker/config.json
-            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:latest --build-arg=VERSION=$VERSION
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
           resources: {}
   podTemplate: {}

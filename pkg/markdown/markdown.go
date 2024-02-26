@@ -19,6 +19,16 @@ func ConvertToSlack(markdown string) string {
 		return strings.ReplaceAll(s, "*", "•")
 	})
 
+	// Convert unchecked task box (- [ ] -> ☐)
+	regex = regexp.MustCompile(`(^|\n)(|\s+)- \[ ] `)
+	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
+		return strings.ReplaceAll(s, "- [ ] ", "☐ ")
+	})
+
+	// Convert unchecked task box (- [x] -> ☒)
+	regex = regexp.MustCompile(`-\s\[[xX]]`)
+	markdown = regex.ReplaceAllString(markdown, "☒")
+
 	// Convert bullets (- -> •)
 	regex = regexp.MustCompile(`(^|\n)(|\s+)-\s`)
 	markdown = regex.ReplaceAllStringFunc(markdown, func(s string) string {
@@ -50,12 +60,13 @@ func ConvertToSlack(markdown string) string {
 	// Convert URLs ([text](url) -> <url|text>)
 	regex = regexp.MustCompile(`\[([^]]+)]\(([^)]+)\)`)
 	markdown = regex.ReplaceAllString(markdown, "<$2|$1>")
+
 	return markdown
 }
 
 // ConvertToHTML converts the Markdown syntax into HTML and sanitises the result.
 func ConvertToHTML(markdown string) string {
-	mdParser := md.New(md.HTML(true))
+	mdParser := md.New(md.HTML(true), md.Breaks(true))
 	unsafeHTML := mdParser.RenderToString([]byte(markdown))
 	safeHTML := bluemonday.UGCPolicy().Sanitize(unsafeHTML)
 

@@ -23,7 +23,7 @@ func TestMarkdown_Converters(t *testing.T) {
 			name:          "CarriageReturn",
 			inputMarkdown: "First Sentence\r\nSecond Sentence\r\n",
 			expectedSlack: "First Sentence\nSecond Sentence\n",
-			expectedHTML:  "<p>First Sentence\nSecond Sentence</p>\n",
+			expectedHTML:  "<p>First Sentence<br>\nSecond Sentence</p>\n",
 		},
 		{
 			name:          "HeadingReplacement",
@@ -47,13 +47,13 @@ func TestMarkdown_Converters(t *testing.T) {
 			name:          "BoldReplacement(**)",
 			inputMarkdown: "**Bold Title**\n**Other Bold Title**",
 			expectedSlack: "*Bold Title*\n*Other Bold Title*",
-			expectedHTML:  "<p><strong>Bold Title</strong>\n<strong>Other Bold Title</strong></p>\n",
+			expectedHTML:  "<p><strong>Bold Title</strong><br>\n<strong>Other Bold Title</strong></p>\n",
 		},
 		{
 			name:          "BoldReplacement(__)",
 			inputMarkdown: "__Bold Title__\n__Other Bold Title__",
 			expectedSlack: "*Bold Title*\n*Other Bold Title*",
-			expectedHTML:  "<p><strong>Bold Title</strong>\n<strong>Other Bold Title</strong></p>\n",
+			expectedHTML:  "<p><strong>Bold Title</strong><br>\n<strong>Other Bold Title</strong></p>\n",
 		},
 		{
 			name:          "URLReplacement",
@@ -78,6 +78,18 @@ func TestMarkdown_Converters(t *testing.T) {
 			inputMarkdown: "- New queries added to Product/Summary endpoint:\n   - Return products by product class\n   - Return products that were available for a given date",
 			expectedSlack: "• New queries added to Product/Summary endpoint:\n   • Return products by product class\n   • Return products that were available for a given date",
 			expectedHTML:  "<ul>\n<li>New queries added to Product/Summary endpoint:\n<ul>\n<li>Return products by product class</li>\n<li>Return products that were available for a given date</li>\n</ul>\n</li>\n</ul>\n",
+		},
+		{
+			name:          "UnTickedTaskListReplacement(- [ ])",
+			inputMarkdown: "- [ ] No impact to reporting\n- [ ] No impact to downstream services",
+			expectedSlack: "☐ No impact to reporting\n☐ No impact to downstream services",
+			expectedHTML:  "<ul>\n<li>[ ] No impact to reporting</li>\n<li>[ ] No impact to downstream services</li>\n</ul>\n",
+		},
+		{
+			name:          "TickedTaskListReplacement(- [x])",
+			inputMarkdown: "- [x] No impact to reporting\n- [X] No impact to downstream services",
+			expectedSlack: "☒ No impact to reporting\n☒ No impact to downstream services",
+			expectedHTML:  "<ul>\n<li>[x] No impact to reporting</li>\n<li>[X] No impact to downstream services</li>\n</ul>\n",
 		},
 	}
 

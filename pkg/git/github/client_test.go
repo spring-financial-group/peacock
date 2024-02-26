@@ -107,15 +107,12 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 		mockGH := github.NewClient(mockedHTTPClient)
 
 		client := Client{
-			github:   mockGH,
-			user:     "mqube-bot",
-			repo:     "peacock",
-			owner:    "spring-financial-group",
-			prNumber: 1,
+			github: mockGH,
+			user:   "mqube-bot",
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "CommitSHA")
+			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "spring-financial-group", "peacock", "CommitSHA")
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)
