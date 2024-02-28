@@ -17,14 +17,12 @@ webhookSecret: ""
 # Token for authenticating the message webhook
 webhookToken: ""
 
-# The connection string used for the database
-mongodbConnectionString: ""
-
 # Existing secret to use for the service
 serviceSecretName: ""
 
 # Settings for overriding the internal mongodb instance
 mongodb:
+  connectionStringOverride: ""
   useInternalInstance: true
   replicaCount: 1
   persistence:
