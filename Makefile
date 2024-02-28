@@ -193,3 +193,6 @@ install-swag: ## Installs swaggo at the version in go.mod
 
 set-swag-version: ## Sets the version of the app in main.go for swagger generation
 	sed -i 's/@version .*/@version $(VERSION)/' ./cmd/api/main.go
+
+mocks: ## Generates mock implementations from interfaces
+	mockery --all --dir pkg/domain/ --output pkg/domain/mocks

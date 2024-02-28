@@ -2,6 +2,7 @@ package webhookuc
 
 import (
 	"context"
+	"github.com/google/go-github/v48/github"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
@@ -84,12 +85,13 @@ var (
 func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 	mockSCM := mocks.NewSCM(t)
 	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+	mockReleaseUC := mocks.NewReleaseUseCase(t)
 
 	cfg := &config.SCM{
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase())
+	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
 
 	t.Run("Happy Path", func(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
@@ -115,16 +117,22 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 func TestWebHookUseCase_RunPeacock(t *testing.T) {
 	mockSCM := mocks.NewSCM(t)
 	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+	mockReleaseUC := mocks.NewReleaseUseCase(t)
 
 	cfg := &config.SCM{
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase())
+	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
 
 	t.Run("Happy Path", func(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = prBody
+		mockFilesChanged := []*github.CommitFile{
+			{
+				Filename: github.String("helmfiles/staging/helmfile.yaml"),
+			},
+		}
 
 		defaultSHA := "default-SHA"
 		mockSCM.On("GetLatestCommitSHAInBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.DefaultBranch).Return(defaultSHA, nil).Once()
@@ -132,9 +140,12 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.DefaultBranch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
+		mockSCM.On("GetFilesChangedFromPR", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(mockFilesChanged, nil).Once()
 
 		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
 		mockNotesUC.On("SendReleaseNotes", mockFeathers.Config.Messages.Subject, mockNotes).Return(nil)
+
+		mockReleaseUC.On("SaveRelease", mockCTX, "staging", mockNotes).Return(nil).Once()
 
 		err := uc.RunPeacock(mockEvent)
 		assert.NoError(t, err)

@@ -7,6 +7,9 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/health"
 	"github.com/spring-financial-group/peacock/pkg/logger"
+	releasehandler "github.com/spring-financial-group/peacock/pkg/release/delivery"
+	releaserepo "github.com/spring-financial-group/peacock/pkg/release/repository/mongodb"
+	releaseuc "github.com/spring-financial-group/peacock/pkg/release/usecase"
 	"github.com/spring-financial-group/peacock/pkg/releasenotes/delivery/msgclients"
 	releasenotesuc "github.com/spring-financial-group/peacock/pkg/releasenotes/usecase"
 	"github.com/spring-financial-group/peacock/pkg/webhook/handler"
@@ -18,7 +21,7 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	// Setup router
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	publicGroup := router.Group("/api")
+	publicGroup := router.Group("/")
 	publicGroup.Use(logger.Middleware())
 	infraGroup := router.Group("/")
 
@@ -30,10 +33,14 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 
 	feathersUC := feathers.NewUseCase()
 
-	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmClient, notesUC, feathersUC)
+	releaseRepo := releaserepo.NewRepository(*data.MongoDBClient)
+	releaseUC := releaseuc.NewUseCase(releaseRepo)
+
+	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmClient, notesUC, feathersUC, releaseUC)
 
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)
+	releasehandler.NewHandler(publicGroup.Group("releases"), releaseUC)
 	infraGroup.GET("/health", health.ServeHealth)
 	infraGroup.GET("/swagger/v1/swagger.json", func(c *gin.Context) { c.File("docs/swagger.json") })
 	infraGroup.GET("/swagger/index.html", gin.WrapH(v3cdn.NewHandler("Peacock API", "/swagger/v1/swagger.json", "/")))
