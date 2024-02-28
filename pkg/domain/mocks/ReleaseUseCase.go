@@ -47,17 +47,17 @@ func (_m *ReleaseUseCase) GetReleasesAfterDate(ctx context.Context, environment 
 	return r0, r1
 }
 
-// SaveRelease provides a mock function with given fields: ctx, environment, releaseNotes
-func (_m *ReleaseUseCase) SaveRelease(ctx context.Context, environment string, releaseNotes []models.ReleaseNote) error {
-	ret := _m.Called(ctx, environment, releaseNotes)
+// SaveRelease provides a mock function with given fields: ctx, environment, releaseNotes, prSummary
+func (_m *ReleaseUseCase) SaveRelease(ctx context.Context, environment string, releaseNotes []models.ReleaseNote, prSummary models.PullRequestSummary) error {
+	ret := _m.Called(ctx, environment, releaseNotes, prSummary)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveRelease")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []models.ReleaseNote) error); ok {
-		r0 = rf(ctx, environment, releaseNotes)
+	if rf, ok := ret.Get(0).(func(context.Context, string, []models.ReleaseNote, models.PullRequestSummary) error); ok {
+		r0 = rf(ctx, environment, releaseNotes, prSummary)
 	} else {
 		r0 = ret.Error(0)
 	}

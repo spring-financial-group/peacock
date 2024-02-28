@@ -145,7 +145,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
 		mockNotesUC.On("SendReleaseNotes", mockFeathers.Config.Messages.Subject, mockNotes).Return(nil)
 
-		mockReleaseUC.On("SaveRelease", mockCTX, "staging", mockNotes).Return(nil).Once()
+		mockReleaseUC.On("SaveRelease", mockCTX, "staging", mockNotes, mockPullRequestEventDTO.Summary()).Return(nil).Once()
 
 		err := uc.RunPeacock(mockEvent)
 		assert.NoError(t, err)
