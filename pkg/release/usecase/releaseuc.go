@@ -9,7 +9,6 @@ import (
 
 type useCase struct {
 	repository domain.ReleaseRepository
-	scm        domain.SCM
 }
 
 func NewUseCase(repository domain.ReleaseRepository) domain.ReleaseUseCase {
