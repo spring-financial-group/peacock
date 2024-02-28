@@ -7,7 +7,7 @@ import (
 )
 
 type ReleaseUseCase interface {
-	SaveRelease(ctx context.Context, environment string, releaseNotes []models.ReleaseNote) error
+	SaveRelease(ctx context.Context, environment string, releaseNotes []models.ReleaseNote, prSummary models.PullRequestSummary) error
 	GetReleasesAfterDate(ctx context.Context, environment string, startTime time.Time) ([]models.Release, error)
 }
 

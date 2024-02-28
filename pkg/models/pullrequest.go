@@ -24,6 +24,21 @@ type PullRequestEventDTO struct {
 	DefaultBranch string
 }
 
+// PullRequestSummary is a summary of the PR details to be stored alongside release notes
+type PullRequestSummary struct {
+	PRNumber  int
+	RepoOwner string
+	RepoName  string
+}
+
+func (p *PullRequestEventDTO) Summary() PullRequestSummary {
+	return PullRequestSummary{
+		PRNumber:  p.PRNumber,
+		RepoOwner: p.RepoOwner,
+		RepoName:  p.RepoName,
+	}
+}
+
 // MarshalPullRequestEvent marshals a github.PullRequestEvent into a PullRequestEventDTO
 func MarshalPullRequestEvent(event *github.PullRequestEvent) *PullRequestEventDTO {
 	return &PullRequestEventDTO{

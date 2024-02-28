@@ -17,11 +17,12 @@ func NewUseCase(repository domain.ReleaseRepository) domain.ReleaseUseCase {
 	}
 }
 
-func (uc *useCase) SaveRelease(ctx context.Context, environment string, releaseNotes []models.ReleaseNote) error {
+func (uc *useCase) SaveRelease(ctx context.Context, environment string, releaseNotes []models.ReleaseNote, pr models.PullRequestSummary) error {
 	release := models.Release{
 		CreatedAt:    time.Now(),
 		ReleaseNotes: releaseNotes,
 		Environment:  environment,
+		PullRequest:  pr,
 	}
 
 	err := uc.repository.Insert(ctx, release)

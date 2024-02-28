@@ -159,7 +159,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ReleaseContext, e, errors.New("no environment found in helmfiles"))
 	}
 
-	err = w.releaseUC.SaveRelease(ctx, changedEnvironment, releaseNotes)
+	err = w.releaseUC.SaveRelease(ctx, changedEnvironment, releaseNotes, e.Summary())
 	if err != nil {
 		return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to save release"))
 	}
