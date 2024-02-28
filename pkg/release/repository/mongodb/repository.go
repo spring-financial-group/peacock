@@ -31,8 +31,12 @@ func (r *repository) Insert(ctx context.Context, release models.Release) error {
 	return nil
 }
 
-func (r *repository) GetReleasesAfterDate(ctx context.Context, environment string, startTime time.Time) ([]models.Release, error) {
+func (r *repository) GetReleases(ctx context.Context, environment string, startTime time.Time, teams []string) ([]models.Release, error) {
 	filter := bson.M{"environment": environment, "createdAt": bson.M{"$gt": startTime}}
+	if len(teams) > 0 {
+		filter["releaseNotes.teams.name"] = bson.M{"$in": teams}
+	}
+
 	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err

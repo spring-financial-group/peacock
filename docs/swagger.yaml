@@ -1,26 +1,3 @@
-definitions:
-  models.ReleaseNote:
-    properties:
-      content:
-        type: string
-      teams:
-        items:
-          $ref: '#/definitions/models.Team'
-        type: array
-    type: object
-  models.Team:
-    properties:
-      addresses:
-        items:
-          type: string
-        type: array
-      apikey:
-        type: string
-      contactType:
-        type: string
-      name:
-        type: string
-    type: object
 info:
   contact: {}
   description: Service for notifying users of changes to your platform
@@ -28,7 +5,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   title: Peacock API
-  version: 1.6.1-dev+7aa84e8
+  version: 1.6.1-dev+b55dcd4
 paths:
   /health:
     get:
@@ -41,33 +18,6 @@ paths:
       summary: Gets the health of the service
       tags:
       - Health
-  /releases/{environment}:
-    put:
-      consumes:
-      - application/json
-      description: Save a release
-      parameters:
-      - description: Environment
-        in: path
-        name: environment
-        required: true
-        type: string
-      - description: Release Notes
-        in: body
-        name: releaseNotes
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/models.ReleaseNote'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-      summary: Save a release
-      tags:
-      - release
   /releases/{environment}/after/{startTime}:
     get:
       consumes:
@@ -83,6 +33,10 @@ paths:
         in: path
         name: startTime
         required: true
+        type: string
+      - description: Teams
+        in: query
+        name: teams
         type: string
       produces:
       - application/json

@@ -33,8 +33,8 @@ func (uc *useCase) SaveRelease(ctx context.Context, environment string, releaseN
 	return nil
 }
 
-func (uc *useCase) GetReleasesAfterDate(ctx context.Context, environment string, startTime time.Time) ([]models.Release, error) {
-	releases, err := uc.repository.GetReleasesAfterDate(ctx, environment, startTime)
+func (uc *useCase) GetReleases(ctx context.Context, environment string, startTime time.Time, teams []string) ([]models.Release, error) {
+	releases, err := uc.repository.GetReleases(ctx, environment, startTime, teams)
 	if err != nil {
 		return nil, err
 	}

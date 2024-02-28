@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/models"
+	"strings"
 	"time"
 )
 
@@ -27,6 +28,7 @@ func NewHandler(group *gin.RouterGroup, releaseUc domain.ReleaseUseCase) {
 // @Produce json
 // @Param environment path string true "Environment"
 // @Param startTime path string true "Start Time"
+// @Param teams query string false "Teams"
 // @Success 200
 // @Router /releases/{environment}/after/{startTime} [get]
 func (h *ReleaseHandler) GetReleasesAfterDate(c *gin.Context) {
@@ -38,7 +40,15 @@ func (h *ReleaseHandler) GetReleasesAfterDate(c *gin.Context) {
 		return
 	}
 
-	releases, err := h.releaseUc.GetReleasesAfterDate(c, environment, startTime)
+	teamsParam := c.Query("teams")
+	var teams []string
+	if teamsParam == "" {
+		teams = []string{}
+	} else {
+		teams = strings.Split(teamsParam, ",")
+	}
+
+	releases, err := h.releaseUc.GetReleases(c, environment, startTime, teams)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

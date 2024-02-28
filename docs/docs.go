@@ -36,47 +36,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/releases/{environment}": {
-            "put": {
-                "description": "Save a release",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "release"
-                ],
-                "summary": "Save a release",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Environment",
-                        "name": "environment",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Release Notes",
-                        "name": "releaseNotes",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.ReleaseNote"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
         "/releases/{environment}/after/{startTime}": {
             "get": {
                 "description": "Get releases after a specific date",
@@ -104,6 +63,12 @@ const docTemplate = `{
                         "name": "startTime",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Teams",
+                        "name": "teams",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -130,48 +95,12 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "definitions": {
-        "models.ReleaseNote": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "teams": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Team"
-                    }
-                }
-            }
-        },
-        "models.Team": {
-            "type": "object",
-            "properties": {
-                "addresses": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "apikey": {
-                    "type": "string"
-                },
-                "contactType": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.6.1-dev+7aa84e8",
+	Version:          "1.6.1-dev+b55dcd4",
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},

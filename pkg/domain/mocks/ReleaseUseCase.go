@@ -17,29 +17,29 @@ type ReleaseUseCase struct {
 	mock.Mock
 }
 
-// GetReleasesAfterDate provides a mock function with given fields: ctx, environment, startTime
-func (_m *ReleaseUseCase) GetReleasesAfterDate(ctx context.Context, environment string, startTime time.Time) ([]models.Release, error) {
-	ret := _m.Called(ctx, environment, startTime)
+// GetReleases provides a mock function with given fields: ctx, environment, startTime, teams
+func (_m *ReleaseUseCase) GetReleases(ctx context.Context, environment string, startTime time.Time, teams []string) ([]models.Release, error) {
+	ret := _m.Called(ctx, environment, startTime, teams)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetReleasesAfterDate")
+		panic("no return value specified for GetReleases")
 	}
 
 	var r0 []models.Release
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time) ([]models.Release, error)); ok {
-		return rf(ctx, environment, startTime)
+	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time, []string) ([]models.Release, error)); ok {
+		return rf(ctx, environment, startTime, teams)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time) []models.Release); ok {
-		r0 = rf(ctx, environment, startTime)
+	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time, []string) []models.Release); ok {
+		r0 = rf(ctx, environment, startTime, teams)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Release)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, time.Time) error); ok {
-		r1 = rf(ctx, environment, startTime)
+	if rf, ok := ret.Get(1).(func(context.Context, string, time.Time, []string) error); ok {
+		r1 = rf(ctx, environment, startTime, teams)
 	} else {
 		r1 = ret.Error(1)
 	}
