@@ -57,7 +57,7 @@ spec:
           resources: {}
         - image: uses:spring-financial-group/jx3-openapi-generation/pipeline/generate-packages.yaml@master
           name: ""
-          resources: { }
+          resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s
