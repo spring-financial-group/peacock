@@ -21,7 +21,7 @@ Create the mongodb connection string if the internal instance is enabled and the
 {{- define "mongodb.connectionString" -}}
     {{ if (and (eq .Values.mongodb.connectionStringOverride "") .Values.mongodb.useInternalInstance ) }}
         {{- $mongoSrvName := include "mongodb.service.nameOverride" . -}}
-        {{- printf "mongodb://%s:%s@%s/%s" ( index .Values.mongodb.auth.usernames 0 ) ( index .Values.mongodb.auth.passwords 0 )  $mongoSrvName ( index .Values.mongodb.auth.databases 0 ) -}}
+        {{- printf "mongodb://%s:%s@%s" ( index .Values.mongodb.auth.usernames 0 ) ( index .Values.mongodb.auth.passwords 0 )  $mongoSrvName -}}
     {{- else }}
         {{- .Values.mongodb.connectionStringOverride -}}
     {{- end -}}
