@@ -31,7 +31,7 @@ mongodb:
   auth:
     enabled: true
     databases:
-      - releaseNotes
+      - Peacock
     usernames:
       - peacock
     passwords:
