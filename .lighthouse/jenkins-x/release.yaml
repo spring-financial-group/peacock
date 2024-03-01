@@ -17,6 +17,13 @@ spec:
             # override limits for all containers here
             limits: {}
           workingDir: /workspace/source
+          env:
+          - name: SwaggerServiceName
+            value: Peacock
+          - name: SpecPath
+            value: ./docs/swagger.json
+          - name: OutputLanguages
+            value: csharp angular
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone.yaml@versionStream
           name: ""
@@ -86,6 +93,12 @@ spec:
         - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss.yaml@main
           resources: {}
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
+          resources: {}
+        - image: uses:spring-financial-group/jx3-openapi-generation/pipeline/generate-packages.yaml@master
+          name: ""
+          resources: {}
+        - image: uses:spring-financial-group/jx3-openapi-generation/pipeline/generate-python-package.yaml@master
+          name: ""
           resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
