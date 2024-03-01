@@ -22,13 +22,13 @@ func Run() {
 	if err != nil {
 		log.Fatalf("Unable to initialize config: %v\n", err)
 	}
-
 	logger.SetLevel(cfg.LogLevel)
 
-	sources, err := initDataSources(cfg)
+	sources, err := NewDataSources(&cfg.DataSources)
 	if err != nil {
 		log.Fatalf("Unable to initialise data sources: %v\n", err)
 	}
+	defer sources.Close(context.Background())
 
 	router, err := inject(cfg, sources)
 	if err != nil {
@@ -60,6 +60,7 @@ func Run() {
 	// the request it is currently handling
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v\n", err)
 	}

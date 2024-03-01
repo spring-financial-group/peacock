@@ -151,6 +151,19 @@ func (c *Client) GetFileFromBranch(ctx context.Context, owner, repoName, branch,
 	return []byte(content), nil
 }
 
+func (c *Client) GetFilesChangedFromPR(ctx context.Context, owner string, repoName string, prNumber int) ([]*github.CommitFile, error) {
+	commitFiles, resp, err := c.github.PullRequests.ListFiles(ctx, owner, repoName, prNumber, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, errors.New("failed to retrieve changed files from pull request")
+	}
+
+	return commitFiles, nil
+}
+
 func (c *Client) DeleteUsersComments(ctx context.Context, owner, repoName string, prNumber int) error {
 	comments, err := c.GetPRCommentsByUser(ctx, owner, repoName, prNumber)
 	if err != nil {

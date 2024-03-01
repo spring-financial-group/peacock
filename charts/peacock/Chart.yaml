@@ -1,5 +1,11 @@
-apiVersion: v1
+apiVersion: v2
 description: A Helm chart for Peacock Service on Kubernetes
 icon: https://raw.githubusercontent.com/spring-financial-group/peacock/main/images/peacock.png
 name: peacock
 version: 0.1.0-SNAPSHOT
+
+dependencies:
+  - name: mongodb
+    version: '^13'
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: mongodb.useInternalInstance

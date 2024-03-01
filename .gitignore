@@ -16,3 +16,7 @@
 
 /build
 /.idea
+
+# Subchart locks etc
+/charts/peacock/charts
+/charts/peacock/Chart.lock

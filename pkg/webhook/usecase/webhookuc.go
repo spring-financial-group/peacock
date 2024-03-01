@@ -2,12 +2,14 @@ package webhookuc
 
 import (
 	"context"
+	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/models"
+	"strings"
 )
 
 type WebHookUseCase struct {
@@ -15,17 +17,19 @@ type WebHookUseCase struct {
 	scm       domain.SCM
 	notesUC   domain.ReleaseNotesUseCase
 	featherUC domain.FeathersUseCase
+	releaseUC domain.ReleaseUseCase
 
 	feathers map[int64]*feathersMeta
 }
 
-func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseCase, feathersUC domain.FeathersUseCase) *WebHookUseCase {
+func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseCase, feathersUC domain.FeathersUseCase, releaseUC domain.ReleaseUseCase) *WebHookUseCase {
 	return &WebHookUseCase{
 		cfg:       cfg,
 		scm:       scm,
 		notesUC:   notesUC,
 		featherUC: feathersUC,
 		feathers:  make(map[int64]*feathersMeta),
+		releaseUC: releaseUC,
 	}
 }
 
@@ -142,7 +146,23 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	if err = w.notesUC.SendReleaseNotes(feathers.Config.Messages.Subject, releaseNotes); err != nil {
 		return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to send releaseNotes"))
 	}
+
 	log.Infof("%d message(s) sent", len(releaseNotes))
+
+	files, err := w.scm.GetFilesChangedFromPR(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to get changed files from pr")
+	}
+
+	changedEnvironment := w.getChangedEnv(files)
+	if changedEnvironment == "" {
+		return w.handleError(ctx, domain.ReleaseContext, e, errors.New("no environment found in helmfiles"))
+	}
+
+	err = w.releaseUC.SaveRelease(ctx, changedEnvironment, releaseNotes, e.Summary())
+	if err != nil {
+		return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to save release"))
+	}
 
 	err = w.createCommitStatus(ctx, e, domain.SuccessState, defaultSHA, domain.ReleaseContext)
 	if err != nil {
@@ -195,4 +215,17 @@ func (w *WebHookUseCase) handleError(ctx context.Context, statusContext string, 
 
 func (w *WebHookUseCase) createCommitStatus(ctx context.Context, e *models.PullRequestEventDTO, state domain.State, sha, context string) error {
 	return w.scm.CreatePeacockCommitStatus(ctx, e.RepoOwner, e.RepoName, sha, state, context)
+}
+
+func (w *WebHookUseCase) getChangedEnv(files []*github.CommitFile) string {
+	for _, file := range files {
+		splitPath := strings.Split(*file.Filename, "/")
+		for index, path := range splitPath {
+			if path == "helmfiles" {
+				return splitPath[index+1]
+			}
+		}
+	}
+
+	return ""
 }

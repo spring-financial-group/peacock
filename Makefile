@@ -185,3 +185,14 @@ docs: bin/docs ## update docs
 	@./bin/docs --target=./docs/man/man1 --kind=man
 	@rm -f ./bin/docs
 
+swag: set-swag-version install-swag ## Generate swagger documentation
+	swag init -g cmd/api/main.go
+
+install-swag: ## Installs swaggo at the version in go.mod
+	$(GO) install github.com/swaggo/swag/cmd/swag@$(shell grep github.com/swaggo/swag go.mod | cut -d' ' -f2)
+
+set-swag-version: ## Sets the version of the app in main.go for swagger generation
+	sed -i 's/@version .*/@version $(VERSION)/' ./cmd/api/main.go
+
+mocks: ## Generates mock implementations from interfaces
+	mockery --all --dir pkg/domain/ --output pkg/domain/mocks

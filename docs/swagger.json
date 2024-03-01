@@ -1,0 +1,91 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Service for notifying users of changes to your platform",
+        "title": "Peacock API",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.6.1-dev+b55dcd4"
+    },
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "get the health of the dependencies of the service",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Gets the health of the service",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/releases/{environment}/after/{startTime}": {
+            "get": {
+                "description": "Get releases after a specific date",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "release"
+                ],
+                "summary": "Get releases after a specific date",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Environment",
+                        "name": "environment",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start Time",
+                        "name": "startTime",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Teams",
+                        "name": "teams",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/webhooks": {
+            "post": {
+                "description": "Endpoint for GitHub webhooks",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Endpoint for GitHub webhooks",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    }
+}

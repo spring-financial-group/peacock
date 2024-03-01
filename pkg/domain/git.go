@@ -55,4 +55,6 @@ type SCM interface {
 	GetLatestCommitSHAInBranch(ctx context.Context, owner, repoName, branch string) (string, error)
 	// HandleError handles an error by commenting on the PR and creating a commit status on the given SHA
 	HandleError(ctx context.Context, statusContext, owner, repoName string, prNumber int, headSHA, prOwner string, err error) error
+	// GetFilesChangedFromPR returns the files changed files in the given pr
+	GetFilesChangedFromPR(ctx context.Context, owner string, repoName string, prNumber int) ([]*github.CommitFile, error)
 }
