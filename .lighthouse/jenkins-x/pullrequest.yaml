@@ -16,6 +16,13 @@ spec:
             # override limits for all containers here
             limits: {}
           workingDir: /workspace/source
+          env:
+          - name: SwaggerServiceName
+            value: Peacock
+          - name: SpecPath
+            value: ./docs/swagger.json
+          - name: OutputLanguages
+            value: csharp angular
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
@@ -48,6 +55,9 @@ spec:
           resources: {}
         - name: promote-jx-preview
           resources: {}
+        - image: uses:spring-financial-group/jx3-openapi-generation/pipeline/generate-packages.yaml@master
+          name: ""
+          resources: { }
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s
