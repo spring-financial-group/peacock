@@ -77,8 +77,8 @@ spec:
                 name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: mongodb-connection-string
 {{- range $pkey, $pval := .Values.env }}
-        - name: {{ $pkey }}
-          value: {{ quote $pval }}
+          - name: {{ $pkey }}
+            value: {{ quote $pval }}
 {{- end }}
         envFrom:
 {{ toYaml .Values.envFrom | indent 10 }}
@@ -102,7 +102,15 @@ spec:
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
         resources:
 {{ toYaml .Values.resources | indent 12 }}
+        volumeMounts:
+          - mountPath: {{ .Values.env.CONFIG_PATH }}
+            name: config
+            subPath: config.yaml
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.service.name }}-config
       imagePullSecrets:
 {{- range $pval := .Values.jx.imagePullSecrets }}
       - name: {{ quote $pval }}
