@@ -77,8 +77,8 @@ spec:
                 name: {{ .Values.serviceSecretName | default "peacock" }}
                 key: mongodb-connection-string
 {{- range $pkey, $pval := .Values.env }}
-        - name: {{ $pkey }}
-          value: {{ quote $pval }}
+          - name: {{ $pkey }}
+            value: {{ quote $pval }}
 {{- end }}
         envFrom:
 {{ toYaml .Values.envFrom | indent 10 }}
