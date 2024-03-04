@@ -1,12 +1,21 @@
 package config
 
-import "github.com/ilyakaznacheev/cleanenv"
+import (
+	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/spring-financial-group/peacock/pkg/utils"
+	"os"
+)
+
+const (
+	defaultPath = "development-config.yaml"
+)
 
 type Config struct {
 	LogLevel        string `env:"LOG_LEVEL"`
 	SCM             SCM
 	MessageHandlers MessageHandlers
 	DataSources     DataSources
+	Cors            Cors `yaml:"cors"`
 }
 
 type DataSources struct {
@@ -36,9 +45,23 @@ type Webhook struct {
 	Secret string `env:"WEBHOOK_SECRET"`
 }
 
+type Cors struct {
+	AllowOrigins    []string `yaml:"allowOrigins" env:"CORS_ALLOW_ORIGINS" envSeparator:","`
+	AllowAllOrigins bool     `yaml:"allowAllOrigins" env:"CORS_ALLOW_ALL_ORIGINS"`
+}
+
 func Load() (*Config, error) {
+	configPath := os.Getenv("CONFIG_PATH")
+	exists, err := utils.Exists(configPath)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		configPath = defaultPath
+	}
+
 	var cfg Config
-	err := cleanenv.ReadEnv(&cfg)
+	err = cleanenv.ReadConfig(configPath, &cfg)
 	if err != nil {
 		return nil, err
 	}

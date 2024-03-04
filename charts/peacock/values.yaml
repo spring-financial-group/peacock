@@ -66,6 +66,7 @@ jx:
 
 # define environment variables here as a map of key: value
 env:
+  CONFIG_PATH: /production-config.yaml
 
 service:
   name: peacock

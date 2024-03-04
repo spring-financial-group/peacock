@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
@@ -20,7 +21,18 @@ import (
 func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	// Setup router
 	gin.SetMode(gin.ReleaseMode)
+
+	corsCfg := cors.DefaultConfig()
+	corsCfg.AllowOrigins = cfg.Cors.AllowOrigins
+	corsCfg.AllowAllOrigins = cfg.Cors.AllowAllOrigins
+	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	if corsCfg.AllowAllOrigins == false && len(corsCfg.AllowOrigins) == 0 {
+		panic("CORS_ALLOW_ORIGINS or CORS_ALLOW_ALL_ORIGINS must be set")
+	}
+
 	router := gin.New()
+	router.Use(cors.New(corsCfg))
+
 	publicGroup := router.Group("/")
 	publicGroup.Use(logger.Middleware())
 	infraGroup := router.Group("/")
