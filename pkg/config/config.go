@@ -48,6 +48,7 @@ type Webhook struct {
 type Cors struct {
 	AllowOrigins    []string `yaml:"allowOrigins" env:"CORS_ALLOW_ORIGINS" envSeparator:","`
 	AllowAllOrigins bool     `yaml:"allowAllOrigins" env:"CORS_ALLOW_ALL_ORIGINS"`
+	AllowHeaders    []string `yaml:"allowHeaders" env:"CORS_ALLOW_METHODS" envSeparator:","`
 }
 
 func Load() (*Config, error) {

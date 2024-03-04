@@ -147,3 +147,8 @@ jxRequirements:
 config:
   cors:
     allowAllOrigins: true
+    allowHeaders:
+    - "Origin"
+    - "Content-Type"
+    - "Content-Length"
+    - "Authorization"
