@@ -26,7 +26,7 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	corsCfg.AllowOrigins = cfg.Cors.AllowOrigins
 	corsCfg.AllowAllOrigins = cfg.Cors.AllowAllOrigins
 	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	if corsCfg.AllowAllOrigins == false && len(corsCfg.AllowOrigins) == 0 {
+	if !corsCfg.AllowAllOrigins && len(corsCfg.AllowOrigins) == 0 {
 		panic("CORS_ALLOW_ORIGINS or CORS_ALLOW_ALL_ORIGINS must be set")
 	}
 
