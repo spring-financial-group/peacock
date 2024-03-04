@@ -22,13 +22,15 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	// Setup router
 	gin.SetMode(gin.ReleaseMode)
 
+	if !cfg.Cors.AllowAllOrigins && len(cfg.Cors.AllowOrigins) == 0 {
+		panic("CORS_ALLOW_ORIGINS or CORS_ALLOW_ALL_ORIGINS must be set")
+	}
+
 	corsCfg := cors.DefaultConfig()
 	corsCfg.AllowOrigins = cfg.Cors.AllowOrigins
 	corsCfg.AllowAllOrigins = cfg.Cors.AllowAllOrigins
 	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	if !corsCfg.AllowAllOrigins && len(corsCfg.AllowOrigins) == 0 {
-		panic("CORS_ALLOW_ORIGINS or CORS_ALLOW_ALL_ORIGINS must be set")
-	}
+	corsCfg.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 
 	router := gin.New()
 	router.Use(cors.New(corsCfg))
