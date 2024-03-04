@@ -103,14 +103,14 @@ spec:
         resources:
 {{ toYaml .Values.resources | indent 12 }}
         volumeMounts:
-          - mountPath: { { .Values.env.CONFIG_PATH } }
+          - mountPath: {{ .Values.env.CONFIG_PATH }}
             name: config
             subPath: config.yaml
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       volumes:
         - name: config
           configMap:
-            name: { { .Values.service.name } }-config
+            name: {{ .Values.service.name }}-config
       imagePullSecrets:
 {{- range $pval := .Values.jx.imagePullSecrets }}
       - name: {{ quote $pval }}
