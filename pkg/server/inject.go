@@ -30,7 +30,7 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	corsCfg.AllowOrigins = cfg.Cors.AllowOrigins
 	corsCfg.AllowAllOrigins = cfg.Cors.AllowAllOrigins
 	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	corsCfg.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	corsCfg.AllowHeaders = cfg.Cors.AllowHeaders
 
 	router := gin.New()
 	router.Use(cors.New(corsCfg))
