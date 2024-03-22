@@ -2,7 +2,7 @@ apiVersion: v2
 description: A Helm chart for Peacock Service on Kubernetes
 icon: https://raw.githubusercontent.com/spring-financial-group/peacock/main/images/peacock.png
 name: peacock
-version: 0.1.0-SNAPSHOT
+version: 1.8.5
 
 dependencies:
   - name: mongodb
