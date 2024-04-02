@@ -91,6 +91,12 @@ func TestMarkdown_Converters(t *testing.T) {
 			expectedSlack: "☒ No impact to reporting\n☒ No impact to downstream services",
 			expectedHTML:  "<ul>\n<li>[x] No impact to reporting</li>\n<li>[X] No impact to downstream services</li>\n</ul>\n",
 		},
+		{
+			name:          "GithubLinkReplacement",
+			inputMarkdown: "spring-financial-group/mqube-property-service#770",
+			expectedSlack: "<spring-financial-group/mqube-property-service#770|https://github.com/spring-financial-group/mqube-property-service/pull/770>",
+			expectedHTML:  "<p>spring-financial-group/mqube-property-service#770</p>\n",
+		},
 	}
 
 	for _, tt := range testCases {
