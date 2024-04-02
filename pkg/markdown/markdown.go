@@ -61,6 +61,10 @@ func ConvertToSlack(markdown string) string {
 	regex = regexp.MustCompile(`\[([^]]+)]\(([^)]+)\)`)
 	markdown = regex.ReplaceAllString(markdown, "<$2|$1>")
 
+	// Convert GitHub links (<ORG>/<REPO_NAME>#<PR> -> <https://<github.com/<ORG>/<REPO_NAME>/pull/<PR>|text>)
+	regex = regexp.MustCompile(`([^/]+)/([^/]+)#(\d+)`)
+	markdown = regex.ReplaceAllString(markdown, "<$0|https://github.com/$1/$2/pull/$3>")
+
 	return markdown
 }
 
