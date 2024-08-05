@@ -16,3 +16,5 @@ serviceSecretName: "peacock"
 mongodb:
   persistence:
     enabled: false
+  auth:
+    existingSecret: "peacock-mongodb"
