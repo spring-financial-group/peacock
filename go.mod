@@ -1,6 +1,6 @@
 module github.com/spring-financial-group/peacock
 
-go 1.19
+go 1.22
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
