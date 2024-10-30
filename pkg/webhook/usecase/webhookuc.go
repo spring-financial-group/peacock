@@ -154,14 +154,14 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return errors.Wrap(err, "failed to get changed files from pr")
 	}
 
-	changedEnvironment := w.getChangedEnv(files)
-	if changedEnvironment == "" {
-		return w.handleError(ctx, domain.ReleaseContext, e, errors.New("no environment found in helmfiles"))
-	}
-
-	err = w.releaseUC.SaveRelease(ctx, changedEnvironment, releaseNotes, e.Summary())
-	if err != nil {
-		return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to save release"))
+	if changedEnvironment := w.getChangedEnv(files); changedEnvironment != "" {
+		log.Infof("saving release for environment %s", changedEnvironment)
+		err = w.releaseUC.SaveRelease(ctx, changedEnvironment, releaseNotes, e.Summary())
+		if err != nil {
+			return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to save release"))
+		}
+	} else {
+		log.Warn("environment not found for release, skipping save")
 	}
 
 	err = w.createCommitStatus(ctx, e, domain.SuccessState, defaultSHA, domain.ReleaseContext)

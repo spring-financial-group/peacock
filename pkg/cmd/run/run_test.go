@@ -179,7 +179,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			mockHash := "SomeReallyGoodHash"
 
 			mockNotesUC.On("GenerateHash", tt.inputMessages).Return(mockHash, nil)
-			mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), "", "", 0).Return(tt.returnedComments, nil).Once()
+			mockSCM.On("GetPRComments", mock.Anything, "", "", 0).Return(tt.returnedComments, nil).Once()
 
 			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
 			assert.NoError(t, err)
@@ -259,12 +259,12 @@ func TestOptions_Run(t *testing.T) {
 			mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
 			mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, len(allTeams)).Return(mockBreakdown, nil)
 
-			mockSCM.On("GetPullRequestBodyFromPRNumber", mock.AnythingOfType("*context.emptyCtx"), "spring-financial-group", "peacock", 1).Return(tt.prBody, nil).Once()
-			mockSCM.On("CommentOnPR", mock.AnythingOfType("*context.emptyCtx"), "spring-financial-group", "peacock", 1, mock.AnythingOfType("string")).Return(nil).Once()
-			mockSCM.On("GetPRComments", mock.AnythingOfType("*context.emptyCtx"), "spring-financial-group", "peacock", 1).Return(nil, nil)
+			mockSCM.On("GetPullRequestBodyFromPRNumber", mock.Anything, "spring-financial-group", "peacock", 1).Return(tt.prBody, nil).Once()
+			mockSCM.On("CommentOnPR", mock.Anything, "spring-financial-group", "peacock", 1, mock.AnythingOfType("string")).Return(nil).Once()
+			mockSCM.On("GetPRComments", mock.Anything, "spring-financial-group", "peacock", 1).Return(nil, nil)
 		} else {
 			mockGitClient.On("GetLatestCommitSHA", "").Return("SHA", nil)
-			mockSCM.On("GetPullRequestBodyFromCommit", mock.AnythingOfType("*context.emptyCtx"), "spring-financial-group", "peacock", "SHA").Return(tt.prBody, nil).Once()
+			mockSCM.On("GetPullRequestBodyFromCommit", mock.Anything, "spring-financial-group", "peacock", "SHA").Return(tt.prBody, nil).Once()
 		}
 
 		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", *tt.prBody, allTeams).Return(mockNotes, nil)
