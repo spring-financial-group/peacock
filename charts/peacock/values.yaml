@@ -53,7 +53,7 @@ deploymentLabels: {}
 
 image:
   repository: "mqubeoss.azurecr.io/spring-financial-group/peacock"
-  tag: dev
+  tag: 1.9.4
   pullPolicy: IfNotPresent
 
 # optional list of image pull secrets to use to pull images
