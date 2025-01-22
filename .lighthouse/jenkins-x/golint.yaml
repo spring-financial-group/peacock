@@ -14,7 +14,7 @@ spec:
             - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
               name: ""
               resources: {}
-            - image: uses:spring-financial-group/DevOps/pipelines/golang-lint.yaml@main
+            - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/go/golang-lint.yaml@main
               name: ""
               resources: {}
   podTemplate: {}
