@@ -45,12 +45,12 @@ spec:
           script: |
             #!/bin/sh
             make build
-        - image: uses:spring-financial-group/DevOps/pipelines/sonar-scanner-pr.yaml@main
+        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/sonar/sonar-scanner-pr.yaml@main
           name: ""
-        - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push-oss.yaml@main
+        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/build-scan-push/build-scan-push-oss.yaml@main
           name: ""
           resources: {}
-        - image: uses:spring-financial-group/DevOps/pipelines/preview-copy-secrets.yaml@main
+        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/tools/preview-copy-secrets.yaml@main
           name: ""
           resources: {}
         - name: promote-jx-preview
