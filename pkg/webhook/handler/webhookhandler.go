@@ -33,6 +33,7 @@ func (h *Handler) RegisterGitHubHooks() {
 	h.OnPullRequestEventReopened(h.handlePullRequestOpenedEvent)
 	h.OnPullRequestEventClosed(h.handlePullRequestClosedEvent)
 	h.OnPullRequestEventEdited(h.handlePullRequestEditEvent)
+	h.OnIssueCommentEventCreated(h.handleIssueCommentCreatedEvent)
 }
 
 // HandleEvents godoc
@@ -87,4 +88,15 @@ func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.P
 		return nil
 	}
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
+}
+
+// handleIssueCommentCreatedEvent starts a dry-run when a PR has been edited (e.g. body/title changed)
+func (h *Handler) handleIssueCommentCreatedEvent(_ string, _ string, event *github.IssueCommentEvent) error {
+	log.Infof("%s/PR-%d comments edited. Starting dry-run.", *event.Repo.Name, *event.Issue.Number)
+	if *event.Issue.State == models.ClosedState {
+		// No need to handle closed
+		log.Info("PR is closed. Skipping.")
+		return nil
+	}
+	return h.useCase.ValidatePeacockComments(models.MarshalIssueCommentCreatedEvent(event))
 }

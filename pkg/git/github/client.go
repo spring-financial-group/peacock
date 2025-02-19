@@ -76,6 +76,14 @@ func (c *Client) GetPullRequestBodyFromPRNumber(ctx context.Context, owner, repo
 	return pr.Body, nil
 }
 
+func (c *Client) GetPRBranchSHAFromPRNumber(ctx context.Context, owner, repoName string, prNumber int) (*string, *string, error) {
+	pr, _, err := c.github.PullRequests.Get(ctx, owner, repoName, prNumber)
+	if err != nil {
+		return nil, nil, err
+	}
+	return pr.Head.Ref, pr.Head.SHA, nil
+}
+
 func (c *Client) CommentOnPR(ctx context.Context, owner, repoName string, prNumber int, body string) error {
 	_, _, err := c.github.Issues.CreateComment(ctx, owner, repoName, prNumber, &github.IssueComment{Body: &body})
 	if err != nil {
