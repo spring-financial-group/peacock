@@ -33,7 +33,7 @@ func (h *Handler) RegisterGitHubHooks() {
 	h.OnPullRequestEventReopened(h.handlePullRequestOpenedEvent)
 	h.OnPullRequestEventClosed(h.handlePullRequestClosedEvent)
 	h.OnPullRequestEventEdited(h.handlePullRequestEditEvent)
-	h.OnIssueCommentEventCreated(h.handleIssueCommentCreatedEvent)
+	h.OnIssueCommentCreated(h.handleIssueCommentCreatedEvent)
 }
 
 // HandleEvents godoc
