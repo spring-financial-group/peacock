@@ -4,7 +4,7 @@ import (
 	"github.com/google/go-github/v48/github"
 )
 
-// MarshalIssueCommentCreatedEvent marshals a github.IssueCommentEvent into a IssueCommentEventDTO
+// MarshalIssueCommentCreatedEvent marshals a github.IssueCommentEvent into a PullRequestEventDTO
 func MarshalIssueCommentCreatedEvent(event *github.IssueCommentEvent) *PullRequestEventDTO {
 	return &PullRequestEventDTO{
 		PullRequestID: *event.Issue.ID,

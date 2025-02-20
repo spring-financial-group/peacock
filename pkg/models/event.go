@@ -6,7 +6,7 @@ const (
 	ClosedState = "closed"
 )
 
-// PullRequestEventDTO is a data transfer object for the PullRequestEvent. It reduces the amount of data that is held
+// PullRequestEventDTO is a data transfer object for the PullRequestEvent & IssueCommentEvent. It reduces the amount of data that is held
 // by the service.
 type PullRequestEventDTO struct {
 	PullRequestID int64
@@ -19,7 +19,6 @@ type PullRequestEventDTO struct {
 	Branch        string
 	DefaultBranch string
 }
-
 
 // PullRequestSummary is a summary of the PR details to be stored alongside release notes
 type PullRequestSummary struct {
