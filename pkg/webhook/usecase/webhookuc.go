@@ -2,6 +2,8 @@ package webhookuc
 
 import (
 	"context"
+	"strings"
+
 	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -9,7 +11,6 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/models"
-	"strings"
 )
 
 type WebHookUseCase struct {
@@ -35,6 +36,17 @@ func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseC
 
 func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
+
+	// Get PR for SHA
+	if e.Branch == "" {
+		branch, sha, err := w.scm.GetPRBranchSHAFromPRNumber(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
+		if err != nil {
+			println("failed to get PR details")
+			return w.handleError(ctx, domain.ValidationContext, e, err)
+		}
+		e.Branch = *branch
+		e.SHA = *sha
+	}
 
 	// Set the current pipeline status to pending
 	if err := w.createCommitStatus(ctx, e, domain.PendingState, e.SHA, domain.ValidationContext); err != nil {

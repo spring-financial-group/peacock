@@ -37,6 +37,8 @@ type SCM interface {
 	GetPullRequestBodyFromCommit(ctx context.Context, owner, repoName, sha string) (*string, error)
 	// GetPullRequestBodyFromPRNumber returns the body of a pull request from pr number
 	GetPullRequestBodyFromPRNumber(ctx context.Context, owner, repoName string, prNumber int) (*string, error)
+	// GetPRBranchSHAFromPRNumber returns the Branch and Head SHA of a pull request from pr number
+	GetPRBranchSHAFromPRNumber(ctx context.Context, owner, repoName string, prNumber int) (*string, *string, error)
 	// CommentOnPR posts a comment on a pull request given the pr number
 	CommentOnPR(ctx context.Context, owner, repoName string, prNumber int, body string) error
 	// CommentError posts an error comment on a pull request given the pr number
