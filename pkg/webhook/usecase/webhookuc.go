@@ -37,6 +37,15 @@ func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseC
 func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	ctx := context.Background()
 
+	// Get PR for SHA
+	if e.Branch == "" {
+		e.Branch, e.SHA, err = w.scm.GetPRBranchSHAFromPRNumber(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
+		if err != nil {
+			println("failed to get PR details")
+			return w.handleError(ctx, domain.ValidationContext, e, err)
+		}
+	}
+
 	// Set the current pipeline status to pending
 	if err := w.createCommitStatus(ctx, e, domain.PendingState, e.SHA, domain.ValidationContext); err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to create pending status"))

@@ -90,7 +90,7 @@ func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.P
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
 
-// handleIssueCommentCreatedEvent starts a dry-run when a PR has been edited (e.g. body/title changed)
+// handleIssueCommentCreatedEvent starts a dry-run when a comment has been created on a PR
 func (h *Handler) handleIssueCommentCreatedEvent(_ string, _ string, event *github.IssueCommentEvent) error {
 	log.Infof("%s/PR-%d comments edited. Starting dry-run.", *event.Repo.Name, *event.Issue.Number)
 	if *event.Issue.State == models.ClosedState {
@@ -98,5 +98,5 @@ func (h *Handler) handleIssueCommentCreatedEvent(_ string, _ string, event *gith
 		log.Info("PR is closed. Skipping.")
 		return nil
 	}
-	return h.useCase.ValidatePeacockComments(models.MarshalIssueCommentCreatedEvent(event))
+	return h.useCase.ValidatePeacock(models.MarshalIssueCommentCreatedEvent(event))
 }
