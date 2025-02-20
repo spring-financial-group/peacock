@@ -4,12 +4,6 @@ import (
 	"github.com/google/go-github/v48/github"
 )
 
-// Pull request states
-const (
-	OpenState   = "open"
-	ClosedState = "closed"
-)
-
 // MarshalIssueCommentCreatedEvent marshals a github.IssueCommentEvent into a IssueCommentEventDTO
 func MarshalIssueCommentCreatedEvent(event *github.IssueCommentEvent) *PullRequestEventDTO {
 	return &PullRequestEventDTO{

@@ -1,7 +1,9 @@
 package models
 
-import (
-	"github.com/google/go-github/v48/github"
+// Pull request states
+const (
+	OpenState   = "open"
+	ClosedState = "closed"
 )
 
 // PullRequestEventDTO is a data transfer object for the PullRequestEvent. It reduces the amount of data that is held
