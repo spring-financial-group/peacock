@@ -99,9 +99,9 @@ func TestMarkdown_Converters(t *testing.T) {
 		},
 		{
 			name:          "ImageConversion",
-			inputMarkdown: "However, when they click proceed, a new dialog appears:  \n\n![image](https://github.com/user-attachments/assets/fc9c1ee1-a8a1-4006-b46c-f1eb94c9c60f)",
-			expectedSlack: "However, when they click proceed, a new dialog appears:  \n\n!<https://github.com/user-attachments/assets/fc9c1ee1-a8a1-4006-b46c-f1eb94c9c60f|image>",
-			expectedHTML:  "<p>However, when they click proceed, a new dialog appears:</p>\n<p><img src=\"https://github.com/user-attachments/assets/fc9c1ee1-a8a1-4006-b46c-f1eb94c9c60f\" alt=\"image\"></p>\n",
+			inputMarkdown: "However, when they click proceed, a new dialog appears:  \n\n![800px-Sunflower_from_Silesia2](https://github.com/user-attachments/assets/08ee90e0-8b35-4072-9656-0435a5126614)",
+			expectedSlack: "However, when they click proceed, a new dialog appears:  \n\n!<https://github.com/user-attachments/assets/08ee90e0-8b35-4072-9656-0435a5126614|800px-Sunflower_from_Silesia2>",
+			expectedHTML:  "<p>However, when they click proceed, a new dialog appears:</p>\n<p><img src=\"https://github.com/user-attachments/assets/08ee90e0-8b35-4072-9656-0435a5126614\" alt=\"800px-Sunflower_from_Silesia2\"></p>\n",
 		},
 	}
 
