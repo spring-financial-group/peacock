@@ -67,11 +67,22 @@ func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeather
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get teams by name")
 		}
-
+		m = uc.removeBotGeneratedText(m)
 		notes[i].Content = strings.TrimSpace(m)
 		notes[i].Teams = teamsInNote
 	}
 	return notes, nil
+}
+
+var (
+	// This regex is used to find all the bot generated text in the markdown
+	// Bot generated text is of the form `[//]: # (some-bot-tag)`
+	botGeneratedTextRegex = regexp.MustCompile(`\[//\]: # \((.*)\)`)
+)
+
+func (uc *UseCase) removeBotGeneratedText(text string) string {
+	// We want to remove all of these from the text and
+	return botGeneratedTextRegex.ReplaceAllString(text, "")
 }
 
 func (uc *UseCase) getAndValidateTeamsByNames(teamNames []string, teamsInFeathers models.Teams) (models.Teams, error) {
