@@ -225,6 +225,20 @@ func TestParse(t *testing.T) {
 			expectedNotes: nil,
 			shouldError:   true,
 		},
+		{
+			name:          "RemoveBotGeneratedText",
+			inputMarkdown: "### Notify infrastructure\nTest Content\n\n[//]: # (some-bot-content)\n### Notify devs\nMore Test Content",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Test Content",
+				},
+				{
+					Teams:   models.Teams{devsTeam},
+					Content: "More Test Content",
+				},
+			},
+		},
 	}
 
 	for _, tt := range testCases {
