@@ -193,6 +193,36 @@ func Test_GetFeathersFromFile_Validate(t *testing.T) {
 			},
 			shouldError: true,
 		},
+		{
+			name: "TeamWithNoneContactType",
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
+					{
+						Name:        "infrastructure",
+						ContactType: "none",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
+						Addresses:   []string{},
+					},
+				},
+			},
+			shouldError: false,
+		},
+		{
+			name: "TeamWithNoneContactTypeButAddresses",
+			expectedConfig: models.Feathers{
+				Teams: []models.Team{
+					{
+						Name:        "infrastructure",
+						ContactType: "none",
+						APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
+						Addresses: []string{
+							"SomeAddressThatShouldn'tExist",
+						},
+					},
+				},
+			},
+			shouldError: true,
+		},
 	}
 
 	baseDir, fullPath, err := utils.CreateTestDir(".peacock")

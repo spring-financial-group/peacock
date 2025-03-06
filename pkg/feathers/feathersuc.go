@@ -84,12 +84,16 @@ func (uc *UseCase) validateTeam(t models.Team) error {
 	if t.Name == "" {
 		return errors.New("no team name found")
 	}
-	if t.Addresses == nil {
-		return errors.Errorf("no addresses for team %s", t.Name)
-	}
 	if t.ContactType == "" {
 		return errors.Errorf("no contactType for team %s", t.Name)
 	}
+	if len(t.Addresses) == 0 && t.ContactType != models.None {
+		return errors.Errorf("no addresses for team %s", t.Name)
+	}
+	if len(t.Addresses) > 0 && t.ContactType == models.None {
+		return errors.Errorf("addresses found for team %s with contactType of none", t.Name)
+	}
+
 	if t.APIKey == "" {
 		return errors.Errorf("no APIKey for team %s", t.Name)
 	}

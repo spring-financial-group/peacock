@@ -29,11 +29,17 @@ var (
 		ContactType: models.Webhook,
 		Addresses:   []string{"Webhook3", "Webhook4"},
 	}
+	testingTeam = models.Team{
+		Name:        "testing",
+		ContactType: models.None,
+		Addresses:   nil,
+	}
 	allTeams = models.Teams{
 		infraTeam,
 		devsTeam,
 		supportTeam,
 		productTeam,
+		testingTeam,
 	}
 )
 
@@ -52,6 +58,13 @@ func TestHandler_SendMessage(t *testing.T) {
 	}{
 		{
 			name: "Default",
+			inputMessage: models.ReleaseNote{
+				Teams:   allTeams,
+				Content: "Test message content",
+			},
+		},
+		{
+			name: "NoneTeam",
 			inputMessage: models.ReleaseNote{
 				Teams:   allTeams,
 				Content: "Test message content",
