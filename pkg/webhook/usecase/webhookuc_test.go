@@ -46,13 +46,13 @@ var (
 	infraTeam = models.Team{
 		Name:        "infrastructure",
 		APIKey:      "some-api-key",
-		Addresses:   []string{},
+		Addresses:   []string{"C02TE2EMTMK"},
 		ContactType: models.Slack,
 	}
 	productTeam = models.Team{
 		Name:        "product",
 		APIKey:      "another-api-key",
-		Addresses:   []string{},
+		Addresses:   []string{"C02TE2EMTML"},
 		ContactType: models.Webhook,
 	}
 	allTeams = models.Teams{

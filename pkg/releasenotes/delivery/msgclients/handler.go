@@ -25,6 +25,7 @@ func NewMessageHandler(cfg *config.MessageHandlers) *Handler {
 		log.Info("Webhook message handler initialised")
 		clients[models.Webhook] = webhook.NewClient(cfg.Webhook.URL, cfg.Webhook.Token, cfg.Webhook.Secret)
 	}
+
 	return &Handler{
 		Clients: clients,
 	}
@@ -50,6 +51,10 @@ func (h *Handler) sendNote(note models.ReleaseNote, subject string) error {
 	// We should pool the addresses by contact type so that we only send one note per contact type
 	addressPool := note.Teams.GetAddressPool()
 	for contactType, addresses := range addressPool {
+		if contactType == models.None {
+			continue
+		}
+
 		err := h.Clients[contactType].Send(note.Content, subject, addresses)
 		if err != nil {
 			return errors.Wrapf(err, "failed to send note")
@@ -61,5 +66,5 @@ func (h *Handler) sendNote(note models.ReleaseNote, subject string) error {
 
 func (h *Handler) IsInitialised(contactType string) bool {
 	_, ok := h.Clients[contactType]
-	return ok
+	return ok || contactType == models.None
 }
