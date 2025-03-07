@@ -227,11 +227,11 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:          "RemoveBotGeneratedText",
-			inputMarkdown: "### Notify infrastructure\nTest Content\n\n[//]: # (some-bot-content)\n### Notify devs\nMore Test Content",
+			inputMarkdown: "### Notify infrastructure\nTest Content\n\n[//]: # (some-bot-content)\nAnother bit of content\n### Notify devs\nMore Test Content",
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
-					Content: "Test Content",
+					Content: "Test Content\n\nAnother bit of content",
 				},
 				{
 					Teams:   models.Teams{devsTeam},
