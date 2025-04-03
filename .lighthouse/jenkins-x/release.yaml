@@ -79,7 +79,7 @@ spec:
           script: |
             #!/usr/bin/env sh
             echo "export GH_TOKEN=\"$(kubectl get secret peacock -n jx-staging -o jsonpath="{.data['git-token']}" | base64 -d)\"" >> .jx/variables.sh
-        - image: tomhobson/github-cli:latest
+        - image: jx3mqubebuild.azurecr.io/spring-financial-group/container-tools:latest
           name: push-release
           script: |
             #!/usr/bin/env bash
