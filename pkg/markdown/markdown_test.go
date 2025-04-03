@@ -97,6 +97,12 @@ func TestMarkdown_Converters(t *testing.T) {
 			expectedSlack: "<spring-financial-group/mqube-property-service#770|https://github.com/spring-financial-group/mqube-property-service/pull/770>",
 			expectedHTML:  "<p>spring-financial-group/mqube-property-service#770</p>\n",
 		},
+		{
+			name:          "ImageConversion",
+			inputMarkdown: "However, when they click proceed, a new dialog appears:  \n\n![800px-Sunflower_from_Silesia2](https://github.com/user-attachments/assets/08ee90e0-8b35-4072-9656-0435a5126614)",
+			expectedSlack: "However, when they click proceed, a new dialog appears:  \n\n!<https://github.com/user-attachments/assets/08ee90e0-8b35-4072-9656-0435a5126614|800px-Sunflower_from_Silesia2>",
+			expectedHTML:  "<p>However, when they click proceed, a new dialog appears:</p>\n<p><img src=\"https://github.com/user-attachments/assets/08ee90e0-8b35-4072-9656-0435a5126614\" alt=\"800px-Sunflower_from_Silesia2\"></p>\n",
+		},
 	}
 
 	for _, tt := range testCases {
