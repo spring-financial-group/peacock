@@ -77,7 +77,7 @@ func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeather
 var (
 	// This regex is used to find all the bot generated text in the markdown
 	// Bot generated text is of the form `[//]: # (some-bot-tag)`
-	botGeneratedTextRegex = regexp.MustCompile(`\n\[//\]: # \((.*)\)`)
+	botGeneratedTextRegex = regexp.MustCompile(`\n?\[//\]: # \((.*)\)`)
 )
 
 func (uc *UseCase) removeBotGeneratedText(text string) string {
