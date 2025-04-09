@@ -64,7 +64,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ValidationContext, e, err)
 	}
 
-	releaseNotes, err := w.notesUC.GetReleaseNotesFromMDAndTeams(e.Body, feathers.Teams)
+	releaseNotes, err := w.notesUC.GetReleaseNotesFromMDAndTeams(e.Body, feathers.Teams, false)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to parse release notes from markdown"))
 	}
@@ -146,7 +146,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Parse the PR body for any releaseNotes
-	releaseNotes, err := w.notesUC.GetReleaseNotesFromMDAndTeams(e.Body, feathers.Teams)
+	releaseNotes, err := w.notesUC.GetReleaseNotesFromMDAndTeams(e.Body, feathers.Teams, false)
 	if err != nil {
 		return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to parse release notes from markdown"))
 	}
