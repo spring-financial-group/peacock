@@ -32,12 +32,16 @@ var (
 		Name:        "teamWithBadContactType",
 		ContactType: "bad",
 	}
+	teamWithNoInfo = models.Team{
+		Name: "teamWithNoInfo",
+	}
 	allTeams = models.Teams{
 		devsTeam,
 		infraTeam,
 		mlTeam,
 		productTeam,
 		teamWithBadContactType,
+		teamWithNoInfo,
 	}
 )
 
@@ -50,14 +54,17 @@ func TestParse(t *testing.T) {
 	})
 
 	testCases := []struct {
-		name          string
-		inputMarkdown string
-		expectedNotes []models.ReleaseNote
-		shouldError   bool
+		name              string
+		inputMarkdown     string
+		inputTeams        models.Teams
+		disableValidation bool
+		expectedNotes     []models.ReleaseNote
+		shouldError       bool
 	}{
 		{
 			name:          "Passing",
 			inputMarkdown: "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam, devsTeam},
@@ -73,6 +80,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "CommaSeparatedVaryingWhiteSpace",
 			inputMarkdown: "### Notify infrastructure,devs, ml , product\nTest Content\n",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam, devsTeam, mlTeam, productTeam},
@@ -84,6 +92,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "HeadingsInContent",
 			inputMarkdown: "### Notify infrastructure\n### Test Content\nThis is some content with headers\n#### Another different header",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -95,6 +104,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "PrefaceToMessages",
 			inputMarkdown: "# Title to the PR\nSome information about the pr\n### Notify infrastructure\nTest Content",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -106,24 +116,28 @@ func TestParse(t *testing.T) {
 		{
 			name:          "NoInputMarkdown",
 			inputMarkdown: "",
+			inputTeams:    allTeams,
 			expectedNotes: nil,
 			shouldError:   false,
 		},
 		{
 			name:          "NoMessages",
 			inputMarkdown: "# Title to the PR\nSome information about the pr\n",
+			inputTeams:    allTeams,
 			expectedNotes: nil,
 			shouldError:   false,
 		},
 		{
 			name:          "NoTeams",
 			inputMarkdown: "### Notify ",
+			inputTeams:    allTeams,
 			expectedNotes: nil,
 			shouldError:   false,
 		},
 		{
 			name:          "MultipleMessages",
 			inputMarkdown: "### Notify infrastructure\nTest Content\n### Notify ml\nMore test content\n",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -139,6 +153,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "MultipleTeamsInOneMessage",
 			inputMarkdown: "### Notify infrastructure, ml, devs\nTest Content\n",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam, mlTeam, devsTeam},
@@ -150,6 +165,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "AdditionalNewLines",
 			inputMarkdown: "\n\n### Notify infrastructure\nTest Content\n\n\n",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -161,6 +177,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "MultiLineContent",
 			inputMarkdown: "### Notify infrastructure\nThis is an example\nThat runs\nAcross multiple\nlines",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -172,6 +189,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "Lists",
 			inputMarkdown: "### Notify infrastructure\nHere's a list of what we've done\n\t- Fixes\n\t- Features\n\t- bugs",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -183,6 +201,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "WhitespaceAfterTeamName",
 			inputMarkdown: "\n### Notify infrastructure   \nTest Content",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -194,6 +213,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "ExtraWhitespaceBetweenTeamNames",
 			inputMarkdown: "\n### Notify infrastructure   ,    ml ,   product\nTest Content",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam, mlTeam, productTeam},
@@ -205,6 +225,7 @@ func TestParse(t *testing.T) {
 		{
 			name:          "NoWhitespaceBeforeTeamName",
 			inputMarkdown: "# Peacock\r\n## ReleaseNote\n### Notifyinfrastructure\nTest Content",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -216,18 +237,21 @@ func TestParse(t *testing.T) {
 		{
 			name:          "TeamDoesNotExist",
 			inputMarkdown: "### Notify NoneExistentPeople\nTest Content",
+			inputTeams:    allTeams,
 			expectedNotes: nil,
 			shouldError:   true,
 		},
 		{
 			name:          "InvalidContactType",
 			inputMarkdown: "### Notify teamWithBadContactType\nTest Content",
+			inputTeams:    allTeams,
 			expectedNotes: nil,
 			shouldError:   true,
 		},
 		{
 			name:          "RemoveBotGeneratedText",
 			inputMarkdown: "### Notify infrastructure\n[//]: # (beaver-start)\nTest Content\n\n[//]: # (some-bot-content)\nAnother bit of content\n### Notify devs\nMore Test Content",
+			inputTeams:    allTeams,
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -239,11 +263,44 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:              "InputTeamMissingInfo",
+			inputMarkdown:     "### Notify teamWithNoInfo\nTest Content\n\n",
+			inputTeams:        models.Teams{teamWithNoInfo},
+			disableValidation: false,
+			expectedNotes:     nil,
+			shouldError:       true,
+		},
+		{
+			name:              "InputTeamMissingInfo-DisableValidation",
+			inputMarkdown:     "### Notify teamWithNoInfo\nTest Content",
+			inputTeams:        models.Teams{teamWithNoInfo},
+			disableValidation: true,
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{teamWithNoInfo},
+					Content: "Test Content",
+				},
+			},
+		},
+
+		{
+			name:              "DisableValidation-OnlyExtractRequestedTeam",
+			inputMarkdown:     "### Notify teamWithNoInfo, someTeamWeDon'tCareAbout\nTest Content\n\n### Notify anotherTeamWeDon'tCareAbout\nTest Content",
+			inputTeams:        models.Teams{teamWithNoInfo},
+			disableValidation: true,
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{teamWithNoInfo},
+					Content: "Test Content",
+				},
+			},
+		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMessages, err := uc.GetReleaseNotesFromMDAndTeams(tt.inputMarkdown, allTeams)
+			actualMessages, err := uc.GetReleaseNotesFromMDAndTeams(tt.inputMarkdown, tt.inputTeams, tt.disableValidation)
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)

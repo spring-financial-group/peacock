@@ -6,7 +6,7 @@ import (
 
 type ReleaseNotesUseCase interface {
 	// GetReleaseNotesFromMDAndTeams parses release notes from a markdown string attaching the corresponding teams
-	GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error)
+	GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams, disableValidation bool) ([]models.ReleaseNote, error)
 	// GenerateHash generates a SHA256 hash of the json of a slice of release notes
 	GenerateHash(messages []models.ReleaseNote) (string, error)
 	// GenerateBreakdown generates a markdown string breaking down the release notes

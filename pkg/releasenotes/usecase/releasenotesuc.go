@@ -43,7 +43,7 @@ func NewUseCase(msgClientsHandler domain.MessageHandler) *UseCase {
 	return &UseCase{msgClientsHandler}
 }
 
-func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
+func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams, disableValidation bool) ([]models.ReleaseNote, error) {
 	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
 	if err != nil {
 		return nil, err
@@ -60,16 +60,22 @@ func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeather
 	contents := teamNameReg.Split(markdown, -1)
 	contents = contents[1:]
 
-	notes := make([]models.ReleaseNote, len(contents))
+	var notes []models.ReleaseNote
 	for i, m := range contents {
 		teamsNamesInNote := teamNames[i]
-		teamsInNote, err := uc.getAndValidateTeamsByNames(teamsNamesInNote, teamsInFeathers)
+		teamsInNote, err := uc.getAndValidateTeamsByNames(teamsNamesInNote, teamsInFeathers, disableValidation)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get teams by name")
 		}
+		if len(teamsInNote) == 0 {
+			continue
+		}
+
 		m = uc.removeBotGeneratedText(m)
-		notes[i].Content = strings.TrimSpace(m)
-		notes[i].Teams = teamsInNote
+		notes = append(notes, models.ReleaseNote{
+			Teams:   teamsInNote,
+			Content: strings.TrimSpace(m),
+		})
 	}
 	return notes, nil
 }
@@ -85,11 +91,17 @@ func (uc *UseCase) removeBotGeneratedText(text string) string {
 	return botGeneratedTextRegex.ReplaceAllString(text, "")
 }
 
-func (uc *UseCase) getAndValidateTeamsByNames(teamNames []string, teamsInFeathers models.Teams) (models.Teams, error) {
-	if err := teamsInFeathers.Contains(teamNames...); err != nil {
-		return nil, err
+func (uc *UseCase) getAndValidateTeamsByNames(teamNames []string, teamsInFeathers models.Teams, disableValidation bool) (models.Teams, error) {
+	if !disableValidation {
+		if err := teamsInFeathers.Contains(teamNames...); err != nil {
+			return nil, err
+		}
 	}
 	wantedTeams := teamsInFeathers.GetTeamsByNames(teamNames...)
+	if disableValidation {
+		return wantedTeams, nil
+	}
+
 	for _, team := range wantedTeams {
 		if !uc.MsgClientsHandler.IsInitialised(team.ContactType) {
 			return nil, errors.New(fmt.Sprintf("communication method %s has not been configured", team.ContactType))
