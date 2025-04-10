@@ -74,6 +74,14 @@ func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeather
 	return notes, nil
 }
 
+func (uc *UseCase) GetMarkdownFromReleaseNotes(notes []models.ReleaseNote) string {
+	var markdown string
+	for _, note := range notes {
+		markdown += fmt.Sprintf("### Notify %s\n%s\n\n", utils.CommaSeparated(note.Teams.GetAllTeamNames()), note.Content)
+	}
+	return strings.TrimSpace(markdown)
+}
+
 var (
 	// This regex is used to find all the bot generated text in the markdown
 	// Bot generated text is of the form `[//]: # (some-bot-tag)`

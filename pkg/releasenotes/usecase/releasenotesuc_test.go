@@ -302,3 +302,43 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		})
 	}
 }
+
+func TestUseCase_GetMarkdownFromReleaseNotes(t *testing.T) {
+	testCases := []struct {
+		name     string
+		notes    []models.ReleaseNote
+		expected string
+	}{
+		{
+			name: "SingleNote",
+			notes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			expected: "### Notify infrastructure\nNew release of some infrastructure\nrelated things",
+		},
+		{
+			name: "MultipleNotes",
+			notes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New release of some infrastructure\nrelated things",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "New release of some ml\nrelated things",
+				},
+			},
+			expected: "### Notify infrastructure\nNew release of some infrastructure\nrelated things\n\n### Notify ml\nNew release of some ml\nrelated things",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := NewUseCase(nil)
+			actual := uc.GetMarkdownFromReleaseNotes(tc.notes)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
