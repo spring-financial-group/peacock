@@ -5,8 +5,12 @@ import (
 )
 
 type ReleaseNotesUseCase interface {
-	// GetReleaseNotesFromMDAndTeams parses release notes from a markdown string attaching the corresponding teams
-	GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error)
+	// GetReleaseNotesFromMarkdownAndTeamsInFeathers parses release notes from a markdown string attaching the corresponding teams from feathers
+	GetReleaseNotesFromMarkdownAndTeamsInFeathers(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error)
+	// PopulateTeamsInReleaseNotes populates the teams in the release notes with the corresponding teams in feathers
+	PopulateTeamsInReleaseNotes(releaseNotes []models.ReleaseNote, teamsInFeathers models.Teams) error
+	// ParseReleaseNoteFromMarkdown parses release notes from a markdown string
+	ParseReleaseNoteFromMarkdown(markdown string) ([]models.ReleaseNote, error)
 	// GetMarkdownFromReleaseNotes generates a markdown string from a slice of release notes
 	GetMarkdownFromReleaseNotes(notes []models.ReleaseNote) string
 	// GenerateHash generates a SHA256 hash of the json of a slice of release notes

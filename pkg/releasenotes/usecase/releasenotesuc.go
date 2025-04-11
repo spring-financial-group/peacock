@@ -43,7 +43,29 @@ func NewUseCase(msgClientsHandler domain.MessageHandler) *UseCase {
 	return &UseCase{msgClientsHandler}
 }
 
-func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
+func (uc *UseCase) GetReleaseNotesFromMarkdownAndTeamsInFeathers(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
+	releaseNotes, err := uc.ParseReleaseNoteFromMarkdown(markdown)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get release notes from markdown")
+	}
+	if err = uc.PopulateTeamsInReleaseNotes(releaseNotes, teamsInFeathers); err != nil {
+		return nil, errors.Wrap(err, "failed to populate teams in release notes")
+	}
+	return releaseNotes, nil
+}
+
+func (uc *UseCase) PopulateTeamsInReleaseNotes(releaseNotes []models.ReleaseNote, teamsInFeathers models.Teams) error {
+	for i, note := range releaseNotes {
+		teamsInNote, err := uc.getAndValidateTeamsByNames(note.Teams.GetAllTeamNames(), teamsInFeathers)
+		if err != nil {
+			return errors.Wrap(err, "failed to get teams by name")
+		}
+		releaseNotes[i].Teams = teamsInNote
+	}
+	return nil
+}
+
+func (uc *UseCase) ParseReleaseNoteFromMarkdown(markdown string) ([]models.ReleaseNote, error) {
 	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
 	if err != nil {
 		return nil, err
@@ -59,16 +81,17 @@ func (uc *UseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeather
 	// Get the contents for each message & trim to remove any text before the first message
 	contents := teamNameReg.Split(markdown, -1)
 	contents = contents[1:]
-
 	notes := make([]models.ReleaseNote, len(contents))
 	for i, m := range contents {
 		teamsNamesInNote := teamNames[i]
-		teamsInNote, err := uc.getAndValidateTeamsByNames(teamsNamesInNote, teamsInFeathers)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get teams by name")
-		}
 		m = uc.removeBotGeneratedText(m)
 		notes[i].Content = strings.TrimSpace(m)
+		teamsInNote := make([]models.Team, 0, len(teamsNamesInNote))
+		for _, teamName := range teamsNamesInNote {
+			teamsInNote = append(teamsInNote, models.Team{
+				Name: teamName,
+			})
+		}
 		notes[i].Teams = teamsInNote
 	}
 	return notes, nil

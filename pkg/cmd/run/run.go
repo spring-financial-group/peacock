@@ -160,7 +160,7 @@ func (o *Options) Run() error {
 	}
 
 	log.Info("Parsing messages from pull request body")
-	messages, err := o.NotesUC.GetReleaseNotesFromMDAndTeams(*prBody, o.Feathers.Teams)
+	messages, err := o.NotesUC.GetReleaseNotesFromMarkdownAndTeamsInFeathers(*prBody, o.Feathers.Teams)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse release notes from pull request")
 		o.PostErrorToPR(ctx, err)
