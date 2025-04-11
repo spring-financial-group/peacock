@@ -41,7 +41,7 @@ var (
 	}
 )
 
-func TestParse(t *testing.T) {
+func TestUseCase_GetReleaseNotesFromMarkdownAndTeamsInFeathers(t *testing.T) {
 	uc := NewUseCase(&msgclients.Handler{
 		Clients: map[string]domain.MessageClient{
 			models.Slack:   &slack.Client{},
@@ -255,6 +255,47 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestUseCase_ParseReleaseNoteFromMarkdown(t *testing.T) {
+	uc := NewUseCase(&msgclients.Handler{
+		Clients: map[string]domain.MessageClient{},
+	})
+
+	testCases := []struct {
+		name          string
+		inputMarkdown string
+		expectedNotes []models.ReleaseNote
+		shouldError   bool
+	}{
+		{
+			name:          "Passing",
+			inputMarkdown: "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{{Name: "infrastructure"}, {Name: "devs"}},
+					Content: "Test Content",
+				},
+				{
+					Teams:   models.Teams{{Name: "ml"}},
+					Content: "More Test Content",
+				},
+			},
+			shouldError: false,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			actualMessages, err := uc.ParseReleaseNoteFromMarkdown(tt.inputMarkdown)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedNotes, actualMessages)
+		})
+	}
+}
+
 func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 	uc := NewUseCase(nil)
 
@@ -332,6 +373,16 @@ func TestUseCase_GetMarkdownFromReleaseNotes(t *testing.T) {
 				},
 			},
 			expected: "### Notify infrastructure\nNew release of some infrastructure\nrelated things\n\n### Notify ml\nNew release of some ml\nrelated things",
+		},
+		{
+			name: "MultipleTeamsInOneNote",
+			notes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam, mlTeam},
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			expected: "### Notify infrastructure, ml\nNew release of some infrastructure\nrelated things",
 		},
 	}
 	for _, tc := range testCases {
