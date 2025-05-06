@@ -267,7 +267,7 @@ func TestOptions_Run(t *testing.T) {
 			mockSCM.On("GetPullRequestBodyFromCommit", mock.Anything, "spring-financial-group", "peacock", "SHA").Return(tt.prBody, nil).Once()
 		}
 
-		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", *tt.prBody, allTeams).Return(mockNotes, nil)
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", *tt.prBody, allTeams).Return(mockNotes, nil)
 
 		if !tt.opts.DryRun {
 			mockNotesUC.On("SendReleaseNotes", "New Release Notes for peacock", mockNotes).Return(nil).Once()

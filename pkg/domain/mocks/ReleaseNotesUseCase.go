@@ -12,6 +12,26 @@ type ReleaseNotesUseCase struct {
 	mock.Mock
 }
 
+// AppendReleaseNotesToExisting provides a mock function with given fields: existing, new
+func (_m *ReleaseNotesUseCase) AppendReleaseNotesToExisting(existing []models.ReleaseNote, new []models.ReleaseNote) []models.ReleaseNote {
+	ret := _m.Called(existing, new)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AppendReleaseNotesToExisting")
+	}
+
+	var r0 []models.ReleaseNote
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, []models.ReleaseNote) []models.ReleaseNote); ok {
+		r0 = rf(existing, new)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ReleaseNote)
+		}
+	}
+
+	return r0
+}
+
 // GenerateBreakdown provides a mock function with given fields: notes, hash, totalTeams
 func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
 	ret := _m.Called(notes, hash, totalTeams)
@@ -86,12 +106,12 @@ func (_m *ReleaseNotesUseCase) GetMarkdownFromReleaseNotes(notes []models.Releas
 	return r0
 }
 
-// GetReleaseNotesFromMDAndTeams provides a mock function with given fields: markdown, teamsInFeathers
-func (_m *ReleaseNotesUseCase) GetReleaseNotesFromMDAndTeams(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
+// GetReleaseNotesFromMarkdownAndTeamsInFeathers provides a mock function with given fields: markdown, teamsInFeathers
+func (_m *ReleaseNotesUseCase) GetReleaseNotesFromMarkdownAndTeamsInFeathers(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
 	ret := _m.Called(markdown, teamsInFeathers)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetReleaseNotesFromMDAndTeams")
+		panic("no return value specified for GetReleaseNotesFromMarkdownAndTeamsInFeathers")
 	}
 
 	var r0 []models.ReleaseNote
@@ -114,6 +134,54 @@ func (_m *ReleaseNotesUseCase) GetReleaseNotesFromMDAndTeams(markdown string, te
 	}
 
 	return r0, r1
+}
+
+// ParseReleaseNoteFromMarkdown provides a mock function with given fields: markdown
+func (_m *ReleaseNotesUseCase) ParseReleaseNoteFromMarkdown(markdown string) ([]models.ReleaseNote, error) {
+	ret := _m.Called(markdown)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ParseReleaseNoteFromMarkdown")
+	}
+
+	var r0 []models.ReleaseNote
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) ([]models.ReleaseNote, error)); ok {
+		return rf(markdown)
+	}
+	if rf, ok := ret.Get(0).(func(string) []models.ReleaseNote); ok {
+		r0 = rf(markdown)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ReleaseNote)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(markdown)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PopulateTeamsInReleaseNotes provides a mock function with given fields: releaseNotes, teamsInFeathers
+func (_m *ReleaseNotesUseCase) PopulateTeamsInReleaseNotes(releaseNotes []models.ReleaseNote, teamsInFeathers models.Teams) error {
+	ret := _m.Called(releaseNotes, teamsInFeathers)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PopulateTeamsInReleaseNotes")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, models.Teams) error); ok {
+		r0 = rf(releaseNotes, teamsInFeathers)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // SendReleaseNotes provides a mock function with given fields: subject, notes
