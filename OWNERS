@@ -1,8 +1,4 @@
 approvers:
-- mqube-bot
-- Skisocks
-- tomhobson
+- go
 reviewers:
-- mqube-bot
-- Skisocks
-- tomhobson
+- go

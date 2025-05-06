@@ -46,13 +46,13 @@ var (
 	infraTeam = models.Team{
 		Name:        "infrastructure",
 		APIKey:      "some-api-key",
-		Addresses:   []string{},
+		Addresses:   []string{"C02TE2EMTMK"},
 		ContactType: models.Slack,
 	}
 	productTeam = models.Team{
 		Name:        "product",
 		APIKey:      "another-api-key",
-		Addresses:   []string{},
+		Addresses:   []string{"C02TE2EMTML"},
 		ContactType: models.Webhook,
 	}
 	allTeams = models.Teams{
@@ -105,7 +105,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 		mockSCM.On("CommentOnPR", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mock.Anything).Return(nil).Once()
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
-		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil)
 		mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
 		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2).Return("", nil)
 
@@ -142,7 +142,7 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, defaultSHA, domain.SuccessState, domain.ReleaseContext).Return(nil).Once()
 		mockSCM.On("GetFilesChangedFromPR", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(mockFilesChanged, nil).Once()
 
-		mockNotesUC.On("GetReleaseNotesFromMDAndTeams", prBody, allTeams).Return(mockNotes, nil)
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil)
 		mockNotesUC.On("SendReleaseNotes", mockFeathers.Config.Messages.Subject, mockNotes).Return(nil)
 
 		mockReleaseUC.On("SaveRelease", mockCTX, "staging", mockNotes, mockPullRequestEventDTO.Summary()).Return(nil).Once()

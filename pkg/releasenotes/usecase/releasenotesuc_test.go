@@ -41,7 +41,7 @@ var (
 	}
 )
 
-func TestParse(t *testing.T) {
+func TestUseCase_GetReleaseNotesFromMarkdownAndTeamsInFeathers(t *testing.T) {
 	uc := NewUseCase(&msgclients.Handler{
 		Clients: map[string]domain.MessageClient{
 			models.Slack:   &slack.Client{},
@@ -225,13 +225,83 @@ func TestParse(t *testing.T) {
 			expectedNotes: nil,
 			shouldError:   true,
 		},
+		{
+			name:          "RemoveBotGeneratedText",
+			inputMarkdown: "### Notify infrastructure\n[//]: # (beaver-start)\nTest Content\n\n[//]: # (some-bot-content)\nAnother bit of content\n### Notify devs\nMore Test Content",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Test Content\n\nAnother bit of content",
+				},
+				{
+					Teams:   models.Teams{devsTeam},
+					Content: "More Test Content",
+				},
+			},
+		},
+		{
+			name:          "MergingReleaseNotes",
+			inputMarkdown: "### Notify infrastructure\nTest Content\n### Notify infrastructure\nMore Test Content\n### Notify devs, infrastructure\nNot merged content",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Test Content\n\n---\n\nMore Test Content",
+				},
+				{
+					Teams:   models.Teams{devsTeam, infraTeam},
+					Content: "Not merged content",
+				},
+			},
+			shouldError: false,
+		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMessages, err := uc.GetReleaseNotesFromMDAndTeams(tt.inputMarkdown, allTeams)
+			actualMessages, err := uc.GetReleaseNotesFromMarkdownAndTeamsInFeathers(tt.inputMarkdown, allTeams)
 			if tt.shouldError {
 				fmt.Println("expected error: " + err.Error())
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedNotes, actualMessages)
+		})
+	}
+}
+
+func TestUseCase_ParseReleaseNoteFromMarkdown(t *testing.T) {
+	uc := NewUseCase(&msgclients.Handler{
+		Clients: map[string]domain.MessageClient{},
+	})
+
+	testCases := []struct {
+		name          string
+		inputMarkdown string
+		expectedNotes []models.ReleaseNote
+		shouldError   bool
+	}{
+		{
+			name:          "Passing",
+			inputMarkdown: "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{{Name: "infrastructure"}, {Name: "devs"}},
+					Content: "Test Content",
+				},
+				{
+					Teams:   models.Teams{{Name: "ml"}},
+					Content: "More Test Content",
+				},
+			},
+			shouldError: false,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			actualMessages, err := uc.ParseReleaseNoteFromMarkdown(tt.inputMarkdown)
+			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
@@ -285,6 +355,156 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 			actualBreakdown, err := uc.GenerateBreakdown(tt.inputNotes, mockHash, tt.numberOfTeams)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedBreakdown, actualBreakdown)
+		})
+	}
+}
+
+func TestUseCase_GetMarkdownFromReleaseNotes(t *testing.T) {
+	testCases := []struct {
+		name     string
+		notes    []models.ReleaseNote
+		expected string
+	}{
+		{
+			name: "SingleNote",
+			notes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			expected: "### Notify infrastructure\nNew release of some infrastructure\nrelated things",
+		},
+		{
+			name: "MultipleNotes",
+			notes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New release of some infrastructure\nrelated things",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "New release of some ml\nrelated things",
+				},
+			},
+			expected: "### Notify infrastructure\nNew release of some infrastructure\nrelated things\n\n### Notify ml\nNew release of some ml\nrelated things",
+		},
+		{
+			name: "MultipleTeamsInOneNote",
+			notes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam, mlTeam},
+					Content: "New release of some infrastructure\nrelated things",
+				},
+			},
+			expected: "### Notify infrastructure, ml\nNew release of some infrastructure\nrelated things",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := NewUseCase(nil)
+			actual := uc.GetMarkdownFromReleaseNotes(tc.notes)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestUseCase_AppendReleaseNotesToExisting(t *testing.T) {
+	testCases := []struct {
+		name     string
+		existing []models.ReleaseNote
+		new      []models.ReleaseNote
+		expected []models.ReleaseNote
+	}{
+		{
+			name: "SingleNote",
+			existing: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content",
+				},
+			},
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+			},
+			expected: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content\n\n---\n\nNew note content",
+				},
+			},
+		},
+		{
+			name: "MultipleNotes",
+			existing: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content",
+				},
+			},
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another new note content",
+				},
+			},
+			expected: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content\n\n---\n\nNew note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content\n\n---\n\nAnother new note content",
+				},
+			},
+		},
+		{
+			name: "UnModifiedExistingNotes",
+			existing: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content",
+				},
+			},
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+			},
+			expected: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content\n\n---\n\nNew note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content",
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := NewUseCase(nil)
+			actual := uc.AppendReleaseNotesToExisting(tc.existing, tc.new)
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }
