@@ -19,4 +19,7 @@ type ReleaseNotesUseCase interface {
 	GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error)
 	// SendReleaseNotes sends release notes to their respective teams
 	SendReleaseNotes(subject string, notes []models.ReleaseNote) error
+	// AppendReleaseNotesToExisting appends new release notes to existing ones if the teams are the same
+	// If the teams are different, then the note isn't appended
+	AppendReleaseNotesToExisting(existing, new []models.ReleaseNote) []models.ReleaseNote
 }

@@ -51,6 +51,7 @@ func (uc *UseCase) GetReleaseNotesFromMarkdownAndTeamsInFeathers(markdown string
 	if err = uc.PopulateTeamsInReleaseNotes(releaseNotes, teamsInFeathers); err != nil {
 		return nil, errors.Wrap(err, "failed to populate teams in release notes")
 	}
+	releaseNotes = uc.MergeReleaseNotes(releaseNotes)
 	return releaseNotes, nil
 }
 
@@ -103,6 +104,47 @@ func (uc *UseCase) GetMarkdownFromReleaseNotes(notes []models.ReleaseNote) strin
 		markdown += fmt.Sprintf("### Notify %s\n%s\n\n", utils.CommaSeparated(note.Teams.GetAllTeamNames()), note.Content)
 	}
 	return strings.TrimSpace(markdown)
+}
+
+func (uc *UseCase) MergeReleaseNotes(notes []models.ReleaseNote) []models.ReleaseNote {
+	if len(notes) < 1 {
+		return nil
+	}
+
+	// Merge the release notes by teams
+	merged := make([]models.ReleaseNote, 0, len(notes))
+	teamsMap := make(map[string]models.ReleaseNote)
+
+	for _, note := range notes {
+		teamNames := utils.CommaSeparated(note.Teams.GetAllTeamNames())
+		if existingNote, ok := teamsMap[teamNames]; ok {
+			existingNote.AppendContent(note.Content)
+			teamsMap[teamNames] = existingNote
+		} else {
+			teamsMap[teamNames] = note
+		}
+	}
+
+	for _, note := range teamsMap {
+		merged = append(merged, note)
+	}
+	return merged
+}
+
+func (uc *UseCase) AppendReleaseNotesToExisting(existing, new []models.ReleaseNote) []models.ReleaseNote {
+	out := make([]models.ReleaseNote, len(existing))
+	copy(out, existing)
+
+	for i, existingNote := range existing {
+		for _, newNote := range new {
+			if existingNote.AreTeamsEqual(newNote) {
+				// Append content if teams match
+				out[i].AppendContent(newNote.Content)
+				break
+			}
+		}
+	}
+	return out
 }
 
 var (

@@ -239,6 +239,21 @@ func TestUseCase_GetReleaseNotesFromMarkdownAndTeamsInFeathers(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:          "MergingReleaseNotes",
+			inputMarkdown: "### Notify infrastructure\nTest Content\n### Notify infrastructure\nMore Test Content\n### Notify devs, infrastructure\nNot merged content",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Test Content\n\n---\n\nMore Test Content",
+				},
+				{
+					Teams:   models.Teams{devsTeam, infraTeam},
+					Content: "Not merged content",
+				},
+			},
+			shouldError: false,
+		},
 	}
 
 	for _, tt := range testCases {
@@ -389,6 +404,106 @@ func TestUseCase_GetMarkdownFromReleaseNotes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			uc := NewUseCase(nil)
 			actual := uc.GetMarkdownFromReleaseNotes(tc.notes)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestUseCase_AppendReleaseNotesToExisting(t *testing.T) {
+	testCases := []struct {
+		name     string
+		existing []models.ReleaseNote
+		new      []models.ReleaseNote
+		expected []models.ReleaseNote
+	}{
+		{
+			name: "SingleNote",
+			existing: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content",
+				},
+			},
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+			},
+			expected: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content\n\n---\n\nNew note content",
+				},
+			},
+		},
+		{
+			name: "MultipleNotes",
+			existing: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content",
+				},
+			},
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another new note content",
+				},
+			},
+			expected: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content\n\n---\n\nNew note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content\n\n---\n\nAnother new note content",
+				},
+			},
+		},
+		{
+			name: "UnModifiedExistingNotes",
+			existing: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content",
+				},
+			},
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+			},
+			expected: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Existing note content\n\n---\n\nNew note content",
+				},
+				{
+					Teams:   models.Teams{mlTeam},
+					Content: "Another existing note content",
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := NewUseCase(nil)
+			actual := uc.AppendReleaseNotesToExisting(tc.existing, tc.new)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

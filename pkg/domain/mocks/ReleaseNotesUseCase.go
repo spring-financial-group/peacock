@@ -12,6 +12,26 @@ type ReleaseNotesUseCase struct {
 	mock.Mock
 }
 
+// AppendReleaseNotesToExisting provides a mock function with given fields: existing, new
+func (_m *ReleaseNotesUseCase) AppendReleaseNotesToExisting(existing []models.ReleaseNote, new []models.ReleaseNote) []models.ReleaseNote {
+	ret := _m.Called(existing, new)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AppendReleaseNotesToExisting")
+	}
+
+	var r0 []models.ReleaseNote
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, []models.ReleaseNote) []models.ReleaseNote); ok {
+		r0 = rf(existing, new)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ReleaseNote)
+		}
+	}
+
+	return r0
+}
+
 // GenerateBreakdown provides a mock function with given fields: notes, hash, totalTeams
 func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
 	ret := _m.Called(notes, hash, totalTeams)
