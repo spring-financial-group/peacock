@@ -115,9 +115,8 @@ func (uc *UseCase) MergeReleaseNotes(notes []models.ReleaseNote) []models.Releas
 		return nil
 	}
 
-	// Merge the release notes by teams
-	merged := make([]models.ReleaseNote, 0, len(notes))
 	teamsMap := make(map[string]models.ReleaseNote)
+	order := make([]string, 0, len(notes))
 
 	for _, note := range notes {
 		teamNames := utils.CommaSeparated(note.Teams.GetAllTeamNames())
@@ -126,11 +125,13 @@ func (uc *UseCase) MergeReleaseNotes(notes []models.ReleaseNote) []models.Releas
 			teamsMap[teamNames] = existingNote
 		} else {
 			teamsMap[teamNames] = note
+			order = append(order, teamNames)
 		}
 	}
 
-	for _, note := range teamsMap {
-		merged = append(merged, note)
+	merged := make([]models.ReleaseNote, 0, len(order))
+	for _, teamNames := range order {
+		merged = append(merged, teamsMap[teamNames])
 	}
 	return merged
 }
