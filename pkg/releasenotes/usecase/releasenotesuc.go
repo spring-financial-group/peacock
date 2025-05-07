@@ -44,7 +44,7 @@ func NewUseCase(msgClientsHandler domain.MessageHandler) *UseCase {
 }
 
 func (uc *UseCase) GetReleaseNotesFromMarkdownAndTeamsInFeathers(markdown string, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
-	releaseNotes, err := uc.ParseReleaseNoteFromMarkdown(markdown)
+	_, releaseNotes, err := uc.ParseReleaseNoteFromMarkdown(markdown, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get release notes from markdown")
 	}
@@ -66,26 +66,30 @@ func (uc *UseCase) PopulateTeamsInReleaseNotes(releaseNotes []models.ReleaseNote
 	return nil
 }
 
-func (uc *UseCase) ParseReleaseNoteFromMarkdown(markdown string) ([]models.ReleaseNote, error) {
+func (uc *UseCase) ParseReleaseNoteFromMarkdown(markdown string, sanitise bool) (preamble string, notes []models.ReleaseNote, err error) {
 	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	log.Debug("Parsing release notes from markdown")
 	teamNames := uc.parseTeamNames(teamNameReg, markdown)
 	if len(teamNames) < 1 {
-		return nil, nil
+		return markdown, nil, nil
 	}
 	log.Debugf("%d notes found in markdown", len(teamNames))
 
 	// Get the contents for each message & trim to remove any text before the first message
-	contents := teamNameReg.Split(markdown, -1)
-	contents = contents[1:]
-	notes := make([]models.ReleaseNote, len(contents))
-	for i, m := range contents {
+	markdownSplit := teamNameReg.Split(markdown, -1)
+	preamble = markdownSplit[0]
+	markdownSplit = markdownSplit[1:]
+
+	notes = make([]models.ReleaseNote, len(markdownSplit))
+	for i, m := range markdownSplit {
 		teamsNamesInNote := teamNames[i]
-		m = uc.removeBotGeneratedText(m)
+		if sanitise {
+			m = uc.removeBotGeneratedText(m)
+		}
 		notes[i].Content = strings.TrimSpace(m)
 		teamsInNote := make([]models.Team, 0, len(teamsNamesInNote))
 		for _, teamName := range teamsNamesInNote {
@@ -95,7 +99,7 @@ func (uc *UseCase) ParseReleaseNoteFromMarkdown(markdown string) ([]models.Relea
 		}
 		notes[i].Teams = teamsInNote
 	}
-	return notes, nil
+	return preamble, notes, nil
 }
 
 func (uc *UseCase) GetMarkdownFromReleaseNotes(notes []models.ReleaseNote) string {
@@ -111,9 +115,8 @@ func (uc *UseCase) MergeReleaseNotes(notes []models.ReleaseNote) []models.Releas
 		return nil
 	}
 
-	// Merge the release notes by teams
-	merged := make([]models.ReleaseNote, 0, len(notes))
 	teamsMap := make(map[string]models.ReleaseNote)
+	order := make([]string, 0, len(notes))
 
 	for _, note := range notes {
 		teamNames := utils.CommaSeparated(note.Teams.GetAllTeamNames())
@@ -122,29 +125,58 @@ func (uc *UseCase) MergeReleaseNotes(notes []models.ReleaseNote) []models.Releas
 			teamsMap[teamNames] = existingNote
 		} else {
 			teamsMap[teamNames] = note
+			order = append(order, teamNames)
 		}
 	}
 
-	for _, note := range teamsMap {
-		merged = append(merged, note)
+	merged := make([]models.ReleaseNote, 0, len(order))
+	for _, teamNames := range order {
+		merged = append(merged, teamsMap[teamNames])
 	}
 	return merged
 }
 
-func (uc *UseCase) AppendReleaseNotesToExisting(existing, new []models.ReleaseNote) []models.ReleaseNote {
-	out := make([]models.ReleaseNote, len(existing))
-	copy(out, existing)
+func (uc *UseCase) AppendReleaseNotesToExistingMarkdown(existingMarkdown string, releaseNotesToAppend []models.ReleaseNote) (string, error) {
+	// Parse the existing markdown to get the release notes
+	preamble, existingReleaseNotes, err := uc.ParseReleaseNoteFromMarkdown(existingMarkdown, false)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse existing markdown")
+	}
+	preamble = addSuffixIfNotExists(preamble, "\n\n")
+	mergedReleaseNotes := uc.mergeOrAppendReleaseNotes(existingReleaseNotes, releaseNotesToAppend)
+	return preamble + uc.GetMarkdownFromReleaseNotes(mergedReleaseNotes), nil
+}
 
-	for i, existingNote := range existing {
-		for _, newNote := range new {
-			if existingNote.AreTeamsEqual(newNote) {
-				// Append content if teams match
-				out[i].AppendContent(newNote.Content)
-				break
-			}
+// mergeOrAppendReleaseNotes merges or appends release notes based on the teams maintaining the original order
+func (uc *UseCase) mergeOrAppendReleaseNotes(existing, new []models.ReleaseNote) []models.ReleaseNote {
+	// Create a map to store the merged release notes and an array to maintain the order
+	merged := make(map[string]models.ReleaseNote)
+	order := make([]string, 0, len(existing))
+
+	// Iterate over the existing release notes and add them to the map by the teams in the note
+	for _, note := range existing {
+		teams := utils.CommaSeparated(note.Teams.GetAllTeamNames())
+		merged[teams] = note
+		order = append(order, teams)
+	}
+
+	// Iterate over the new release notes and merge or append them
+	for _, note := range new {
+		teams := utils.CommaSeparated(note.Teams.GetAllTeamNames())
+		if existingNote, ok := merged[teams]; ok {
+			existingNote.AppendContent(note.Content)
+			merged[teams] = existingNote
+		} else {
+			merged[teams] = note
+			order = append(order, teams)
 		}
 	}
-	return out
+
+	result := make([]models.ReleaseNote, 0, len(order))
+	for _, key := range order {
+		result = append(result, merged[key])
+	}
+	return result
 }
 
 var (
@@ -232,4 +264,11 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 
 func (uc *UseCase) SendReleaseNotes(subject string, notes []models.ReleaseNote) error {
 	return uc.MsgClientsHandler.SendReleaseNotes(subject, notes)
+}
+
+func addSuffixIfNotExists(text string, suffix string) string {
+	if text == "" || strings.HasSuffix(text, suffix) {
+		return text
+	}
+	return text + suffix
 }

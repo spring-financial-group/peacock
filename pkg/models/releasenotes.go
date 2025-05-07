@@ -8,7 +8,7 @@ type ReleaseNote struct {
 }
 
 func (r *ReleaseNote) AppendContent(content string) {
-	r.Content += fmt.Sprintf("\n\n---\n\n%s", content)
+	r.Content += fmt.Sprintf("\n---\n%s", content)
 }
 
 func (r *ReleaseNote) AreTeamsEqual(other ReleaseNote) bool {

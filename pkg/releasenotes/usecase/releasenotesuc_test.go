@@ -8,6 +8,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/msgclients/webhook"
 	"github.com/spring-financial-group/peacock/pkg/releasenotes/delivery/msgclients"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -245,7 +246,7 @@ func TestUseCase_GetReleaseNotesFromMarkdownAndTeamsInFeathers(t *testing.T) {
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
-					Content: "Test Content\n\n---\n\nMore Test Content",
+					Content: "Test Content\n---\nMore Test Content",
 				},
 				{
 					Teams:   models.Teams{devsTeam, infraTeam},
@@ -276,14 +277,17 @@ func TestUseCase_ParseReleaseNoteFromMarkdown(t *testing.T) {
 	})
 
 	testCases := []struct {
-		name          string
-		inputMarkdown string
-		expectedNotes []models.ReleaseNote
-		shouldError   bool
+		name             string
+		inputMarkdown    string
+		expectedNotes    []models.ReleaseNote
+		expectedPreamble string
+		sanitise         bool
+		shouldError      bool
 	}{
 		{
-			name:          "Passing",
-			inputMarkdown: "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
+			name:             "Passing",
+			inputMarkdown:    "### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
+			expectedPreamble: "",
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{{Name: "infrastructure"}, {Name: "devs"}},
@@ -294,19 +298,54 @@ func TestUseCase_ParseReleaseNoteFromMarkdown(t *testing.T) {
 					Content: "More Test Content",
 				},
 			},
+			sanitise:    true,
 			shouldError: false,
+		},
+		{
+			name:             "WithPreamble",
+			inputMarkdown:    "This is some preamble that exists outside of the notes\n\n### Notify infrastructure, devs\nTest Content\n### Notify ml\nMore Test Content",
+			expectedPreamble: "This is some preamble that exists outside of the notes\n\n",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{{Name: "infrastructure"}, {Name: "devs"}},
+					Content: "Test Content",
+				},
+				{
+					Teams:   models.Teams{{Name: "ml"}},
+					Content: "More Test Content",
+				},
+			},
+			sanitise:    true,
+			shouldError: false,
+		},
+		{
+			name:             "RemoveBotGeneratedText",
+			inputMarkdown:    "### Notify infrastructure\n[//]: # (beaver-start)\nTest Content\n\n[//]: # (some-bot-content)\nAnother bit of content\n### Notify devs\nMore Test Content",
+			expectedPreamble: "",
+			expectedNotes: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{{Name: "infrastructure"}},
+					Content: "Test Content\n\nAnother bit of content",
+				},
+				{
+					Teams:   models.Teams{{Name: "devs"}},
+					Content: "More Test Content",
+				},
+			},
+			sanitise: true,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMessages, err := uc.ParseReleaseNoteFromMarkdown(tt.inputMarkdown)
+			actualPreamble, actualMessages, err := uc.ParseReleaseNoteFromMarkdown(tt.inputMarkdown, tt.sanitise)
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.expectedNotes, actualMessages)
+			assert.Equal(t, tt.expectedPreamble, actualPreamble)
 		})
 	}
 }
@@ -409,46 +448,38 @@ func TestUseCase_GetMarkdownFromReleaseNotes(t *testing.T) {
 	}
 }
 
-func TestUseCase_AppendReleaseNotesToExisting(t *testing.T) {
+func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 	testCases := []struct {
-		name     string
-		existing []models.ReleaseNote
-		new      []models.ReleaseNote
-		expected []models.ReleaseNote
+		name             string
+		existingMarkdown string
+		new              []models.ReleaseNote
+		expected         string
 	}{
 		{
-			name: "SingleNote",
-			existing: []models.ReleaseNote{
-				{
-					Teams:   models.Teams{infraTeam},
-					Content: "Existing note content",
-				},
-			},
+			name:             "SingleNoteMerged",
+			existingMarkdown: "### Notify infrastructure\nExisting note content",
 			new: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
-					Content: "New note content",
+					Content: "More note content",
 				},
 			},
-			expected: []models.ReleaseNote{
-				{
-					Teams:   models.Teams{infraTeam},
-					Content: "Existing note content\n\n---\n\nNew note content",
-				},
-			},
+			expected: "### Notify infrastructure\nExisting note content\n---\nMore note content",
 		},
 		{
-			name: "MultipleNotes",
-			existing: []models.ReleaseNote{
+			name:             "SingleNoteAppended",
+			existingMarkdown: "### Notify ml\nExisting note content",
+			new: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
-					Content: "Existing note content",
-				},
-				{
-					Teams:   models.Teams{mlTeam},
-					Content: "Another existing note content",
+					Content: "More note content",
 				},
 			},
+			expected: "### Notify ml\nExisting note content\n\n### Notify infrastructure\nMore note content",
+		},
+		{
+			name:             "MultipleNotes",
+			existingMarkdown: "### Notify infrastructure\nExisting note content\n### Notify ml\nAnother existing note content",
 			new: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
@@ -459,51 +490,66 @@ func TestUseCase_AppendReleaseNotesToExisting(t *testing.T) {
 					Content: "Another new note content",
 				},
 			},
-			expected: []models.ReleaseNote{
-				{
-					Teams:   models.Teams{infraTeam},
-					Content: "Existing note content\n\n---\n\nNew note content",
-				},
-				{
-					Teams:   models.Teams{mlTeam},
-					Content: "Another existing note content\n\n---\n\nAnother new note content",
-				},
-			},
+			expected: "### Notify infrastructure\nExisting note content\n---\nNew note content\n\n### Notify ml\nAnother existing note content\n---\nAnother new note content",
 		},
 		{
-			name: "UnModifiedExistingNotes",
-			existing: []models.ReleaseNote{
+			name:             "MergingAndAppendingAndMaintainingOrder",
+			existingMarkdown: "### Notify infrastructure\nExisting note content\n### Notify ml\nAnother existing note content",
+			new: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
-					Content: "Existing note content",
+					Content: "New note content",
 				},
 				{
 					Teams:   models.Teams{mlTeam},
-					Content: "Another existing note content",
+					Content: "Another new note content",
+				},
+				{
+					Teams:   models.Teams{productTeam},
+					Content: "Product note content",
 				},
 			},
+			expected: "### Notify infrastructure\nExisting note content\n---\nNew note content\n\n### Notify ml\nAnother existing note content\n---\nAnother new note content\n\n### Notify product\nProduct note content",
+		},
+		{
+			name:             "BotTextNotRemoved",
+			existingMarkdown: "### Notify infrastructure\nExisting note content\n[//]: # (bot-start)\nExisting bot content\n\n[//]: # (bot-stop)",
 			new: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
 					Content: "New note content",
 				},
 			},
-			expected: []models.ReleaseNote{
+			expected: "### Notify infrastructure\nExisting note content\n[//]: # (bot-start)\nExisting bot content\n\n[//]: # (bot-stop)\n---\nNew note content",
+		},
+		{
+			name:             "NoExistingReleaseNotes",
+			existingMarkdown: "Some text that isn't a note",
+			new: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
-					Content: "Existing note content\n\n---\n\nNew note content",
-				},
-				{
-					Teams:   models.Teams{mlTeam},
-					Content: "Another existing note content",
+					Content: "New note content",
 				},
 			},
+			expected: "Some text that isn't a note\n\n### Notify infrastructure\nNew note content",
+		},
+		{
+			name:             "NoExistingMarkdown",
+			existingMarkdown: "",
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+			},
+			expected: "### Notify infrastructure\nNew note content",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			uc := NewUseCase(nil)
-			actual := uc.AppendReleaseNotesToExisting(tc.existing, tc.new)
+			actual, err := uc.AppendReleaseNotesToExistingMarkdown(tc.existingMarkdown, tc.new)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
