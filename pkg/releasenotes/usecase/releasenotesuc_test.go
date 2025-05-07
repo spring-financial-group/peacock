@@ -246,7 +246,7 @@ func TestUseCase_GetReleaseNotesFromMarkdownAndTeamsInFeathers(t *testing.T) {
 			expectedNotes: []models.ReleaseNote{
 				{
 					Teams:   models.Teams{infraTeam},
-					Content: "Test Content\n\n---\n\nMore Test Content",
+					Content: "Test Content\n---\nMore Test Content",
 				},
 				{
 					Teams:   models.Teams{devsTeam, infraTeam},
@@ -464,7 +464,7 @@ func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 					Content: "More note content",
 				},
 			},
-			expected: "### Notify infrastructure\nExisting note content\n\n---\n\nMore note content",
+			expected: "### Notify infrastructure\nExisting note content\n---\nMore note content",
 		},
 		{
 			name:             "SingleNoteAppended",
@@ -490,7 +490,7 @@ func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 					Content: "Another new note content",
 				},
 			},
-			expected: "### Notify infrastructure\nExisting note content\n\n---\n\nNew note content\n\n### Notify ml\nAnother existing note content\n\n---\n\nAnother new note content",
+			expected: "### Notify infrastructure\nExisting note content\n---\nNew note content\n\n### Notify ml\nAnother existing note content\n---\nAnother new note content",
 		},
 		{
 			name:             "MergingAndAppendingAndMaintainingOrder",
@@ -509,7 +509,7 @@ func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 					Content: "Product note content",
 				},
 			},
-			expected: "### Notify infrastructure\nExisting note content\n\n---\n\nNew note content\n\n### Notify ml\nAnother existing note content\n\n---\n\nAnother new note content\n\n### Notify product\nProduct note content",
+			expected: "### Notify infrastructure\nExisting note content\n---\nNew note content\n\n### Notify ml\nAnother existing note content\n---\nAnother new note content\n\n### Notify product\nProduct note content",
 		},
 		{
 			name:             "BotTextNotRemoved",
@@ -520,7 +520,7 @@ func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 					Content: "New note content",
 				},
 			},
-			expected: "### Notify infrastructure\nExisting note content\n[//]: # (bot-start)\nExisting bot content\n\n[//]: # (bot-stop)\n\n---\n\nNew note content",
+			expected: "### Notify infrastructure\nExisting note content\n[//]: # (bot-start)\nExisting bot content\n\n[//]: # (bot-stop)\n---\nNew note content",
 		},
 		{
 			name:             "NoExistingReleaseNotes",
