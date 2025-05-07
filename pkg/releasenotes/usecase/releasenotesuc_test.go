@@ -522,6 +522,28 @@ func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 			},
 			expected: "### Notify infrastructure\nExisting note content\n[//]: # (bot-start)\nExisting bot content\n\n[//]: # (bot-stop)\n\n---\n\nNew note content",
 		},
+		{
+			name:             "NoExistingReleaseNotes",
+			existingMarkdown: "Some text that isn't a note",
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+			},
+			expected: "Some text that isn't a note\n\n### Notify infrastructure\nNew note content",
+		},
+		{
+			name:             "NoExistingMarkdown",
+			existingMarkdown: "",
+			new: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "New note content",
+				},
+			},
+			expected: "### Notify infrastructure\nNew note content",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

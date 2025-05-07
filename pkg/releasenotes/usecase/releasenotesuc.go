@@ -75,7 +75,7 @@ func (uc *UseCase) ParseReleaseNoteFromMarkdown(markdown string, sanitise bool) 
 	log.Debug("Parsing release notes from markdown")
 	teamNames := uc.parseTeamNames(teamNameReg, markdown)
 	if len(teamNames) < 1 {
-		return "", nil, nil
+		return markdown, nil, nil
 	}
 	log.Debugf("%d notes found in markdown", len(teamNames))
 
@@ -141,7 +141,7 @@ func (uc *UseCase) AppendReleaseNotesToExistingMarkdown(existingMarkdown string,
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse existing markdown")
 	}
-
+	preamble = addSuffixIfNotExists(preamble, "\n\n")
 	mergedReleaseNotes := uc.mergeOrAppendReleaseNotes(existingReleaseNotes, releaseNotesToAppend)
 	return preamble + uc.GetMarkdownFromReleaseNotes(mergedReleaseNotes), nil
 }
@@ -263,4 +263,11 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 
 func (uc *UseCase) SendReleaseNotes(subject string, notes []models.ReleaseNote) error {
 	return uc.MsgClientsHandler.SendReleaseNotes(subject, notes)
+}
+
+func addSuffixIfNotExists(text string, suffix string) string {
+	if text == "" || strings.HasSuffix(text, suffix) {
+		return text
+	}
+	return text + suffix
 }
