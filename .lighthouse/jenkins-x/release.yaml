@@ -46,9 +46,6 @@ spec:
           script: |
             #!/usr/bin/env sh
             sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
-        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/go/golang-lint.yaml@main
-          name: ""
-          resources: {}
         - image: golang:1.22
           name: build-make-build
           resources: {}
