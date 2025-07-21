@@ -6,7 +6,8 @@ type Feathers struct {
 }
 
 type Config struct {
-	Messages Messages `yaml:"messages"`
+	Messages           Messages `yaml:"messages"`
+	PRBodyTemplatePath string   `yaml:"prBodyTemplatePath"`
 }
 
 type Messages struct {

@@ -266,6 +266,18 @@ func (uc *UseCase) SendReleaseNotes(subject string, notes []models.ReleaseNote) 
 	return uc.MsgClientsHandler.SendReleaseNotes(subject, notes)
 }
 
+func (uc *UseCase) FindEqualReleaseNotes(a, b []models.ReleaseNote) [][2]int {
+	equalPairs := make([][2]int, 0)
+	for i, noteA := range a {
+		for j, noteB := range b {
+			if noteA.AreTeamsEqual(noteB) && noteA.Content == noteB.Content {
+				equalPairs = append(equalPairs, [2]int{i, j})
+			}
+		}
+	}
+	return equalPairs
+}
+
 func addSuffixIfNotExists(text string, suffix string) string {
 	if text == "" || strings.HasSuffix(text, suffix) {
 		return text

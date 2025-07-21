@@ -66,9 +66,23 @@ var (
 			Messages: models.Messages{
 				Subject: "Subject",
 			},
+			PRBodyTemplatePath: "docs/peacock_pull_request_template.md",
 		},
 	}
 	mockFeathersData, _ = yaml.Marshal(mockFeathers)
+
+	mockPRTemplate = "### Notify Infra\n\nSome template\n\n### Notify product\n\nAnother template"
+
+	mockTemplateNotes = []models.ReleaseNote{
+		{
+			Teams:   models.Teams{infraTeam},
+			Content: "Some template",
+		},
+		{
+			Teams:   models.Teams{productTeam},
+			Content: "Another template",
+		},
+	}
 
 	mockNotes = []models.ReleaseNote{
 		{
@@ -99,6 +113,10 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
 		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
+
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, mockFeathers.Config.PRBodyTemplatePath).Return([]byte(mockPRTemplate), nil).Once()
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", mockPRTemplate, allTeams).Return(mockTemplateNotes, nil)
+		mockNotesUC.On("FindEqualReleaseNotes", mockTemplateNotes, mockNotes).Return([][2]int{}, nil)
 
 		mockSCM.On("GetPRCommentsByUser", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil, nil).Once()
 		mockSCM.On("DeleteUsersComments", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil).Once()

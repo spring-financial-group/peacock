@@ -554,3 +554,52 @@ func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 		})
 	}
 }
+
+func TestUseCase_FindEqualReleaseNotes(t *testing.T) {
+	uc := NewUseCase(nil)
+
+	teamA := models.Team{Name: "A"}
+	teamB := models.Team{Name: "B"}
+
+	note := func(teams []models.Team, content string) models.ReleaseNote {
+		return models.ReleaseNote{Teams: teams, Content: content}
+	}
+
+	tests := []struct {
+		name string
+		a, b []models.ReleaseNote
+		want [][2]int
+	}{
+		{
+			name: "No matches",
+			a:    []models.ReleaseNote{note([]models.Team{teamA}, "foo")},
+			b:    []models.ReleaseNote{note([]models.Team{teamB}, "bar")},
+			want: [][2]int{},
+		},
+		{
+			name: "One match",
+			a:    []models.ReleaseNote{note([]models.Team{teamA}, "foo")},
+			b:    []models.ReleaseNote{note([]models.Team{teamA}, "foo")},
+			want: [][2]int{{0, 0}},
+		},
+		{
+			name: "Multiple matches",
+			a:    []models.ReleaseNote{note([]models.Team{teamA}, "foo"), note([]models.Team{teamB}, "bar")},
+			b:    []models.ReleaseNote{note([]models.Team{teamA}, "foo"), note([]models.Team{teamB}, "bar")},
+			want: [][2]int{{0, 0}, {1, 1}},
+		},
+		{
+			name: "Duplicate content, different teams",
+			a:    []models.ReleaseNote{note([]models.Team{teamA}, "foo")},
+			b:    []models.ReleaseNote{note([]models.Team{teamB}, "foo")},
+			want: [][2]int{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := uc.FindEqualReleaseNotes(tt.a, tt.b)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

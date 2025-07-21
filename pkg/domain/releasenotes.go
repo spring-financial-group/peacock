@@ -22,4 +22,7 @@ type ReleaseNotesUseCase interface {
 	// AppendReleaseNotesToExistingMarkdown appends release notes to an existing markdown string merging notes by team if possible.
 	// If a note is not mergable, it will be appended as a new note. Order of the existing notes is preserved.
 	AppendReleaseNotesToExistingMarkdown(existingMarkdown string, releaseNotesToAppend []models.ReleaseNote) (string, error)
+	// FindEqualReleaseNotes compares each release note in slice 'a' with each note in slice 'b'.
+	// It returns a slice of index pairs [i, j] where the notes have equal teams and content.
+	FindEqualReleaseNotes(a, b []models.ReleaseNote) [][2]int
 }

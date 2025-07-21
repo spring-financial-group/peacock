@@ -2,6 +2,7 @@ package webhookuc
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/google/go-github/v48/github"
@@ -71,6 +72,24 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	if releaseNotes == nil {
 		log.Infof("no releaseNotes found in PR body, skipping")
 		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
+	}
+
+	// Compare the release notes with the template if it exists
+	defaultReleaseNotes, err := w.getReleasesNotesFromTemplate(ctx, e, feathers)
+	if err != nil {
+		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to get release notes from template"))
+	}
+	equalReleaseNotesIndexes := w.notesUC.FindEqualReleaseNotes(defaultReleaseNotes, releaseNotes)
+	if len(equalReleaseNotesIndexes) > 0 {
+		// Let's comment the PR with the release notes that match the template
+		log.Infof("found %d release notes that match the template, commenting on PR", len(equalReleaseNotesIndexes))
+		var commentBody strings.Builder
+		commentBody.WriteString("The following release notes match the repository's template:\n\n")
+		for _, indexes := range equalReleaseNotesIndexes {
+			commentBody.WriteString(fmt.Sprintf("- repository template %d and PR note %d\n", indexes[0], indexes[1]))
+		}
+		commentBody.WriteString("\nPlease update the PR body to remove or update the notes to proceed.")
+		return w.handleError(ctx, domain.ValidationContext, e, errors.New(commentBody.String()))
 	}
 
 	// Create a hash of the releaseNotes. Probably should cache these as well.
@@ -215,6 +234,22 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, branch string, event *
 	}
 	w.feathers[event.PullRequestID] = meta
 	return meta.feathers, nil
+}
+
+func (w *WebHookUseCase) getReleasesNotesFromTemplate(ctx context.Context, e *models.PullRequestEventDTO, feathers *models.Feathers) ([]models.ReleaseNote, error) {
+	if feathers.Config.PRBodyTemplatePath == "" {
+		return nil, nil
+	}
+
+	data, err := w.scm.GetFileFromBranch(ctx, e.RepoOwner, e.RepoName, e.Branch, feathers.Config.PRBodyTemplatePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get PR body template")
+	}
+	defaultReleaseNotes, err := w.notesUC.GetReleaseNotesFromMarkdownAndTeamsInFeathers(string(data), feathers.Teams)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse release notes from PR body template")
+	}
+	return defaultReleaseNotes, nil
 }
 
 func (w *WebHookUseCase) CleanUp(pullRequestID int64) {

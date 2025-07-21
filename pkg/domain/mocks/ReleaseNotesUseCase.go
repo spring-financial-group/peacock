@@ -40,6 +40,26 @@ func (_m *ReleaseNotesUseCase) AppendReleaseNotesToExistingMarkdown(existingMark
 	return r0, r1
 }
 
+// FindEqualReleaseNotes provides a mock function with given fields: a, b
+func (_m *ReleaseNotesUseCase) FindEqualReleaseNotes(a []models.ReleaseNote, b []models.ReleaseNote) [][2]int {
+	ret := _m.Called(a, b)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindEqualReleaseNotes")
+	}
+
+	var r0 [][2]int
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, []models.ReleaseNote) [][2]int); ok {
+		r0 = rf(a, b)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([][2]int)
+		}
+	}
+
+	return r0
+}
+
 // GenerateBreakdown provides a mock function with given fields: notes, hash, totalTeams
 func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
 	ret := _m.Called(notes, hash, totalTeams)
