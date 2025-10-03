@@ -13,6 +13,9 @@ import (
 	releaseuc "github.com/spring-financial-group/peacock/pkg/release/usecase"
 	"github.com/spring-financial-group/peacock/pkg/releasenotes/delivery/msgclients"
 	releasenotesuc "github.com/spring-financial-group/peacock/pkg/releasenotes/usecase"
+	usertrackinghandler "github.com/spring-financial-group/peacock/pkg/usertracking/delivery"
+	usertrackingrepo "github.com/spring-financial-group/peacock/pkg/usertracking/repository/mongodb"
+	usertrackinguc "github.com/spring-financial-group/peacock/pkg/usertracking/usecase"
 	"github.com/spring-financial-group/peacock/pkg/webhook/handler"
 	"github.com/spring-financial-group/peacock/pkg/webhook/usecase"
 	"github.com/swaggest/swgui/v3cdn"
@@ -50,11 +53,15 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	releaseRepo := releaserepo.NewRepository(*data.MongoDBClient)
 	releaseUC := releaseuc.NewUseCase(releaseRepo)
 
+	userTrackingRepo := usertrackingrepo.NewUserReleaseTrackingRepository(*data.MongoDBClient)
+	userTrackingUC := usertrackinguc.NewUserReleaseTrackingUseCase(userTrackingRepo, releaseRepo, notesUC)
+
 	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmClient, notesUC, feathersUC, releaseUC)
 
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)
 	releasehandler.NewHandler(publicGroup.Group("releases"), releaseUC)
+	usertrackinghandler.NewHandler(publicGroup.Group("releases"), userTrackingUC)
 	infraGroup.GET("/health", health.ServeHealth)
 	infraGroup.GET("/swagger/v1/swagger.json", func(c *gin.Context) { c.File("docs/swagger.json") })
 	infraGroup.GET("/swagger/index.html", gin.WrapH(v3cdn.NewHandler("Peacock API", "/swagger/v1/swagger.json", "/")))
