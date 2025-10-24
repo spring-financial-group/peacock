@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -58,25 +59,21 @@ func CheckErr(err error) {
 // checkErr formats a given error as a string and calls the passed handleErr
 // func with that string and an kubectl exit code.
 func checkErr(err error, handleErr func(string, int)) {
-	switch err {
-	case nil:
+	if err == nil {
 		return
-	case ErrExit:
+	}
+	if errors.Is(err, ErrExit) {
 		handleErr("", defaultErrorExitCode)
 		return
-	default:
-		switch err.(type) {
-		default: // for any other error type
-			msg, ok := StandardErrorMessage(err)
-			if !ok {
-				msg = err.Error()
-				if !strings.HasPrefix(msg, "error: ") {
-					msg = fmt.Sprintf("error: %s", msg)
-				}
-			}
-			handleErr(msg, defaultErrorExitCode)
+	}
+	msg, ok := StandardErrorMessage(err)
+	if !ok {
+		msg = err.Error()
+		if !strings.HasPrefix(msg, "error: ") {
+			msg = fmt.Sprintf("error: %s", msg)
 		}
 	}
+	handleErr(msg, defaultErrorExitCode)
 }
 
 // StandardErrorMessage translates common errors into a human-readable message, or returns
@@ -86,18 +83,18 @@ func checkErr(err error, handleErr func(string, int)) {
 // This method is generic to the command in use and may be used by non-Kubectl
 // commands.
 func StandardErrorMessage(err error) (string, bool) {
-	switch t := err.(type) {
-	case *url.Error:
-		glog.V(4).Infof("Connection error: %s %s: %v", t.Op, t.URL, t.Err)
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		glog.V(4).Infof("Connection error: %s %s: %v", urlErr.Op, urlErr.URL, urlErr.Err)
 		switch {
-		case strings.Contains(t.Err.Error(), "connection refused"):
-			host := t.URL
-			if server, err := url.Parse(t.URL); err == nil {
+		case strings.Contains(urlErr.Err.Error(), "connection refused"):
+			host := urlErr.URL
+			if server, err := url.Parse(urlErr.URL); err == nil {
 				host = server.Host
 			}
 			return fmt.Sprintf("The connection to the server %s was refused - did you specify the right host or port?", host), true
 		}
-		return fmt.Sprintf("Unable to connect to the server: %v", t.Err), true
+		return fmt.Sprintf("Unable to connect to the server: %v", urlErr.Err), true
 	}
 	return "", false
 }

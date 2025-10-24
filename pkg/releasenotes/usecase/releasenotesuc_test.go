@@ -1,7 +1,6 @@
 package releasenotesuc
 
 import (
-	"fmt"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/msgclients/slack"
@@ -261,7 +260,6 @@ func TestUseCase_GetReleaseNotesFromMarkdownAndTeamsInFeathers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			actualMessages, err := uc.GetReleaseNotesFromMarkdownAndTeamsInFeathers(tt.inputMarkdown, allTeams)
 			if tt.shouldError {
-				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)

@@ -147,7 +147,7 @@ func (c *Client) GetFileFromBranch(ctx context.Context, owner, repoName, branch,
 	fileContent, _, resp, err := c.github.Repositories.GetContents(ctx, owner, repoName, path, &github.RepositoryContentGetOptions{Ref: branch})
 	if err != nil {
 		if resp.StatusCode == http.StatusNotFound {
-			err = &domain.ErrFileNotFound{Path: path}
+			err = &domain.FileNotFoundError{Path: path}
 		}
 		return nil, errors.Wrap(err, "failed to get file from branch")
 	}

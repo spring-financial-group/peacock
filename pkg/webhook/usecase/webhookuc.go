@@ -41,7 +41,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	if e.Branch == "" {
 		branch, sha, err := w.scm.GetPRBranchSHAFromPRNumber(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
 		if err != nil {
-			println("failed to get PR details")
+			log.Error().Msg("failed to get PR details")
 			return w.handleError(ctx, domain.ValidationContext, e, err)
 		}
 		e.Branch = *branch
@@ -201,12 +201,11 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, branch string, event *
 
 	data, err := w.scm.GetFileFromBranch(ctx, event.RepoOwner, event.RepoName, branch, ".peacock/feathers.yaml")
 	if err != nil {
-		switch err.(type) {
-		case *domain.ErrFileNotFound:
+		var fileNotFoundErr *domain.FileNotFoundError
+		if errors.As(err, &fileNotFoundErr) {
 			return nil, errors.New("feathers does not exist in branch")
-		default:
-			return nil, err
 		}
+		return nil, err
 	}
 
 	meta.feathers, err = w.featherUC.GetFeathersFromBytes(data)

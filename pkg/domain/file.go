@@ -2,10 +2,10 @@ package domain
 
 import "fmt"
 
-type ErrFileNotFound struct {
+type FileNotFoundError struct {
 	Path string
 }
 
-func (e *ErrFileNotFound) Error() string {
+func (e *FileNotFoundError) Error() string {
 	return fmt.Sprintf("file not found: %s", e.Path)
 }

@@ -2,7 +2,6 @@ package run_test
 
 import (
 	"context"
-	"fmt"
 	"github.com/google/go-github/v48/github"
 	"github.com/spring-financial-group/peacock/pkg/cmd/run"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
@@ -276,7 +275,6 @@ func TestOptions_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.opts.Run()
 			if tt.shouldError {
-				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)

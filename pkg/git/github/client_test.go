@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"fmt"
 	"github.com/google/go-github/v48/github"
 	ghmock "github.com/migueleliasweb/go-github-mock/src/mock"
 	"github.com/spring-financial-group/peacock/pkg/utils"
@@ -114,7 +113,6 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "spring-financial-group", "peacock", "CommitSHA")
 			if tt.shouldError {
-				fmt.Println("expected error: " + err.Error())
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
