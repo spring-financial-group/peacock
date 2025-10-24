@@ -7,20 +7,25 @@ import (
 )
 
 // BinaryName the binary name to use in help docs
-var BinaryName string
+var BinaryName = getBinaryName()
 
 // TopLevelCommand the top level command name
-var TopLevelCommand string
+var TopLevelCommand = getTopLevelCommand()
 
-func init() {
-	BinaryName = os.Getenv("BINARY_NAME")
-	if BinaryName == "" {
-		BinaryName = "peacock"
+func getBinaryName() string {
+	name := os.Getenv("BINARY_NAME")
+	if name == "" {
+		return "peacock"
 	}
-	TopLevelCommand = os.Getenv("TOP_LEVEL_COMMAND")
-	if TopLevelCommand == "" {
-		TopLevelCommand = "peacock"
+	return name
+}
+
+func getTopLevelCommand() string {
+	cmd := os.Getenv("TOP_LEVEL_COMMAND")
+	if cmd == "" {
+		return "peacock"
 	}
+	return cmd
 }
 
 // SplitCommand helper command to ignore the options object

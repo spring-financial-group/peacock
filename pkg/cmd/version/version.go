@@ -57,7 +57,8 @@ func NewCmdVersion() (*cobra.Command, *Options) {
 }
 
 func (o *Options) Run() error {
-	fmt.Println(GetVersion())
+	version := GetVersion()
+	o.Cmd.Print(version + "\n")
 	return nil
 }
 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/markdown"
-	"github.com/spring-financial-group/peacock/pkg/utils/http_utils"
+	httputils "github.com/spring-financial-group/peacock/pkg/utils/http_utils"
 )
 
 type Client struct {
@@ -38,11 +38,11 @@ func (h *Client) Send(content, subject string, addresses []string) error {
 		return err
 	}
 
-	req, err := http_utils.GenerateAuthenticatedPostRequest(h.url, h.token, http_utils.SignMessage(data, h.secret), data)
+	req, err := httputils.GenerateAuthenticatedPostRequest(h.url, h.token, httputils.SignMessage(data, h.secret), data)
 	if err != nil {
 		return err
 	}
-	_, err = http_utils.DoRequestAndCatchUnsuccessful(req)
+	_, err = httputils.DoRequestAndCatchUnsuccessful(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to post messages")
 	}
