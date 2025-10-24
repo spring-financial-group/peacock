@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"net/url"
 	"os/exec"
 	"strings"
@@ -33,7 +34,8 @@ func (c Client) GetLatestCommitSHA(dir string) (string, error) {
 }
 
 func (c Client) git(dir string, args ...string) (string, error) {
-	e := exec.Command("git", args...)
+	ctx := context.Background()
+	e := exec.CommandContext(ctx, "git", args...)
 	e.Dir = dir
 	out, err := e.CombinedOutput()
 	return strings.TrimSpace(string(out)), err

@@ -104,13 +104,9 @@ func (uc *UseCase) validateTeam(t models.Team) error {
 	}
 
 	// We should check that the addresses conform to the contact type
-	slackRegex, err := regexp.Compile(slackChannelIDRegex)
-	if err != nil {
-		return err
-	}
+	slackRegex := regexp.MustCompile(slackChannelIDRegex)
 	for _, address := range t.Addresses {
-		switch t.ContactType {
-		case models.Slack:
+		if t.ContactType == models.Slack {
 			match := slackRegex.MatchString(address)
 			if !match {
 				return errors.Errorf("failed to parse slack channel ID %s for team %s", address, t.Name)

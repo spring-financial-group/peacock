@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-func CommaSeparated[T any](slice []T) (commaSep string) {
+func CommaSeparated[T any](slice []T) string {
+	var commaSep string
 	for i, val := range slice {
 		if i == 0 {
 			commaSep = fmt.Sprintf("%v", val)
@@ -14,7 +15,7 @@ func CommaSeparated[T any](slice []T) (commaSep string) {
 			commaSep = fmt.Sprintf("%v, %v", commaSep, val)
 		}
 	}
-	return
+	return commaSep
 }
 
 func NewPtr[T any](obj T) *T { return &obj }

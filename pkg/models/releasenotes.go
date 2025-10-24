@@ -3,8 +3,8 @@ package models
 import "fmt"
 
 type ReleaseNote struct {
-	Teams   Teams
-	Content string
+	Teams   Teams  `json:"teams"`
+	Content string `json:"content"`
 }
 
 func (r *ReleaseNote) AppendContent(content string) {

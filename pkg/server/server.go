@@ -14,30 +14,34 @@ import (
 func Run() {
 	logger.Init()
 
-	// Create context that listens for the interrupt signal from the OS.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal().Msgf("Unable to initialize config: %v", err)
+		return
 	}
 	logger.SetLevel(cfg.LogLevel)
 
 	sources, err := NewDataSources(&cfg.DataSources)
 	if err != nil {
 		log.Fatal().Msgf("Unable to initialise data sources: %v", err)
+		return
 	}
-	defer sources.Close(context.Background())
 
 	router, err := inject(cfg, sources)
 	if err != nil {
 		log.Fatal().Msgf("Unable to initialise router: %v", err)
+		return
 	}
+	defer sources.Close(context.Background())
+
+	// Create context that listens for the interrupt signal from the OS.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
+		Addr:              ":8080",
+		Handler:           router,
+		ReadHeaderTimeout: 30 * time.Second,
 	}
 
 	// Initialising the server in a goroutine so that

@@ -35,9 +35,8 @@ var (
 	Version string
 )
 
-// NewCmdTrigger
+// NewCmdVersion creates a new version command
 func NewCmdVersion() (*cobra.Command, *Options) {
-
 	o := &Options{}
 
 	cmd := &cobra.Command{
@@ -55,7 +54,6 @@ func NewCmdVersion() (*cobra.Command, *Options) {
 	o.Cmd = cmd
 
 	return cmd, o
-
 }
 
 func (o *Options) Run() error {

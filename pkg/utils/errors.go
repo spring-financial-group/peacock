@@ -45,7 +45,7 @@ func Fatal(msg string, code int) {
 
 // ErrExit may be passed to CheckError to instruct it to output nothing but exit with
 // status code 1.
-var ErrExit = fmt.Errorf("exit")
+var ErrExit = errors.New("exit")
 
 // CheckErr prints a user-friendly error to STDERR and exits with a non-zero
 // exit code. Unrecognized errors will be printed with an "error: " prefix.
@@ -86,8 +86,7 @@ func StandardErrorMessage(err error) (string, bool) {
 	var urlErr *url.Error
 	if errors.As(err, &urlErr) {
 		glog.V(4).Infof("Connection error: %s %s: %v", urlErr.Op, urlErr.URL, urlErr.Err)
-		switch {
-		case strings.Contains(urlErr.Err.Error(), "connection refused"):
+		if strings.Contains(urlErr.Err.Error(), "connection refused") {
 			host := urlErr.URL
 			if server, err := url.Parse(urlErr.URL); err == nil {
 				host = server.Host

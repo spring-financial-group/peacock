@@ -165,7 +165,7 @@ func (c *Client) GetFilesChangedFromPR(ctx context.Context, owner string, repoNa
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("failed to retrieve changed files from pull request")
 	}
 

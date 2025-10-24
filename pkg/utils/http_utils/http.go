@@ -2,6 +2,7 @@ package http_utils
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -45,7 +46,8 @@ func DoRequestAndCatchUnsuccessful(request *http.Request) (*http.Response, error
 // and hash to the SignatureHeader
 func GenerateAuthenticatedPostRequest(url, authToken, hash string, body []byte) (*http.Request, error) {
 	// create the request
-	req, err := http.NewRequest(POST, url, bytes.NewBuffer(body))
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, POST, url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}

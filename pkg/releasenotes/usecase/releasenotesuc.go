@@ -67,10 +67,7 @@ func (uc *UseCase) PopulateTeamsInReleaseNotes(releaseNotes []models.ReleaseNote
 }
 
 func (uc *UseCase) ParseReleaseNoteFromMarkdown(markdown string, sanitise bool) (preamble string, notes []models.ReleaseNote, err error) {
-	teamNameReg, err := regexp.Compile(teamNameHeaderRegex)
-	if err != nil {
-		return "", nil, err
-	}
+	teamNameReg := regexp.MustCompile(teamNameHeaderRegex)
 
 	log.Debug().Msg("Parsing release notes from markdown")
 	teamNames := uc.parseTeamNames(teamNameReg, markdown)
