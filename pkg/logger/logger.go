@@ -7,22 +7,24 @@ import (
 	"net/http"
 )
 
+var Logger zerolog.Logger
+
 func Init() {
 	// zerolog outputs JSON by default, no need to set formatter
 	// Set global log level to debug
-	log.Logger = log.Logger.Level(zerolog.DebugLevel)
+	Logger = log.Logger.Level(zerolog.DebugLevel)
 }
 
 func SetLevel(level string) {
 	switch level {
 	case "debug":
-		log.Logger = log.Logger.Level(zerolog.DebugLevel)
+		Logger = log.Logger.Level(zerolog.DebugLevel)
 	case "info":
-		log.Logger = log.Logger.Level(zerolog.InfoLevel)
+		Logger = log.Logger.Level(zerolog.InfoLevel)
 	case "warn":
-		log.Logger = log.Logger.Level(zerolog.WarnLevel)
+		Logger = log.Logger.Level(zerolog.WarnLevel)
 	case "error":
-		log.Logger = log.Logger.Level(zerolog.ErrorLevel)
+		Logger = log.Logger.Level(zerolog.ErrorLevel)
 	default:
 		log.Fatal().Msgf("Unable to log... wait what: %v", level)
 	}

@@ -94,7 +94,7 @@ func (r *ASCIIRenderer) HRule(out *bytes.Buffer) {
 func (r *ASCIIRenderer) LineBreak(out *bytes.Buffer)                                      { out.WriteString(linebreak) }
 func (r *ASCIIRenderer) TitleBlock(out *bytes.Buffer, text []byte)                        { r.fw(out, text) }
 func (r *ASCIIRenderer) Header(out *bytes.Buffer, text func() bool, level int, id string) { text() }
-func (r *ASCIIRenderer) BlockHtml(out *bytes.Buffer, text []byte)                         { r.fw(out, text) }
+func (r *ASCIIRenderer) BlockHtml(out *bytes.Buffer, text []byte)                         { r.fw(out, text) } //nolint:staticcheck // required by blackfriday.Renderer interface
 func (r *ASCIIRenderer) BlockQuote(out *bytes.Buffer, text []byte)                        { r.fw(out, text) }
 func (r *ASCIIRenderer) TableRow(out *bytes.Buffer, text []byte)                          { r.fw(out, text) }
 func (r *ASCIIRenderer) TableHeaderCell(out *bytes.Buffer, text []byte, align int)        { r.fw(out, text) }
@@ -107,7 +107,7 @@ func (r *ASCIIRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int)      
 func (r *ASCIIRenderer) CodeSpan(out *bytes.Buffer, text []byte)                   { r.fw(out, text) }
 func (r *ASCIIRenderer) DoubleEmphasis(out *bytes.Buffer, text []byte)             { r.fw(out, text) }
 func (r *ASCIIRenderer) Emphasis(out *bytes.Buffer, text []byte)                   { r.fw(out, text) }
-func (r *ASCIIRenderer) RawHtmlTag(out *bytes.Buffer, text []byte)                 { r.fw(out, text) }
+func (r *ASCIIRenderer) RawHtmlTag(out *bytes.Buffer, text []byte)                 { r.fw(out, text) } //nolint:staticcheck // required by blackfriday.Renderer interface
 func (r *ASCIIRenderer) TripleEmphasis(out *bytes.Buffer, text []byte)             { r.fw(out, text) }
 func (r *ASCIIRenderer) StrikeThrough(out *bytes.Buffer, text []byte)              { r.fw(out, text) }
 func (r *ASCIIRenderer) FootnoteRef(out *bytes.Buffer, ref []byte, id int)         { r.fw(out, ref) }
