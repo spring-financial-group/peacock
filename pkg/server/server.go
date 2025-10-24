@@ -28,11 +28,9 @@ func Run() {
 	}
 
 	router := inject(cfg, sources)
-	defer sources.Close(context.Background())
 
 	// Create context that listens for the interrupt signal from the OS.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	srv := &http.Server{
 		Addr:              ":8080",
@@ -62,9 +60,11 @@ func Run() {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		cancel()
+		sources.Close(context.Background())
 		log.Fatal().Msgf("Server forced to shutdown: %v", err)
 	}
 	cancel()
+	sources.Close(context.Background())
 
 	log.Info().Msg("Server exiting")
 }

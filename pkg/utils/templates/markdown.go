@@ -52,11 +52,12 @@ func (r *ASCIIRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 	} else {
 		r.listItemCount++
 	}
-	level := r.listLevel
-	if level > math.MaxInt {
-		level = math.MaxInt
+	// Safe conversion: listLevel is a nesting level, typically < 10
+	indentCount := int(r.listLevel)
+	if r.listLevel > math.MaxInt {
+		indentCount = math.MaxInt
 	}
-	indent := strings.Repeat(r.Indentation, int(level))
+	indent := strings.Repeat(r.Indentation, indentCount)
 	var bullet string
 	if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
 		bullet += fmt.Sprintf("%d.", r.listItemCount)
@@ -132,6 +133,6 @@ func (r *ASCIIRenderer) Image(out *bytes.Buffer, link []byte, title []byte, alt 
 
 func (r *ASCIIRenderer) fw(out io.Writer, text ...[]byte) {
 	for _, t := range text {
-		out.Write(t) //nolint:errcheck
+		_, _ = out.Write(t) // Explicitly ignore error for rendering
 	}
 }
