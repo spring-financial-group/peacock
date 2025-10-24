@@ -15,5 +15,5 @@ func CreateTestDir(additionalPath string) (string, string, error) {
 		return "", "", err
 	}
 	fullPath := filepath.Join(baseDir, additionalPath)
-	return baseDir, fullPath, os.MkdirAll(fullPath, 0775)
+	return baseDir, fullPath, os.MkdirAll(fullPath, 0750)
 }

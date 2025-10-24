@@ -6,6 +6,7 @@ import (
 	ghmock "github.com/migueleliasweb/go-github-mock/src/mock"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -113,9 +114,9 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			actualBody, err := client.GetPullRequestBodyFromCommit(context.Background(), "spring-financial-group", "peacock", "CommitSHA")
 			if tt.shouldError {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			assert.Equal(t, tt.expectedBody, actualBody)
 		})

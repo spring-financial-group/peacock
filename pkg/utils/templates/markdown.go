@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/russross/blackfriday"
@@ -51,7 +52,11 @@ func (r *ASCIIRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 	} else {
 		r.listItemCount++
 	}
-	indent := strings.Repeat(r.Indentation, int(r.listLevel))
+	level := r.listLevel
+	if level > math.MaxInt {
+		level = math.MaxInt
+	}
+	indent := strings.Repeat(r.Indentation, int(level))
 	var bullet string
 	if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
 		bullet += fmt.Sprintf("%d.", r.listItemCount)
