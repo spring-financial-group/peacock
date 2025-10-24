@@ -260,9 +260,9 @@ func TestUseCase_GetReleaseNotesFromMarkdownAndTeamsInFeathers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			actualMessages, err := uc.GetReleaseNotesFromMarkdownAndTeamsInFeathers(tt.inputMarkdown, allTeams)
 			if tt.shouldError {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			assert.Equal(t, tt.expectedNotes, actualMessages)
 		})
@@ -338,9 +338,9 @@ func TestUseCase_ParseReleaseNoteFromMarkdown(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			actualPreamble, actualMessages, err := uc.ParseReleaseNoteFromMarkdown(tt.inputMarkdown, tt.sanitise)
 			if tt.shouldError {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			assert.Equal(t, tt.expectedNotes, actualMessages)
 			assert.Equal(t, tt.expectedPreamble, actualPreamble)
@@ -390,7 +390,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 			mockHash := "ReallyGoodHash"
 
 			actualBreakdown, err := uc.GenerateBreakdown(tt.inputNotes, mockHash, tt.numberOfTeams)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.expectedBreakdown, actualBreakdown)
 		})
 	}

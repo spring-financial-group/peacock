@@ -18,7 +18,7 @@ import (
 	"github.com/swaggest/swgui/v3cdn"
 )
 
-func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
+func inject(cfg *config.Config, data *DataSources) *gin.Engine {
 	// Setup router
 	gin.SetMode(gin.ReleaseMode)
 
@@ -59,5 +59,5 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	infraGroup.GET("/swagger/v1/swagger.json", func(c *gin.Context) { c.File("docs/swagger.json") })
 	infraGroup.GET("/swagger/index.html", gin.WrapH(v3cdn.NewHandler("Peacock API", "/swagger/v1/swagger.json", "/")))
 
-	return router, nil
+	return router
 }

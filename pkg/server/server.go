@@ -27,11 +27,7 @@ func Run() {
 		return
 	}
 
-	router, err := inject(cfg, sources)
-	if err != nil {
-		log.Fatal().Msgf("Unable to initialise router: %v", err)
-		return
-	}
+	router := inject(cfg, sources)
 	defer sources.Close(context.Background())
 
 	// Create context that listens for the interrupt signal from the OS.

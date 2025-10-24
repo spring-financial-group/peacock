@@ -8,5 +8,5 @@ import (
 
 func TestGetVersion(t *testing.T) {
 	version := version.GetVersion()
-	assert.NotEqual(t, "", version)
+	assert.NotEmpty(t, version)
 }

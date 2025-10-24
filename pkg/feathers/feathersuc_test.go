@@ -5,6 +5,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
@@ -250,9 +251,9 @@ func Test_GetFeathersFromFile_Validate(t *testing.T) {
 
 			actualConfig, err := uc.GetFeathersFromFile()
 			if tt.shouldError {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			assert.Equal(t, tt.expectedConfig, *actualConfig)
 

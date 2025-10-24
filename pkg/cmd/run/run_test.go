@@ -9,6 +9,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -181,7 +182,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			mockSCM.On("GetPRComments", mock.Anything, "", "", 0).Return(tt.returnedComments, nil).Once()
 
 			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.expectedChanged, actualChanged)
 			assert.Equal(t, tt.expectedHash, actualHash)
 		})
@@ -277,7 +278,7 @@ func TestOptions_Run(t *testing.T) {
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
