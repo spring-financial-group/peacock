@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
@@ -54,7 +54,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	if e.Body == "" {
-		log.Infof("no text found in PR body, skipping")
+		log.Info().Msg("no text found in PR body, skipping")
 		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 	}
 
@@ -69,7 +69,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to parse release notes from markdown"))
 	}
 	if releaseNotes == nil {
-		log.Infof("no releaseNotes found in PR body, skipping")
+		log.Info().Msg("no releaseNotes found in PR body, skipping")
 		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 	}
 
@@ -89,7 +89,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		lastComment := comments[0]
 		oldHash, _ := comment.GetMetadataFromComment(*lastComment.Body)
 		if oldHash == newHash {
-			log.Infof("message hash matches previous comment, skipping new breakdown")
+			log.Info().Msg("message hash matches previous comment, skipping new breakdown")
 			return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 		}
 	}
@@ -106,14 +106,14 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Comment on the PR with the breakdown
-	log.Info("commenting on PR with message breakdown")
+	log.Info().Msg("commenting on PR with message breakdown")
 	err = w.scm.CommentOnPR(ctx, e.RepoOwner, e.RepoName, e.PRNumber, breakdown)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to comment breakdown on PR"))
 	}
 	err = w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 	if err != nil {
-		log.Errorf("failed to create success status: %v", err)
+		log.Error().Msgf("failed to create success status: %v", err)
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	if e.Body == "" {
-		log.Infof("no text found in PR body, skipping")
+		log.Info().Msg("no text found in PR body, skipping")
 		return w.createCommitStatus(ctx, e, domain.SuccessState, defaultSHA, domain.ReleaseContext)
 	}
 
@@ -151,7 +151,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to parse release notes from markdown"))
 	}
 	if releaseNotes == nil {
-		log.Infof("no release notes found in PR body, skipping")
+		log.Info().Msg("no release notes found in PR body, skipping")
 		return w.createCommitStatus(ctx, e, domain.SuccessState, defaultSHA, domain.ReleaseContext)
 	}
 
@@ -159,7 +159,7 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to send releaseNotes"))
 	}
 
-	log.Infof("%d message(s) sent", len(releaseNotes))
+	log.Info().Msgf("%d message(s) sent", len(releaseNotes))
 
 	files, err := w.scm.GetFilesChangedFromPR(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
 	if err != nil {
@@ -167,18 +167,18 @@ func (w *WebHookUseCase) RunPeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	if changedEnvironment := w.getChangedEnv(files); changedEnvironment != "" {
-		log.Infof("saving release for environment %s", changedEnvironment)
+		log.Info().Msgf("saving release for environment %s", changedEnvironment)
 		err = w.releaseUC.SaveRelease(ctx, changedEnvironment, releaseNotes, e.Summary())
 		if err != nil {
 			return w.handleError(ctx, domain.ReleaseContext, e, errors.Wrap(err, "failed to save release"))
 		}
 	} else {
-		log.Warn("environment not found for release, skipping save")
+		log.Warn().Msg("environment not found for release, skipping save")
 	}
 
 	err = w.createCommitStatus(ctx, e, domain.SuccessState, defaultSHA, domain.ReleaseContext)
 	if err != nil {
-		log.Errorf("failed to create success status: %v", err)
+		log.Error().Msgf("failed to create success status: %v", err)
 	}
 	return nil
 }

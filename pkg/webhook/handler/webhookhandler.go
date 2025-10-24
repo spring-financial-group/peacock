@@ -4,7 +4,7 @@ import (
 	"github.com/cbrgm/githubevents/githubevents"
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-github/v48/github"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/webhook/usecase"
@@ -46,16 +46,16 @@ func (h *Handler) RegisterGitHubHooks() {
 func (h *Handler) HandleEvents(c *gin.Context) {
 	err := h.HandleEventRequest(c.Request)
 	if err != nil {
-		log.Error(err)
+		log.Error().Err(err).Send()
 		return
 	}
 }
 
 // handlePullRequestSyncEvent starts a dry-run when a PR has been synchronized (e.g. new commits pushed)
 func (h *Handler) handlePullRequestSyncEvent(_ string, _ string, event *github.PullRequestEvent) error {
-	log.Infof("%s/PR-%d synced. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
+	log.Info().Msgf("%s/PR-%d synced. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
 	if *event.PullRequest.State == models.ClosedState {
-		log.Info("PR is closed. Skipping.")
+		log.Info().Msg("PR is closed. Skipping.")
 		return nil
 	}
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
@@ -63,7 +63,7 @@ func (h *Handler) handlePullRequestSyncEvent(_ string, _ string, event *github.P
 
 // handlePullRequestOpenedEvent starts a dry-run when a PR has been opened
 func (h *Handler) handlePullRequestOpenedEvent(_ string, _ string, event *github.PullRequestEvent) error {
-	log.Infof("%s/PR-%d opened. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
+	log.Info().Msgf("%s/PR-%d opened. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
 }
 
@@ -71,20 +71,20 @@ func (h *Handler) handlePullRequestOpenedEvent(_ string, _ string, event *github
 // feathers etc.
 func (h *Handler) handlePullRequestClosedEvent(_ string, _ string, event *github.PullRequestEvent) error {
 	if !*event.PullRequest.Merged {
-		log.Infof("%s/PR-%d closed without merging. Skipping.", *event.Repo.Name, *event.PullRequest.Number)
+		log.Info().Msgf("%s/PR-%d closed without merging. Skipping.", *event.Repo.Name, *event.PullRequest.Number)
 		h.useCase.CleanUp(*event.PullRequest.ID)
 		return nil
 	}
-	log.Infof("%s/PR-%d closed with merge. Starting full run.", *event.Repo.Name, *event.PullRequest.Number)
+	log.Info().Msgf("%s/PR-%d closed with merge. Starting full run.", *event.Repo.Name, *event.PullRequest.Number)
 	return h.useCase.RunPeacock(models.MarshalPullRequestEvent(event))
 }
 
 // handlePullRequestEditEvent starts a dry-run when a PR has been edited (e.g. body/title changed)
 func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.PullRequestEvent) error {
-	log.Infof("%s/PR-%d edited. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
+	log.Info().Msgf("%s/PR-%d edited. Starting dry-run.", *event.Repo.Name, *event.PullRequest.Number)
 	if *event.PullRequest.State == models.ClosedState {
 		// No need to handle closed
-		log.Info("PR is closed. Skipping.")
+		log.Info().Msg("PR is closed. Skipping.")
 		return nil
 	}
 	return h.useCase.ValidatePeacock(models.MarshalPullRequestEvent(event))
@@ -92,10 +92,10 @@ func (h *Handler) handlePullRequestEditEvent(_ string, _ string, event *github.P
 
 // handleIssueCommentCreatedEvent starts a dry-run when a comment has been created on a PR
 func (h *Handler) handleIssueCommentCreatedEvent(_ string, _ string, event *github.IssueCommentEvent) error {
-	log.Infof("%s/PR-%d comments edited. Starting dry-run.", *event.Repo.Name, *event.Issue.Number)
+	log.Info().Msgf("%s/PR-%d comments edited. Starting dry-run.", *event.Repo.Name, *event.Issue.Number)
 	if *event.Issue.State == models.ClosedState {
 		// No need to handle closed
-		log.Info("PR is closed. Skipping.")
+		log.Info().Msg("PR is closed. Skipping.")
 		return nil
 	}
 	return h.useCase.ValidatePeacock(models.MarshalIssueCommentCreatedEvent(event))

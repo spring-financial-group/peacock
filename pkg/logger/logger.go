@@ -2,35 +2,43 @@ package logger
 
 import (
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"net/http"
 )
 
 func Init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.DebugLevel)
+	// zerolog outputs JSON by default, no need to set formatter
+	// Set global log level to debug
+	log.Logger = log.Logger.Level(zerolog.DebugLevel)
 }
 
 func SetLevel(level string) {
-	logLevel, err := log.ParseLevel(level)
-	if err != nil {
-		log.Fatalf("Unable to log... wait what: %v\n", err)
+	switch level {
+	case "debug":
+		log.Logger = log.Logger.Level(zerolog.DebugLevel)
+	case "info":
+		log.Logger = log.Logger.Level(zerolog.InfoLevel)
+	case "warn":
+		log.Logger = log.Logger.Level(zerolog.WarnLevel)
+	case "error":
+		log.Logger = log.Logger.Level(zerolog.ErrorLevel)
+	default:
+		log.Fatal().Msgf("Unable to log... wait what: %v", level)
 	}
-	log.SetLevel(logLevel)
 }
 
 func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
-		log.WithField("request_ip", clientIP).Debugf("Requesting %s", c.Request.URL)
+		log.Debug().Str("request_ip", clientIP).Msgf("Requesting %s", c.Request.URL)
 		c.Next()
-		requestLog := log.WithFields(log.Fields{
-			"request_ip": clientIP, "status_code": c.Writer.Status(),
-		})
+
+		logger := log.With().Str("request_ip", clientIP).Int("status_code", c.Writer.Status()).Logger()
 		if c.Writer.Status() != http.StatusOK {
-			requestLog.Errorf("Finished request %s", c.Request.URL)
+			logger.Error().Msgf("Finished request %s", c.Request.URL)
 			return
 		}
-		requestLog.Debugf("Finished request %s", c.Request.URL)
+		logger.Debug().Msgf("Finished request %s", c.Request.URL)
 	}
 }

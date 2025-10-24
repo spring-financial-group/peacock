@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -17,7 +17,7 @@ type DataSources struct {
 
 // NewDataSources creates and initialises the data sources for the server.
 func NewDataSources(cfg *config.DataSources) (*DataSources, error) {
-	log.Info("Initialising data sources")
+	log.Info().Msg("Initialising data sources")
 	ds := &DataSources{
 		cfg: cfg,
 	}
@@ -34,7 +34,7 @@ func (ds *DataSources) Close(ctx context.Context) {
 		case mongo.ErrClientDisconnected:
 			// Already disconnected so nothing to do
 		default:
-			log.Errorf("Failed to close mongo client: %v", err)
+			log.Error().Err(err).Msg("Failed to close mongo client")
 		}
 	}
 }
@@ -58,6 +58,6 @@ func (ds *DataSources) initialiseMongoDB() error {
 	}
 
 	ds.MongoDBClient = client
-	log.Info("Successfully initialised mongo")
+	log.Info().Msg("Successfully initialised mongo")
 	return nil
 }

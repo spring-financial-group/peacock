@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/models"
@@ -72,12 +72,12 @@ func (uc *UseCase) ParseReleaseNoteFromMarkdown(markdown string, sanitise bool) 
 		return "", nil, err
 	}
 
-	log.Debug("Parsing release notes from markdown")
+	log.Debug().Msg("Parsing release notes from markdown")
 	teamNames := uc.parseTeamNames(teamNameReg, markdown)
 	if len(teamNames) < 1 {
 		return markdown, nil, nil
 	}
-	log.Debugf("%d notes found in markdown", len(teamNames))
+	log.Debug().Msgf("%d notes found in markdown", len(teamNames))
 
 	// Get the contents for each message & trim to remove any text before the first message
 	markdownSplit := teamNameReg.Split(markdown, -1)

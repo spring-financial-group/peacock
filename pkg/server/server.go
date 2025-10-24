@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/logger"
 	"net/http"
@@ -20,19 +20,19 @@ func Run() {
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Unable to initialize config: %v\n", err)
+		log.Fatal().Msgf("Unable to initialize config: %v", err)
 	}
 	logger.SetLevel(cfg.LogLevel)
 
 	sources, err := NewDataSources(&cfg.DataSources)
 	if err != nil {
-		log.Fatalf("Unable to initialise data sources: %v\n", err)
+		log.Fatal().Msgf("Unable to initialise data sources: %v", err)
 	}
 	defer sources.Close(context.Background())
 
 	router, err := inject(cfg, sources)
 	if err != nil {
-		log.Fatalf("Unable to initialise router: %v\n", err)
+		log.Fatal().Msgf("Unable to initialise router: %v", err)
 	}
 
 	srv := &http.Server{
@@ -44,17 +44,17 @@ func Run() {
 	// it won't block the graceful shutdown handling below
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Error serving: %v\n", err)
+			log.Fatal().Msgf("Error serving: %v", err)
 		}
 	}()
-	log.Infof("Server started, listening on %s", srv.Addr)
+	log.Info().Msgf("Server started, listening on %s", srv.Addr)
 
 	// Listen for the interrupt signal.
 	<-ctx.Done()
 
 	// Restore default behavior on the interrupt signal and notify user of shutdown.
 	stop()
-	log.Info("Shutting down gracefully, press Ctrl+C again to force")
+	log.Info().Msg("Shutting down gracefully, press Ctrl+C again to force")
 
 	// The context is used to inform the server it has 5 seconds to finish
 	// the request it is currently handling
@@ -62,8 +62,8 @@ func Run() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v\n", err)
+		log.Fatal().Msgf("Server forced to shutdown: %v", err)
 	}
 
-	log.Info("Server exiting")
+	log.Info().Msg("Server exiting")
 }

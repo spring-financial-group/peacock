@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
@@ -132,7 +132,7 @@ func (o *Options) ParseEnvVars(cmd *cobra.Command) (err error) {
 }
 
 func (o *Options) Run() error {
-	log.Info("Initialising variables & clients")
+	log.Info().Msg("Initialising variables & clients")
 	err := o.initialiseFlagsAndClients()
 	if err != nil {
 		return errors.Wrap(err, "failed to validate input args & clients")
@@ -145,12 +145,12 @@ func (o *Options) Run() error {
 	}
 	// We should check that the body actually exists
 	if prBody == nil {
-		log.Infof("No Body found for PR%d, exiting", o.PRNumber)
+		log.Info().Msgf("No Body found for PR%d, exiting", o.PRNumber)
 		return nil
 	}
 
 	if o.Feathers == nil {
-		log.Info("Loading feathers from local instance")
+		log.Info().Msg("Loading feathers from local instance")
 		o.Feathers, err = o.FeathersUC.GetFeathersFromFile()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load feathers")
@@ -159,7 +159,7 @@ func (o *Options) Run() error {
 		}
 	}
 
-	log.Info("Parsing messages from pull request body")
+	log.Info().Msg("Parsing messages from pull request body")
 	messages, err := o.NotesUC.GetReleaseNotesFromMarkdownAndTeamsInFeathers(*prBody, o.Feathers.Teams)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse release notes from pull request")
@@ -168,12 +168,12 @@ func (o *Options) Run() error {
 	}
 	// If no messages then we should exit with 0 code
 	if messages == nil {
-		log.Info("No messages found in markdown, exiting")
+		log.Info().Msg("No messages found in markdown, exiting")
 		return nil
 	}
 
 	if o.DryRun {
-		log.Info("Generating message breakdown")
+		log.Info().Msg("Generating message breakdown")
 		breakdown, err := o.GetMessageBreakdown(ctx, messages)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
@@ -194,7 +194,7 @@ func (o *Options) Run() error {
 		o.GenerateSubject()
 	}
 
-	log.Info("Sending messages")
+	log.Info().Msg("Sending messages")
 	err = o.NotesUC.SendReleaseNotes(o.Subject, messages)
 	if err != nil {
 		return err
@@ -208,11 +208,11 @@ func (o *Options) GetPullRequestBody(ctx context.Context) (*string, error) {
 	var sha string
 	if o.DryRun {
 		// If it's a dry run we need to be given the pr number that we're in
-		log.Info("Getting pull request from PR number")
+		log.Info().Msg("Getting pull request from PR number")
 		body, err = o.GitServerClient.GetPullRequestBodyFromPRNumber(ctx, o.RepoOwner, o.RepoName, o.PRNumber)
 	} else {
 		// If not then we can get it from the last commit in the local instance
-		log.Info("Getting pull request from last commit")
+		log.Info().Msg("Getting pull request from last commit")
 		sha, err = o.Git.GetLatestCommitSHA("")
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get latest commit sha")
@@ -244,7 +244,7 @@ func (o *Options) GetMessageBreakdown(ctx context.Context, messages []models.Rel
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR
 func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.ReleaseNote) (bool, string, error) {
-	log.Info("Checking if messages have changed")
+	log.Info().Msg("Checking if messages have changed")
 	currentHash, err := o.NotesUC.GenerateHash(messages)
 	if err != nil {
 		return false, "", err
@@ -255,7 +255,7 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.Rel
 		return false, "", err
 	}
 	if len(comments) < 1 {
-		log.Info("No comments found on PR")
+		log.Info().Msg("No comments found on PR")
 		return true, currentHash, nil
 	}
 
@@ -265,21 +265,21 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.Rel
 		// was the last one posted by the bot
 		previousHash, _ = comment.GetMetadataFromComment(*c.Body)
 		if previousHash != "" {
-			log.Info("Found previous hash in comment")
+			log.Info().Msg("Found previous hash in comment")
 			break
 		}
 	}
 
 	if previousHash == "" {
-		log.Info("No previous hash found in comments")
+		log.Info().Msg("No previous hash found in comments")
 		return true, currentHash, nil
 	}
 
 	if previousHash == currentHash {
-		log.Info("Previous hash matches current hash, messages have not changed")
+		log.Info().Msg("Previous hash matches current hash, messages have not changed")
 		return false, "", nil
 	}
-	log.Info("Previous hash does not match current hash, messages have changed")
+	log.Info().Msg("Previous hash does not match current hash, messages have changed")
 	return true, currentHash, nil
 }
 
@@ -314,7 +314,7 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 	}
 
 	if o.RepoOwner == "" || o.RepoName == "" {
-		log.Info("No one repo owner or name provided, getting from git")
+		log.Info().Msg("No one repo owner or name provided, getting from git")
 		o.RepoOwner, o.RepoName, err = o.Git.GetRepoOwnerAndName("")
 		if err != nil {
 			return errors.Wrap(err, "failed to get repo owner and name")

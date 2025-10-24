@@ -2,7 +2,7 @@ package msgclients
 
 import (
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/models"
@@ -18,11 +18,11 @@ type Handler struct {
 func NewMessageHandler(cfg *config.MessageHandlers) *Handler {
 	clients := make(map[string]domain.MessageClient)
 	if cfg.Slack.Token != "" {
-		log.Info("Slack message handler initialised")
+		log.Info().Msg("Slack message handler initialised")
 		clients[models.Slack] = slack.NewClient(cfg.Slack.Token)
 	}
 	if cfg.Webhook.URL != "" && cfg.Webhook.Secret != "" {
-		log.Info("Webhook message handler initialised")
+		log.Info().Msg("Webhook message handler initialised")
 		clients[models.Webhook] = webhook.NewClient(cfg.Webhook.URL, cfg.Webhook.Token, cfg.Webhook.Secret)
 	}
 
@@ -36,7 +36,7 @@ func (h *Handler) SendReleaseNotes(subject string, notes []models.ReleaseNote) e
 	for _, n := range notes {
 		err := h.sendNote(n, subject)
 		if err != nil {
-			log.Error(err)
+			log.Error().Err(err).Send()
 			errCount++
 			continue
 		}
@@ -59,7 +59,7 @@ func (h *Handler) sendNote(note models.ReleaseNote, subject string) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to send note")
 		}
-		log.Infof("Release note successfully sent to %s via %s", strings.Join(addresses, ", "), contactType)
+		log.Info().Msgf("Release note successfully sent to %s via %s", strings.Join(addresses, ", "), contactType)
 	}
 	return nil
 }

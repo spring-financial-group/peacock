@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"golang.org/x/oauth2"
@@ -59,7 +59,7 @@ func (c *Client) GetPullRequestBodyFromCommit(ctx context.Context, owner, repoNa
 	if len(prsWithCommit) < 1 {
 		return nil, errors.Errorf("no pull request found containing commit %s", sha)
 	}
-	log.Infof("Found %d pull request(s) containing that commit", len(prsWithCommit))
+	log.Info().Msgf("Found %d pull request(s) containing that commit", len(prsWithCommit))
 
 	// If there is only one PR then that must be it
 	if len(prsWithCommit) == 1 {
@@ -208,12 +208,12 @@ func (c *Client) GetLatestCommitSHAInBranch(ctx context.Context, owner, repoName
 func (c *Client) HandleError(ctx context.Context, statusContext, owner, repoName string, prNumber int, headSHA, prOwner string, err error) error {
 	commentErr := c.CommentError(ctx, owner, repoName, prNumber, prOwner, err)
 	if commentErr != nil {
-		log.Errorf("Failed to comment error on PR: %s", commentErr.Error())
+		log.Error().Msgf("Failed to comment error on PR: %s", commentErr.Error())
 	}
 
 	statusErr := c.CreatePeacockCommitStatus(ctx, owner, repoName, headSHA, domain.FailureState, statusContext)
 	if statusErr != nil {
-		log.Errorf("failed to create failed commit status: %s", err)
+		log.Error().Msgf("failed to create failed commit status: %s", err)
 	}
 	return err
 }
