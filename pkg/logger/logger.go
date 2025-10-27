@@ -1,10 +1,11 @@
 package logger
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"net/http"
 )
 
 var Logger zerolog.Logger
