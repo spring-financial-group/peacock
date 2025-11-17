@@ -39,6 +39,7 @@ spec:
           script: |
             #!/usr/bin/env sh
             sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
+            cat .jx/variables.sh
         - image: golang:1.22
           name: build-make-build
           resources: {}
@@ -47,7 +48,7 @@ spec:
             make build
         - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/sonar/sonar-scanner-pr.yaml@main
           name: ""
-        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/build-scan-push/build-scan-push-oss.yaml@main
+        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/build-scan-push/build-scan-push-oss.yaml@b4a83bf246595238696c072c5a786d7325ae1aee
           name: ""
           resources: {}
         - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/tools/preview-copy-secrets.yaml@main
