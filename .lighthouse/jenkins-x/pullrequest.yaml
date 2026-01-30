@@ -47,7 +47,7 @@ spec:
             make build
         - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/sonar/sonar-scanner-pr.yaml@main
           name: ""
-        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/build-scan-push/build-scan-push-oss.yaml@main
+        - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/build-scan-push/build-scan-push.yaml@main
           name: ""
           resources: {}
         - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/tools/preview-copy-secrets.yaml@main
