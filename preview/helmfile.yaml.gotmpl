@@ -7,7 +7,7 @@ helmDefaults:
   # time in seconds to wait for any individual Kubernetes operation (like Jobs for hooks, and waits on pod/pvc/svc/deployment readiness) (default 300)
   timeout: 600
 - name: dev
-  url: jx3mqubebuild.azurecr.io/spring-financial-group/charts
+  url: mqubeoss.azurecr.io/spring-financial-group/charts
   oci: true
 releases:
 - chart: '../charts/{{ requiredEnv "APP_NAME" }}'
