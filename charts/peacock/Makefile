@@ -1,4 +1,4 @@
-CHART_REPO := oci://jx3mqubebuild.azurecr.io/spring-financial-group/charts
+CHART_REPO := oci://mqubeoss.azurecr.io/spring-financial-group/charts
 CURRENT=$(pwd)
 NAME := peacock
 OS := $(shell uname)
