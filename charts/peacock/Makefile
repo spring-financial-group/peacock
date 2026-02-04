@@ -1,4 +1,4 @@
-CHART_REPO := http://jenkins-x-chartmuseum:8080
+CHART_REPO := oci://mqubeoss.azurecr.io/spring-financial-group/charts
 CURRENT=$(pwd)
 NAME := peacock
 OS := $(shell uname)
@@ -25,9 +25,9 @@ clean:
 release: clean
 	helm dependency build
 	helm lint
-	helm init --client-only
+	
 	helm package .
-	curl --fail -u $(CHARTMUSEUM_CREDS_USR):$(CHARTMUSEUM_CREDS_PSW) --data-binary "@$(NAME)-$(shell sed -n 's/^version: //p' Chart.yaml).tgz" $(CHART_REPO)/api/charts
+	helm push $(NAME)-$(shell sed -n 's/^version: //p' Chart.yaml).tgz $(CHART_REPO)
 	rm -rf ${NAME}*.tgz%
 
 tag:

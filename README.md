@@ -152,3 +152,5 @@ Use the command `peacock run` post-submission to actually send the messages to t
 3. Once opened, the peacock dry run pipeline will run. This parses and validates the teams & messages, posting an
    explanation back to the PR if it fails.
 4. Once the PR merges the peacock release pipeline starts. This is the pipeline that actually sends the notifications.
+
+Boop2!
