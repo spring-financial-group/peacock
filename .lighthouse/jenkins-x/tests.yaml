@@ -22,7 +22,7 @@ spec:
               resources: {}
             - name: jx-variables
               resources: {}
-            - image: golang:1.22
+            - image: jx3mqubebuild.azurecr.io/docker-io/library/golang:1.22
               name: build-make-test
               resources: {}
               script: |

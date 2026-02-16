@@ -28,7 +28,7 @@ spec:
                 echo "export WEBHOOK_URL=https://api-staging.jx.mqube.build/EmailService/api/SendEmail/Peacock" >> .jx/variables.sh
                 echo "$(kubectl get secret peacock -n preview-secrets -o jsonpath="{.data['test-feathers']}" | base64 -d)" > ./.peacock/feathers.yaml
               workingDir: /workspace/source
-            - image: golang:1.22
+            - image: jx3mqubebuild.azurecr.io/docker-io/library/golang:1.22
               name: peacock-run
               resources: {}
               script: |

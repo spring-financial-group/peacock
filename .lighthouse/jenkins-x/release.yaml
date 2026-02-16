@@ -46,7 +46,7 @@ spec:
           script: |
             #!/usr/bin/env sh
             sed -i 's/jx3mqubebuild/mqubeoss/g' .jx/variables.sh
-        - image: golang:1.22
+        - image: jx3mqubebuild.azurecr.io/docker-io/library/golang:1.22
           name: build-make-build
           resources: {}
           script: |
