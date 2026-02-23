@@ -87,7 +87,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 
 	if areSame {
 		log.Infof("release notes are same as the pull request template, failing")
-		return w.createCommitStatus(ctx, e, domain.FailureState, e.SHA, domain.ValidationContext)
+		return w.handleError(ctx, domain.ValidationContext, e, errors.New("release notes cannot be the same as the pull request template"))
 	}
 
 	// Prevent doing work if the new release notes are same as the previous release notes
@@ -219,8 +219,9 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, branch string, event *
 
 	data, err := w.scm.GetFileFromBranch(ctx, event.RepoOwner, event.RepoName, branch, ".peacock/feathers.yaml")
 	if err != nil {
-		switch err.(type) {
-		case *domain.ErrFileNotFound:
+		var errFileNotFound *domain.ErrFileNotFound
+		switch {
+		case errors.As(err, &errFileNotFound):
 			return nil, errors.New("feathers does not exist in branch")
 		default:
 			return nil, err
@@ -251,11 +252,12 @@ func (w *WebHookUseCase) getPRTemplateOrDefault(ctx context.Context, branch stri
 		sha: event.SHA,
 	}
 
-	data, err := w.scm.GetFileFromBranch(ctx, event.RepoOwner, event.RepoName, branch, "docs/pull_request_template.md")
+	data, err := w.scm.GetFileFromBranch(ctx, event.RepoOwner, event.RepoName, branch, ".github/pull_request_template.md")
 	if err != nil {
-		switch err.(type) {
+		var errFileNotFound *domain.ErrFileNotFound
+		switch {
 		// is this actually an error as you could peacock without a template
-		case *domain.ErrFileNotFound:
+		case errors.As(err, &errFileNotFound):
 			log.Infof("PR template not found, continuing with default")
 			return []models.ReleaseNote{}, nil
 		default:

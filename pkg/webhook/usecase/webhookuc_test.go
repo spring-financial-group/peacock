@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v48/github"
+	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
@@ -36,6 +37,7 @@ var (
 	mockPullRequestEventDTO = &models.PullRequestEventDTO{
 		PullRequestID: 100,
 		RepoOwner:     RepoOwner,
+		PROwner:       RepoOwner,
 		RepoName:      RepoName,
 		Body:          "### Notify Infra\n\nHello infra\n\n### Notify product\n\nHello product",
 		PRNumber:      PRNumber,
@@ -111,7 +113,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
 		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, "docs/pull_request_template.md").Return(templateContent, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
 
 		mockSCM.On("GetPRCommentsByUser", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil, nil).Once()
 		mockSCM.On("DeleteUsersComments", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil).Once()
@@ -138,14 +140,13 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
 		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, "docs/pull_request_template.md").Return([]byte(prBody), nil).Once()
-		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.FailureState, domain.ValidationContext).Return(nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return([]byte(prBody), nil).Once()
+		mockSCM.On("HandleError", mockCTX, domain.ValidationContext, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockEvent.SHA, mockEvent.RepoOwner, mock.Anything).Return(errors.New("release notes cannot be the same as the pull request template")).Once()
 
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil).Twice()
 
 		err := uc.ValidatePeacock(mockEvent)
-		assert.NoError(t, err)
-		mockSCM.AssertCalled(t, "CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.FailureState, domain.ValidationContext)
+		assert.Error(t, err)
 	})
 
 	t.Run("should handle error when PR template cannot be fetched", func(t *testing.T) {
@@ -159,7 +160,7 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
 		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, "docs/pull_request_template.md").Return(templateContent, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
 
 		mockSCM.On("GetPRCommentsByUser", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil, nil).Once()
 		mockSCM.On("DeleteUsersComments", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil).Once()
@@ -248,7 +249,7 @@ func TestWebHookUseCase_getPRTemplate(t *testing.T) {
 	t.Run("should fetch and cache PR template successfully", func(t *testing.T) {
 		uc.prTemplates = make(map[int64]*prTemplateMeta)
 
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, "docs/pull_request_template.md").Return(templateContent, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return(mockTemplateNotes, nil).Once()
 
 		result, err := uc.getPRTemplateOrDefault(mockCTX, mockEvent.Branch, mockEvent, allTeams)
@@ -282,7 +283,7 @@ func TestWebHookUseCase_getPRTemplate(t *testing.T) {
 			},
 		}
 
-		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, "docs/pull_request_template.md").Return(templateContent, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return(mockTemplateNotes, nil).Once()
 
 		result, err := uc.getPRTemplateOrDefault(mockCTX, mockEvent.Branch, mockEvent, allTeams)
