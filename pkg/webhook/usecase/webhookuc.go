@@ -26,12 +26,13 @@ type WebHookUseCase struct {
 
 func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseCase, feathersUC domain.FeathersUseCase, releaseUC domain.ReleaseUseCase) *WebHookUseCase {
 	return &WebHookUseCase{
-		cfg:       cfg,
-		scm:       scm,
-		notesUC:   notesUC,
-		featherUC: feathersUC,
-		feathers:  make(map[int64]*feathersMeta),
-		releaseUC: releaseUC,
+		cfg:         cfg,
+		scm:         scm,
+		notesUC:     notesUC,
+		featherUC:   feathersUC,
+		feathers:    make(map[int64]*feathersMeta),
+		releaseUC:   releaseUC,
+		prTemplates: make(map[int64]*prTemplateMeta),
 	}
 }
 
