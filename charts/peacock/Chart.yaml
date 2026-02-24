@@ -5,7 +5,7 @@ name: peacock
 version: 0.1.0-SNAPSHOT
 
 dependencies:
-  - name: mongodb
-    version: '^13'
-    repository: "https://charts.bitnami.com/bitnami"
-    condition: mongodb.useInternalInstance
+  - condition: mongodb.useInternalInstance
+    name: mongodb
+    repository: oci://registry-1.docker.io/cloudpirates
+    version: 0.7.1

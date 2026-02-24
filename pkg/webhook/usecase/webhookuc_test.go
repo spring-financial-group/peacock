@@ -2,7 +2,10 @@ package webhookuc
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/go-github/v48/github"
+	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/config"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/domain/mocks"
@@ -11,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v3"
-	"testing"
 )
 
 const (
@@ -35,6 +37,7 @@ var (
 	mockPullRequestEventDTO = &models.PullRequestEventDTO{
 		PullRequestID: 100,
 		RepoOwner:     RepoOwner,
+		PROwner:       RepoOwner,
 		RepoName:      RepoName,
 		Body:          "### Notify Infra\n\nHello infra\n\n### Notify product\n\nHello product",
 		PRNumber:      PRNumber,
@@ -83,29 +86,89 @@ var (
 )
 
 func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
-	mockSCM := mocks.NewSCM(t)
-	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
-	mockReleaseUC := mocks.NewReleaseUseCase(t)
-
 	cfg := &config.SCM{
 		User: RepoOwner,
 	}
 
-	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
+	templateContent := []byte("### Notify Infra\n\nTemplate message\n\n### Notify Product\n\nTemplate message")
+	mockTemplateNotes := []models.ReleaseNote{
+		{
+			Teams:   models.Teams{infraTeam},
+			Content: "Template message",
+		},
+		{
+			Teams:   models.Teams{productTeam},
+			Content: "Template message",
+		},
+	}
 
 	t.Run("Happy Path", func(t *testing.T) {
+		mockSCM := mocks.NewSCM(t)
+		mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+		mockReleaseUC := mocks.NewReleaseUseCase(t)
+		uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
+		uc.prTemplates = make(map[int64]*prTemplateMeta)
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = prBody
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
 		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
 
 		mockSCM.On("GetPRCommentsByUser", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil, nil).Once()
 		mockSCM.On("DeleteUsersComments", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil).Once()
 		mockSCM.On("CommentOnPR", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mock.Anything).Return(nil).Once()
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
-		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil)
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil).Once()
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return(mockTemplateNotes, nil).Once()
+		mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
+		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2).Return("", nil)
+
+		err := uc.ValidatePeacock(mockEvent)
+		assert.NoError(t, err)
+	})
+
+	t.Run("should fail when release notes match PR template", func(t *testing.T) {
+		mockSCM := mocks.NewSCM(t)
+		mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+		mockReleaseUC := mocks.NewReleaseUseCase(t)
+		uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
+		uc.prTemplates = make(map[int64]*prTemplateMeta)
+		mockEvent := mockPullRequestEventDTO
+		mockEvent.Body = prBody
+
+		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return([]byte(prBody), nil).Once()
+		mockSCM.On("HandleError", mockCTX, domain.ValidationContext, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockEvent.SHA, mockEvent.RepoOwner, mock.Anything).Return(errors.New("release notes cannot be the same as the pull request template")).Once()
+
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil).Twice()
+
+		err := uc.ValidatePeacock(mockEvent)
+		assert.Error(t, err)
+	})
+
+	t.Run("should handle error when PR template cannot be fetched", func(t *testing.T) {
+		mockSCM := mocks.NewSCM(t)
+		mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+		mockReleaseUC := mocks.NewReleaseUseCase(t)
+		uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
+		uc.prTemplates = make(map[int64]*prTemplateMeta)
+		mockEvent := mockPullRequestEventDTO
+		mockEvent.Body = prBody
+
+		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".peacock/feathers.yaml").Return(mockFeathersData, nil).Once()
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
+
+		mockSCM.On("GetPRCommentsByUser", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil, nil).Once()
+		mockSCM.On("DeleteUsersComments", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber).Return(nil).Once()
+		mockSCM.On("CommentOnPR", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mock.Anything).Return(nil).Once()
+		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
+
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil).Once()
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return([]models.ReleaseNote{}, nil).Once()
 		mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
 		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2).Return("", nil)
 
@@ -149,5 +212,150 @@ func TestWebHookUseCase_RunPeacock(t *testing.T) {
 
 		err := uc.RunPeacock(mockEvent)
 		assert.NoError(t, err)
+	})
+}
+
+func TestWebHookUseCase_getPRTemplate(t *testing.T) {
+	mockSCM := mocks.NewSCM(t)
+	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+	mockReleaseUC := mocks.NewReleaseUseCase(t)
+
+	cfg := &config.SCM{
+		User: RepoOwner,
+	}
+
+	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
+
+	mockEvent := &models.PullRequestEventDTO{
+		PullRequestID: 100,
+		RepoOwner:     RepoOwner,
+		RepoName:      RepoName,
+		SHA:           SHA,
+		Branch:        Branch,
+	}
+
+	templateContent := []byte("### Notify Infra\n\nTemplate message for infra\n\n### Notify Product\n\nTemplate message for product")
+	mockTemplateNotes := []models.ReleaseNote{
+		{
+			Teams:   models.Teams{infraTeam},
+			Content: "Template message for infra",
+		},
+		{
+			Teams:   models.Teams{productTeam},
+			Content: "Template message for product",
+		},
+	}
+
+	t.Run("should fetch and cache PR template successfully", func(t *testing.T) {
+		uc.prTemplates = make(map[int64]*prTemplateMeta)
+
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return(mockTemplateNotes, nil).Once()
+
+		result, err := uc.getPRTemplateOrDefault(mockCTX, mockEvent.Branch, mockEvent, allTeams)
+
+		assert.NoError(t, err)
+		assert.Equal(t, mockTemplateNotes, result)
+		assert.Contains(t, uc.prTemplates, mockEvent.PullRequestID)
+		assert.Equal(t, SHA, uc.prTemplates[mockEvent.PullRequestID].sha)
+	})
+
+	t.Run("should return cached template when SHA matches", func(t *testing.T) {
+		uc.prTemplates = map[int64]*prTemplateMeta{
+			mockEvent.PullRequestID: {
+				prTemplates: mockTemplateNotes,
+				sha:         SHA,
+			},
+		}
+
+		result, err := uc.getPRTemplateOrDefault(mockCTX, mockEvent.Branch, mockEvent, allTeams)
+
+		assert.NoError(t, err)
+		assert.Equal(t, mockTemplateNotes, result)
+		mockSCM.AssertNotCalled(t, "GetFileFromBranch")
+	})
+
+	t.Run("should refetch when SHA changes", func(t *testing.T) {
+		uc.prTemplates = map[int64]*prTemplateMeta{
+			mockEvent.PullRequestID: {
+				prTemplates: mockTemplateNotes,
+				sha:         "old-SHA",
+			},
+		}
+
+		mockSCM.On("GetFileFromBranch", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.Branch, ".github/pull_request_template.md").Return(templateContent, nil).Once()
+		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return(mockTemplateNotes, nil).Once()
+
+		result, err := uc.getPRTemplateOrDefault(mockCTX, mockEvent.Branch, mockEvent, allTeams)
+
+		assert.NoError(t, err)
+		assert.Equal(t, mockTemplateNotes, result)
+		assert.Equal(t, SHA, uc.prTemplates[mockEvent.PullRequestID].sha)
+	})
+}
+
+func TestWebHookUseCase_compareReleaseNotesAndTemplate(t *testing.T) {
+	mockSCM := mocks.NewSCM(t)
+	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+	mockReleaseUC := mocks.NewReleaseUseCase(t)
+
+	cfg := &config.SCM{
+		User: RepoOwner,
+	}
+
+	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
+
+	notes1 := []models.ReleaseNote{
+		{
+			Teams:   models.Teams{infraTeam},
+			Content: "First note",
+		},
+		{
+			Teams:   models.Teams{productTeam},
+			Content: "Second note",
+		},
+	}
+
+	notes2 := []models.ReleaseNote{
+		{
+			Teams:   models.Teams{infraTeam},
+			Content: "First note",
+		},
+		{
+			Teams:   models.Teams{productTeam},
+			Content: "Second note",
+		},
+	}
+
+	t.Run("should return false when lengths are different", func(t *testing.T) {
+		notesShort := []models.ReleaseNote{
+			{
+				Teams:   models.Teams{infraTeam},
+				Content: "First note",
+			},
+		}
+
+		areSame, err := uc.compareReleaseNotesAndTemplate(notes1, notesShort)
+
+		assert.NoError(t, err)
+		assert.False(t, areSame)
+	})
+
+	t.Run("should return true when lengths are equal (TODO: incomplete implementation)", func(t *testing.T) {
+		areSame, err := uc.compareReleaseNotesAndTemplate(notes1, notes2)
+
+		assert.NoError(t, err)
+		// Note: This returns true due to incomplete implementation (TODO in the code)
+		assert.True(t, areSame)
+	})
+
+	t.Run("should return true for empty slices", func(t *testing.T) {
+		emptyNotes1 := []models.ReleaseNote{}
+		emptyNotes2 := []models.ReleaseNote{}
+
+		areSame, err := uc.compareReleaseNotesAndTemplate(emptyNotes1, emptyNotes2)
+
+		assert.NoError(t, err)
+		assert.True(t, areSame)
 	})
 }

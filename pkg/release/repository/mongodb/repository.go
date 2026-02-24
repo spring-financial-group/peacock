@@ -2,11 +2,12 @@ package mongodb
 
 import (
 	"context"
+	"time"
+
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 )
 
 type repository struct {
@@ -41,7 +42,9 @@ func (r *repository) GetReleases(ctx context.Context, environment string, startT
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func(cursor *mongo.Cursor, ctx context.Context) {
+		_ = cursor.Close(ctx)
+	}(cursor, ctx)
 
 	var releases []models.Release
 	if err = cursor.All(ctx, &releases); err != nil {

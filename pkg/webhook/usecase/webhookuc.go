@@ -20,7 +20,8 @@ type WebHookUseCase struct {
 	featherUC domain.FeathersUseCase
 	releaseUC domain.ReleaseUseCase
 
-	feathers map[int64]*feathersMeta
+	feathers    map[int64]*feathersMeta
+	prTemplates map[int64]*prTemplateMeta
 }
 
 func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseCase, feathersUC domain.FeathersUseCase, releaseUC domain.ReleaseUseCase) *WebHookUseCase {
@@ -73,13 +74,29 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 	}
 
-	// Create a hash of the releaseNotes. Probably should cache these as well.
+	// ensure the current notes aren't the same as the template, as we don't want default messages being sent out
+	templateReleaseNotes, err := w.getPRTemplateOrDefault(ctx, e.Branch, e, feathers.Teams)
+	if err != nil {
+		return w.handleError(ctx, domain.ValidationContext, e, err)
+	}
+
+	areSame, err := w.compareReleaseNotesAndTemplate(releaseNotes, templateReleaseNotes)
+	if err != nil {
+		return w.handleError(ctx, domain.ValidationContext, e, err)
+	}
+
+	if areSame {
+		log.Infof("release notes are same as the pull request template, failing")
+		return w.handleError(ctx, domain.ValidationContext, e, errors.New("release notes cannot be the same as the pull request template"))
+	}
+
+	// Prevent doing work if the new release notes are same as the previous release notes
 	newHash, err := w.notesUC.GenerateHash(releaseNotes)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to generate message hash"))
 	}
 
-	// Get the hash from the last comment and compare
+	// Compare the previous hash to the current one, stop here if there are no changes (there's no work to do)
 	comments, err := w.scm.GetPRCommentsByUser(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to get comments"))
@@ -94,12 +111,13 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		}
 	}
 
+	// Break down the release notes to prove we've parsed them and to check the formatting
 	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, newHash, len(feathers.Teams))
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to generate message breakdown"))
 	}
 
-	// We should prune the previous comments
+	// prune the previous comments to prevent spam
 	err = w.scm.DeleteUsersComments(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to delete previous comments"))
@@ -201,8 +219,9 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, branch string, event *
 
 	data, err := w.scm.GetFileFromBranch(ctx, event.RepoOwner, event.RepoName, branch, ".peacock/feathers.yaml")
 	if err != nil {
-		switch err.(type) {
-		case *domain.ErrFileNotFound:
+		var errFileNotFound *domain.ErrFileNotFound
+		switch {
+		case errors.As(err, &errFileNotFound):
 			return nil, errors.New("feathers does not exist in branch")
 		default:
 			return nil, err
@@ -215,6 +234,43 @@ func (w *WebHookUseCase) getFeathers(ctx context.Context, branch string, event *
 	}
 	w.feathers[event.PullRequestID] = meta
 	return meta.feathers, nil
+}
+
+type prTemplateMeta struct {
+	prTemplates []models.ReleaseNote
+	sha         string
+}
+
+func (w *WebHookUseCase) getPRTemplateOrDefault(ctx context.Context, branch string, event *models.PullRequestEventDTO, teamsInFeathers models.Teams) ([]models.ReleaseNote, error) {
+	// Get the release notes for the branch and check that it matches the sha
+	meta, ok := w.prTemplates[event.PullRequestID]
+	if ok && meta.sha == event.SHA {
+		return meta.prTemplates, nil
+	}
+
+	meta = &prTemplateMeta{
+		sha: event.SHA,
+	}
+
+	data, err := w.scm.GetFileFromBranch(ctx, event.RepoOwner, event.RepoName, branch, ".github/pull_request_template.md")
+	if err != nil {
+		var errFileNotFound *domain.ErrFileNotFound
+		switch {
+		// is this actually an error as you could peacock without a template
+		case errors.As(err, &errFileNotFound):
+			log.Infof("PR template not found, continuing with default")
+			return []models.ReleaseNote{}, nil
+		default:
+			return nil, err
+		}
+	}
+
+	meta.prTemplates, err = w.notesUC.GetReleaseNotesFromMarkdownAndTeamsInFeathers(string(data[:]), teamsInFeathers)
+	if err != nil {
+		return nil, err
+	}
+	w.prTemplates[event.PullRequestID] = meta
+	return meta.prTemplates, nil
 }
 
 func (w *WebHookUseCase) CleanUp(pullRequestID int64) {
@@ -240,4 +296,87 @@ func (w *WebHookUseCase) getChangedEnv(files []*github.CommitFile) string {
 	}
 
 	return ""
+}
+
+func (w *WebHookUseCase) compareReleaseNotesAndTemplate(
+	notes []models.ReleaseNote,
+	templates []models.ReleaseNote,
+) (bool, error) {
+
+	if len(notes) != len(templates) {
+		return false, nil
+	}
+
+	// Index templates by content (or another stable key if you have one)
+	templateIndex := make(map[string]models.ReleaseNote, len(templates))
+	for _, t := range templates {
+		templateIndex[t.Content] = t
+	}
+
+	for _, note := range notes {
+		tmpl, ok := templateIndex[note.Content]
+		if !ok {
+			return false, nil
+		}
+
+		if !teamsEqual(note.Teams, tmpl.Teams) {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func teamsEqual(a, b models.Teams) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	index := make(map[string]models.Team, len(a))
+	for _, team := range a {
+		index[team.Name] = team
+	}
+
+	for _, team := range b {
+		existing, ok := index[team.Name]
+		if !ok {
+			return false
+		}
+
+		if !teamEqual(existing, team) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func teamEqual(a, b models.Team) bool {
+	if a.Name != b.Name ||
+		a.APIKey != b.APIKey ||
+		a.ContactType != b.ContactType {
+		return false
+	}
+
+	return stringSliceEqual(a.Addresses, b.Addresses)
+}
+
+func stringSliceEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	m := make(map[string]int, len(a))
+	for _, v := range a {
+		m[v]++
+	}
+
+	for _, v := range b {
+		if m[v] == 0 {
+			return false
+		}
+		m[v]--
+	}
+
+	return true
 }
