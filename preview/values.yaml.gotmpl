@@ -2,6 +2,12 @@ jxRequirements:
   ingress:
     namespaceSubDomain: "-pr{{ requiredEnv "PULL_NUMBER" }}."
 
+routeKind: httproute
+
+gateway:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+
 image:
   repository: "{{ requiredEnv "DOCKER_REGISTRY" }}/{{ requiredEnv "DOCKER_REGISTRY_ORG" }}/{{ requiredEnv "APP_NAME" }}"
   tag: "{{ requiredEnv "VERSION" }}"

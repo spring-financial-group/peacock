@@ -104,6 +104,8 @@ readinessProbe:
   # Optional distinct readiness probe path, if empty the probePath is used
   probePath: ""
 
+routeKind: ingress # options: ingress, httproute
+
 # custom ingress annotations on this service
 ingress:
   annotations: {}
@@ -114,6 +116,18 @@ ingress:
 
   # ingress path type
   pathType: ImplementationSpecific
+
+# custom HTTPRoute configuration on this service
+# enable by setting routeKind: httproute
+gateway:
+  # Gateway to attach the HTTPRoute to
+  name: ""
+  # Namespace of the Gateway, defaults to the same namespace as the service
+  namespace: ""
+  httpRoute:
+    pathPrefix: /
+  annotations: {}
+  labels: {}
 
 serviceAccount:
   enabled: true
