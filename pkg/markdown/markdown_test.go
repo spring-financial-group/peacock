@@ -97,6 +97,24 @@ func TestMarkdown_Converters(t *testing.T) {
 			expectedSlack: "<spring-financial-group/mqube-property-service#770|https://github.com/spring-financial-group/mqube-property-service/pull/770>",
 			expectedHTML:  "<p>spring-financial-group/mqube-property-service#770</p>\n",
 		},
+		{
+			name:          "DetailsBlockWithSummary",
+			inputMarkdown: "<details>\n<summary>Click to expand</summary>\n\nHidden content here\n\n</details>",
+			expectedSlack: "\n\n*Click to expand*\n\n\nHidden content here\n\n",
+			expectedHTML:  "<header>Click to expand</header>\n<p>Hidden content here</p>\n",
+		},
+		{
+			name:          "DetailsBlockWithOpenAttribute",
+			inputMarkdown: "<details open>\n<summary>Details</summary>\n\nMore info\n\n</details>",
+			expectedSlack: "\n\n*Details*\n\n\nMore info\n\n",
+			expectedHTML:  "<header>Details</header>\n<p>More info</p>\n",
+		},
+		{
+			name:          "DetailsBlockWithoutSummary",
+			inputMarkdown: "<details>\nJust some collapsible text\n</details>",
+			expectedSlack: "\nJust some collapsible text\n",
+			expectedHTML:  "<p>Just some collapsible text</p>\n",
+		},
 	}
 
 	for _, tt := range testCases {

@@ -12,6 +12,8 @@ func ConvertToSlack(markdown string) string {
 	// Remove carriage returns
 	markdown = strings.ReplaceAll(markdown, "\r\n", "\n")
 
+	markdown = stripDetailsTags(markdown)
+
 	var regex *regexp.Regexp
 	// Convert bullets (* -> •)
 	regex = regexp.MustCompile(`(^|\n)(|\s+)\*\s`)
@@ -70,6 +72,8 @@ func ConvertToSlack(markdown string) string {
 
 // ConvertToHTML converts the Markdown syntax into HTML and sanitises the result.
 func ConvertToHTML(markdown string) string {
+	markdown = stripDetailsTags(markdown)
+
 	mdParser := md.New(md.HTML(true), md.Breaks(true))
 	unsafeHTML := mdParser.RenderToString([]byte(markdown))
 	safeHTML := bluemonday.UGCPolicy().Sanitize(unsafeHTML)
@@ -78,4 +82,15 @@ func ConvertToHTML(markdown string) string {
 	// notifications consistent
 	regex := regexp.MustCompile(`(?miU)((<h\d>)(.+)(</h\d>))`)
 	return regex.ReplaceAllString(safeHTML, "<header>$3</header>")
+}
+
+// stripDetailsTags handles GitHub-style <details>/<summary> markup so it renders
+// cleanly: <summary>X</summary> is rewritten to a heading, and the surrounding
+// <details> tags are removed.
+func stripDetailsTags(markdown string) string {
+	summaryRegex := regexp.MustCompile(`(?i)<summary(?:\s[^>]*)?>(.*?)</summary>`)
+	markdown = summaryRegex.ReplaceAllString(markdown, "\n## $1\n")
+
+	tagRegex := regexp.MustCompile(`(?i)</?(?:details|summary)(?:\s[^>]*)?>`)
+	return tagRegex.ReplaceAllString(markdown, "")
 }
