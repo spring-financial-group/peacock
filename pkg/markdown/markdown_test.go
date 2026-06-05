@@ -1,9 +1,10 @@
 package markdown_test
 
 import (
+	"testing"
+
 	"github.com/spring-financial-group/peacock/pkg/markdown"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMarkdown_Converters(t *testing.T) {
@@ -100,20 +101,26 @@ func TestMarkdown_Converters(t *testing.T) {
 		{
 			name:          "DetailsBlockWithSummary",
 			inputMarkdown: "<details>\n<summary>Click to expand</summary>\n\nHidden content here\n\n</details>",
-			expectedSlack: "\n\n*Click to expand*\n\n\nHidden content here\n\n",
+			expectedSlack: "*Click to expand*\n\nHidden content here\n",
 			expectedHTML:  "<header>Click to expand</header>\n<p>Hidden content here</p>\n",
 		},
 		{
 			name:          "DetailsBlockWithOpenAttribute",
 			inputMarkdown: "<details open>\n<summary>Details</summary>\n\nMore info\n\n</details>",
-			expectedSlack: "\n\n*Details*\n\n\nMore info\n\n",
+			expectedSlack: "*Details*\n\nMore info\n",
 			expectedHTML:  "<header>Details</header>\n<p>More info</p>\n",
 		},
 		{
 			name:          "DetailsBlockWithoutSummary",
 			inputMarkdown: "<details>\nJust some collapsible text\n</details>",
-			expectedSlack: "\nJust some collapsible text\n",
+			expectedSlack: "Just some collapsible text",
 			expectedHTML:  "<p>Just some collapsible text</p>\n",
+		},
+		{
+			name:          "DetailsBlockCollapsesSurroundingBlankLines",
+			inputMarkdown: "<details open>\n<summary>Some Important Summary</summary>\n\n### Important Header\n**A Service**\n- A feature\n\n</details>",
+			expectedSlack: "*Some Important Summary*\n\n*Important Header*\n*A Service*\n• A feature\n",
+			expectedHTML:  "<header>Some Important Summary</header>\n<header>Important Header</header>\n<p><strong>A Service</strong></p>\n<ul>\n<li>A feature</li>\n</ul>\n",
 		},
 	}
 
