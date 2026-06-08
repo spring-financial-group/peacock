@@ -122,6 +122,12 @@ func TestMarkdown_Converters(t *testing.T) {
 			expectedSlack: "*Some Important Summary*\n*Important Header*\n*A Service*\n• A feature",
 			expectedHTML:  "<header>Some Important Summary</header>\n<header>Important Header</header>\n<p><strong>A Service</strong></p>\n<ul>\n<li>A feature</li>\n</ul>\n",
 		},
+		{
+			name:          "DetailsBlockPreservesIntentionalBlankLines",
+			inputMarkdown: "<details>\n<summary>Title</summary>\n\n\nFirst paragraph\n\n\n</details>",
+			expectedSlack: "*Title*\n\nFirst paragraph\n",
+			expectedHTML:  "<header>Title</header>\n<p>First paragraph</p>\n",
+		},
 	}
 
 	for _, tt := range testCases {
