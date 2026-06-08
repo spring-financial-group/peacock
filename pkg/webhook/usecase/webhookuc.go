@@ -295,6 +295,8 @@ func (w *WebHookUseCase) getChangedEnv(files []*github.CommitFile) string {
 	return ""
 }
 
+// areActualNotesAndTemplatesEqual checks whether any of the actual notes have the same content as the templates.
+// This is to prevent the repo template messages from accidentally being sent to teams.
 func (w *WebHookUseCase) areActualNotesAndTemplatesEqual(notes, templates []models.ReleaseNote) bool {
 	templateIndex := make(map[string]struct{}, len(templates))
 	for _, t := range templates {
