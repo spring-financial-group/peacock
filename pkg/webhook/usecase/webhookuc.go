@@ -81,12 +81,8 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ValidationContext, e, err)
 	}
 
-	areSame, err := w.compareReleaseNotesAndTemplate(releaseNotes, templateReleaseNotes)
-	if err != nil {
-		return w.handleError(ctx, domain.ValidationContext, e, err)
-	}
-
-	if areSame {
+	areEqual := w.areActualNotesAndTemplatesEqual(releaseNotes, templateReleaseNotes)
+	if areEqual {
 		log.Infof("release notes are same as the pull request template, failing")
 		return w.handleError(ctx, domain.ValidationContext, e, errors.New("release notes cannot be the same as the pull request template"))
 	}
@@ -299,85 +295,17 @@ func (w *WebHookUseCase) getChangedEnv(files []*github.CommitFile) string {
 	return ""
 }
 
-func (w *WebHookUseCase) compareReleaseNotesAndTemplate(
-	notes []models.ReleaseNote,
-	templates []models.ReleaseNote,
-) (bool, error) {
-
-	if len(notes) != len(templates) {
-		return false, nil
-	}
-
-	// Index templates by content (or another stable key if you have one)
-	templateIndex := make(map[string]models.ReleaseNote, len(templates))
+func (w *WebHookUseCase) areActualNotesAndTemplatesEqual(notes, templates []models.ReleaseNote) bool {
+	templateIndex := make(map[string]struct{}, len(templates))
 	for _, t := range templates {
-		templateIndex[t.Content] = t
+		templateIndex[t.Content] = struct{}{}
 	}
 
 	for _, note := range notes {
-		tmpl, ok := templateIndex[note.Content]
-		if !ok {
-			return false, nil
-		}
-
-		if !teamsEqual(note.Teams, tmpl.Teams) {
-			return false, nil
+		_, ok := templateIndex[note.Content]
+		if ok {
+			return true
 		}
 	}
-
-	return true, nil
-}
-
-func teamsEqual(a, b models.Teams) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	index := make(map[string]models.Team, len(a))
-	for _, team := range a {
-		index[team.Name] = team
-	}
-
-	for _, team := range b {
-		existing, ok := index[team.Name]
-		if !ok {
-			return false
-		}
-
-		if !teamEqual(existing, team) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func teamEqual(a, b models.Team) bool {
-	if a.Name != b.Name ||
-		a.APIKey != b.APIKey ||
-		a.ContactType != b.ContactType {
-		return false
-	}
-
-	return stringSliceEqual(a.Addresses, b.Addresses)
-}
-
-func stringSliceEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	m := make(map[string]int, len(a))
-	for _, v := range a {
-		m[v]++
-	}
-
-	for _, v := range b {
-		if m[v] == 0 {
-			return false
-		}
-		m[v]--
-	}
-
-	return true
+	return false
 }
