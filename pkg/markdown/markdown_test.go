@@ -101,13 +101,13 @@ func TestMarkdown_Converters(t *testing.T) {
 		{
 			name:          "DetailsBlockWithSummary",
 			inputMarkdown: "<details>\n<summary>Click to expand</summary>\n\nHidden content here\n\n</details>",
-			expectedSlack: "*Click to expand*\n\nHidden content here\n",
+			expectedSlack: "*Click to expand*\nHidden content here",
 			expectedHTML:  "<header>Click to expand</header>\n<p>Hidden content here</p>\n",
 		},
 		{
 			name:          "DetailsBlockWithOpenAttribute",
 			inputMarkdown: "<details open>\n<summary>Details</summary>\n\nMore info\n\n</details>",
-			expectedSlack: "*Details*\n\nMore info\n",
+			expectedSlack: "*Details*\nMore info",
 			expectedHTML:  "<header>Details</header>\n<p>More info</p>\n",
 		},
 		{
@@ -119,7 +119,7 @@ func TestMarkdown_Converters(t *testing.T) {
 		{
 			name:          "DetailsBlockCollapsesSurroundingBlankLines",
 			inputMarkdown: "<details open>\n<summary>Some Important Summary</summary>\n\n### Important Header\n**A Service**\n- A feature\n\n</details>",
-			expectedSlack: "*Some Important Summary*\n\n*Important Header*\n*A Service*\n• A feature\n",
+			expectedSlack: "*Some Important Summary*\n*Important Header*\n*A Service*\n• A feature",
 			expectedHTML:  "<header>Some Important Summary</header>\n<header>Important Header</header>\n<p><strong>A Service</strong></p>\n<ul>\n<li>A feature</li>\n</ul>\n",
 		},
 	}

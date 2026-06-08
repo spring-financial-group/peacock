@@ -87,16 +87,17 @@ func ConvertToHTML(markdown string) string {
 
 // stripDetailsTags handles GitHub-style <details>/<summary> markup so it renders
 // cleanly: <summary>X</summary> is rewritten to a heading, and the surrounding
-// <details> tags are removed.
-// Each tag also consumes its adjacent newline so the
-// blank lines that wrapped the original markup don't pile up in the output.
+// <details> tags are removed. Each tag also consumes all adjacent newlines —
+// GitHub requires blank lines around the inner content for it to be parsed as
+// markdown rather than raw HTML, and once we've stripped the tags ourselves
+// those blank lines are just noise.
 func stripDetailsTags(markdown string) string {
-	summaryRegex := regexp.MustCompile(`(?i)<summary(?:\s[^>]*)?>(.*?)</summary>\n?`)
+	summaryRegex := regexp.MustCompile(`(?i)<summary(?:\s[^>]*)?>(.*?)</summary>\n*`)
 	markdown = summaryRegex.ReplaceAllString(markdown, "## $1\n")
 
-	openRegex := regexp.MustCompile(`(?i)<details(?:\s[^>]*)?>\n?`)
+	openRegex := regexp.MustCompile(`(?i)<details(?:\s[^>]*)?>\n*`)
 	markdown = openRegex.ReplaceAllString(markdown, "")
 
-	closeRegex := regexp.MustCompile(`(?i)\n?</details>`)
+	closeRegex := regexp.MustCompile(`(?i)\n*</details>`)
 	return closeRegex.ReplaceAllString(markdown, "")
 }
