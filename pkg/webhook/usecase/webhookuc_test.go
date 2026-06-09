@@ -295,67 +295,88 @@ func TestWebHookUseCase_getPRTemplate(t *testing.T) {
 }
 
 func TestWebHookUseCase_compareReleaseNotesAndTemplate(t *testing.T) {
-	mockSCM := mocks.NewSCM(t)
-	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
-	mockReleaseUC := mocks.NewReleaseUseCase(t)
-
-	cfg := &config.SCM{
-		User: RepoOwner,
-	}
-
-	uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
-
-	notes1 := []models.ReleaseNote{
+	testCases := []struct {
+		name          string
+		a             []models.ReleaseNote
+		b             []models.ReleaseNote
+		expectedEqual bool
+	}{
 		{
-			Teams:   models.Teams{infraTeam},
-			Content: "First note",
-		},
-		{
-			Teams:   models.Teams{productTeam},
-			Content: "Second note",
-		},
-	}
-
-	notes2 := []models.ReleaseNote{
-		{
-			Teams:   models.Teams{infraTeam},
-			Content: "First note",
-		},
-		{
-			Teams:   models.Teams{productTeam},
-			Content: "Second note",
-		},
-	}
-
-	t.Run("should return false when lengths are different", func(t *testing.T) {
-		notesShort := []models.ReleaseNote{
-			{
-				Teams:   models.Teams{infraTeam},
-				Content: "First note",
+			name: "Equal if both contents are the same",
+			a: []models.ReleaseNote{
+				{
+					Content: "Template message for infra",
+				},
 			},
-		}
+			b: []models.ReleaseNote{
+				{
+					Content: "Template message for infra",
+				},
+			},
+			expectedEqual: true,
+		},
+		{
+			name: "Not equal if different contents",
+			a: []models.ReleaseNote{
+				{
+					Content: "Template message for infra",
+				},
+			},
+			b: []models.ReleaseNote{
+				{
+					Content: "Actual message for infra",
+				},
+			},
+			expectedEqual: false,
+		},
+		{
+			name: "Equal if at least one content is the same",
+			a: []models.ReleaseNote{
+				{
+					Content: "Template message for infra",
+				},
+			},
+			b: []models.ReleaseNote{
+				{
+					Content: "Actual message for infra",
+				},
+				{
+					Content: "Template message for infra",
+				},
+			},
+			expectedEqual: true,
+		},
+		{
+			name: "Equal if different teams with same content",
+			a: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{infraTeam},
+					Content: "Template message for infra",
+				},
+			},
+			b: []models.ReleaseNote{
+				{
+					Teams:   models.Teams{productTeam},
+					Content: "Template message for infra",
+				},
+			},
+			expectedEqual: true,
+		},
+	}
 
-		areSame, err := uc.compareReleaseNotesAndTemplate(notes1, notesShort)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSCM := mocks.NewSCM(t)
+			mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+			mockReleaseUC := mocks.NewReleaseUseCase(t)
 
-		assert.NoError(t, err)
-		assert.False(t, areSame)
-	})
+			cfg := &config.SCM{
+				User: RepoOwner,
+			}
 
-	t.Run("should return true when lengths are equal (TODO: incomplete implementation)", func(t *testing.T) {
-		areSame, err := uc.compareReleaseNotesAndTemplate(notes1, notes2)
-
-		assert.NoError(t, err)
-		// Note: This returns true due to incomplete implementation (TODO in the code)
-		assert.True(t, areSame)
-	})
-
-	t.Run("should return true for empty slices", func(t *testing.T) {
-		emptyNotes1 := []models.ReleaseNote{}
-		emptyNotes2 := []models.ReleaseNote{}
-
-		areSame, err := uc.compareReleaseNotesAndTemplate(emptyNotes1, emptyNotes2)
-
-		assert.NoError(t, err)
-		assert.True(t, areSame)
-	})
+			uc := NewUseCase(cfg, mockSCM, mockNotesUC, feathers.NewUseCase(), mockReleaseUC)
+			actualEqual := uc.areActualNotesAndTemplatesEqual(tc.a, tc.b)
+			assert.Equal(t, tc.expectedEqual, actualEqual)
+		})
+	}
 }
