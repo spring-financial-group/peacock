@@ -24,6 +24,8 @@ spec:
             value: ./docs/swagger.json
           - name: OutputLanguages
             value: csharp angular
+          - name: GOPROXY
+            value: "http://athens-proxy.infrastructure.svc.cluster.local,direct"
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone.yaml@versionStream
           name: ""
