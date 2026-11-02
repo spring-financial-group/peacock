@@ -66,6 +66,20 @@ func Test_renderTable(t *testing.T) {
 		assert.Equal(t, maxTableRows+2, countLines(table))
 	})
 
+	t.Run("description column appears only when a row carries one", func(t *testing.T) {
+		withDesc := []row{{path: "a", change: addedMarker, details: "string", description: "The a value"}}
+		table, _ := renderTable(withDesc)
+		assert.Contains(t, table, "| Field | Change | Details | Description |\n|---|---|---|---|\n")
+		assert.Contains(t, table, "| `a` | ➕ added | string | The a value |")
+
+		mixed := []row{
+			{path: "a", change: addedMarker, details: "string", description: "The a value"},
+			{path: "b", change: addedMarker, details: "integer"},
+		}
+		table, _ = renderTable(mixed)
+		assert.Contains(t, table, "| `b` | ➕ added | integer |  |")
+	})
+
 	t.Run("cells are escaped", func(t *testing.T) {
 		rows := []row{{path: "a|b", change: addedMarker, details: "line1\nline2"}}
 		table, _ := renderTable(rows)

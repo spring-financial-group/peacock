@@ -53,21 +53,40 @@ const (
 )
 
 type row struct {
-	path    string
-	change  string
-	details string
+	path        string
+	change      string
+	details     string
+	description string
 }
 
-// renderTable renders rows as a markdown table, capping the row count to keep comments within GitHub's limits
+// renderTable renders rows as a markdown table, capping the row count to keep comments within
+// GitHub's limits. The Description column only appears when any row carries one
 func renderTable(rows []row) (table string, truncated int) {
+	withDescriptions := false
+	for _, r := range rows {
+		if r.description != "" {
+			withDescriptions = true
+			break
+		}
+	}
+
 	var b strings.Builder
-	b.WriteString("| Field | Change | Details |\n|---|---|---|\n")
+	if withDescriptions {
+		b.WriteString("| Field | Change | Details | Description |\n|---|---|---|---|\n")
+	} else {
+		b.WriteString("| Field | Change | Details |\n|---|---|---|\n")
+	}
 	if len(rows) > maxTableRows {
 		truncated = len(rows) - maxTableRows
 		rows = rows[:maxTableRows]
 	}
 	for _, r := range rows {
-		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", escapeCell(r.path), escapeCell(r.change), escapeCell(r.details))
+		if withDescriptions {
+			fmt.Fprintf(&b, "| `%s` | %s | %s | %s |\n",
+				escapeCell(r.path), escapeCell(r.change), escapeCell(r.details), escapeCell(r.description))
+		} else {
+			fmt.Fprintf(&b, "| `%s` | %s | %s |\n", escapeCell(r.path), escapeCell(r.change), escapeCell(r.details))
+		}
 	}
 	return b.String(), truncated
 }

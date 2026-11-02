@@ -81,13 +81,14 @@ glob matches a file wins if configs overlap.
 |---------------|--------------------------------------------------------------------------------------|
 | `text`        | A unified diff of the file                                                           |
 | `json`        | A key-path table of any JSON document                                                |
-| `json-schema` | A field-level table (type, nullable, enum) of a JSON Schema document                 |
+| `json-schema` | A field-level table (type, nullable, enum, description) of a JSON Schema document    |
 | `configmap`   | Each `data` value of a Kubernetes ConfigMap, rendered with its detected inner format |
 
 The changed file is shown by name as the section header, linked to its diff in the Files tab, and each sub-document
 (e.g. a ConfigMap `data` key like `OrigoExtractEntry.json`) gets its own collapsible table with a change count. An
 optional `team` attaches the rendered diff inside that feather's note breakdown in the comment — diffs with no team,
-or whose team has no note on the PR, appear as their own section at the end instead.
+or whose team has no note on the PR, appear as their own section at the end instead. Field descriptions render in a
+fourth table column when present; description-only changes never create a row.
 
 Only the `data` field of a ConfigMap is read — `metadata` (labels, annotations) is never parsed, so a version bump that
 doesn't change the data renders nothing at all. Very large diffs are collapsed and row-capped to stay within GitHub's

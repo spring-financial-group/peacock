@@ -13,15 +13,16 @@ const maxRefDepth = 50
 
 type jsonSchemaHandler struct{}
 
-// fieldSig captures the parts of a schema field reviewers care about; descriptions are deliberately
-// excluded so wording-only changes don't spam the comment
+// fieldSig captures the parts of a schema field reviewers care about; the description is display
+// only and deliberately excluded from equality so wording-only changes don't spam the comment
 type fieldSig struct {
-	types      []string
-	enum       []string
-	format     string
-	required   bool
-	deprecated bool
-	ref        string
+	types       []string
+	enum        []string
+	format      string
+	required    bool
+	deprecated  bool
+	ref         string
+	description string
 }
 
 func (jsonSchemaHandler) Diff(key string, base, head []byte) ([]models.DiffSection, error) {
@@ -170,6 +171,7 @@ func sigFromNode(node map[string]any, required bool) fieldSig {
 		}
 	}
 	sig.deprecated, _ = node["deprecated"].(bool)
+	sig.description, _ = node["description"].(string)
 	return sig
 }
 
@@ -202,11 +204,12 @@ func diffFieldSigs(base, head map[string]fieldSig) []row {
 		h, inHead := head[p]
 		switch {
 		case inBase && !inHead:
-			rows = append(rows, row{path: p, change: removedMarker})
+			// removed fields show the description they had
+			rows = append(rows, row{path: p, change: removedMarker, description: truncate(b.description)})
 		case !inBase && inHead:
-			rows = append(rows, row{path: p, change: addedMarker, details: h.render()})
+			rows = append(rows, row{path: p, change: addedMarker, details: h.render(), description: truncate(h.description)})
 		case !b.equal(h):
-			rows = append(rows, row{path: p, change: changedMarker, details: renderSigChange(b, h)})
+			rows = append(rows, row{path: p, change: changedMarker, details: renderSigChange(b, h), description: truncate(h.description)})
 		}
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].path < rows[j].path })

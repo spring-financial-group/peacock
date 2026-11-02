@@ -1,6 +1,7 @@
 package diffs
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -176,6 +177,30 @@ func Test_jsonSchemaHandler_Diff(t *testing.T) {
 		sections, err := (jsonSchemaHandler{}).Diff("schema.json", base, head)
 		assert.NoError(t, err)
 		assert.Empty(t, sections)
+	})
+
+	t.Run("descriptions render in their own column when present", func(t *testing.T) {
+		base := []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"gone": {"type": "string", "description": "The gone field"}}}`)
+		head := []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"added": {"type": "integer", "description": "The added count"}, "changed": {"type": "string", "description": "The changed value"}}}`)
+
+		sections, err := (jsonSchemaHandler{}).Diff("schema.json", base, head)
+		assert.NoError(t, err)
+		assert.Len(t, sections, 1)
+		assert.Contains(t, sections[0].Body, "| Field | Change | Details | Description |\n|---|---|---|---|\n")
+		assert.Contains(t, sections[0].Body, "| `added` | ➕ added | integer | The added count |")
+		assert.Contains(t, sections[0].Body, "| `changed` | ➕ added | string | The changed value |")
+		assert.Contains(t, sections[0].Body, "| `gone` | ➖ removed |  | The gone field |")
+	})
+
+	t.Run("long descriptions are truncated", func(t *testing.T) {
+		long := strings.Repeat("word ", 40)
+		base := []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {}}`)
+		head := []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"a": {"type": "string", "description": "` + long + `"}}}`)
+
+		sections, err := (jsonSchemaHandler{}).Diff("schema.json", base, head)
+		assert.NoError(t, err)
+		assert.Len(t, sections, 1)
+		assert.Contains(t, sections[0].Body, "… |")
 	})
 
 	t.Run("cyclic refs terminate instead of hanging", func(t *testing.T) {
