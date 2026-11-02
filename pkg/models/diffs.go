@@ -25,13 +25,29 @@ func (f DiffFormat) IsValid() bool {
 	return false
 }
 
-// DiffConfig selects changed files to render in the PR validation comment
+// DiffConfig selects changed files to render in the PR validation comment, optionally attaching
+// the rendered diff to a feather team's note breakdown
 type DiffConfig struct {
 	Paths  []string   `yaml:"paths"`
 	Format DiffFormat `yaml:"format"`
+	Team   string     `yaml:"team,omitempty"`
 }
 
 type DiffConfigs []DiffConfig
+
+// DiffSections is rendered diff markdown keyed by the feather team it attaches to;
+// the empty key holds diffs that belong to no team
+type DiffSections map[string]string
+
+// ForTeams returns the diff markdown attached to any of the given team names
+func (d DiffSections) ForTeams(teams Teams) string {
+	for _, name := range teams.GetAllTeamNames() {
+		if md, ok := d[name]; ok {
+			return md
+		}
+	}
+	return ""
+}
 
 // DiffSection is one rendered block of the file changes comment, e.g. a single ConfigMap data key
 type DiffSection struct {

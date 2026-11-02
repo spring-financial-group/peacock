@@ -13,6 +13,7 @@ import (
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -29,6 +30,10 @@ Release Note {{ inc $idx }} will be sent to: {{ getTeamNames $val.Teams }}
 <summary>Release Note Breakdown</summary>
 
 {{ $val.Content }}
+{{- with diffFor $val.Teams }}
+
+{{ . }}
+{{- end }}
 
 </details>
 
@@ -220,17 +225,17 @@ func (uc *UseCase) parseTeamNames(teamNameReg *regexp.Regexp, markdown string) [
 	return teamsInNotes
 }
 
-func (uc *UseCase) GenerateHash(notes []models.ReleaseNote, diffSection string) (string, error) {
-	// hash only the notes when there is no diff section so existing repos keep identical hashes
+func (uc *UseCase) GenerateHash(notes []models.ReleaseNote, diffSections models.DiffSections) (string, error) {
+	// hash only the notes when there are no diffs so existing repos keep identical hashes
 	var data []byte
 	var err error
-	if diffSection == "" {
+	if len(diffSections) == 0 {
 		data, err = json.Marshal(notes)
 	} else {
 		data, err = json.Marshal(struct {
 			Notes []models.ReleaseNote `json:"notes"`
-			Diff  string               `json:"diff"`
-		}{notes, diffSection})
+			Diffs models.DiffSections  `json:"diffs"`
+		}{notes, diffSections})
 	}
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal notes")
@@ -240,7 +245,7 @@ func (uc *UseCase) GenerateHash(notes []models.ReleaseNote, diffSection string) 
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int, diffSection string) (string, error) {
+func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int, diffSections models.DiffSections) (string, error) {
 	tmplFuncs := template.FuncMap{
 		"inc":          func(i int) int { return i + 1 },
 		"getTeamNames": func(ts models.Teams) string { return utils.CommaSeparated(ts.GetAllTeamNames()) },
@@ -251,6 +256,7 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 			}
 			return plural
 		},
+		"diffFor": diffSections.ForTeams,
 	}
 
 	tpl, err := template.New("breakdown").Funcs(tmplFuncs).Parse(breakdownTemplate)
@@ -268,17 +274,42 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 	}
 
 	breakdown := strings.TrimSpace(buf.String())
+	trailing := trailingDiffs(notes, diffSections)
 	switch {
-	case diffSection == "":
+	case trailing == "":
 		// unchanged path for repos without diffs
 	case len(notes) > 0:
-		breakdown += "\n\n***\n\n" + diffSection
+		breakdown += "\n\n***\n\n" + trailing
 	default:
-		// no notes to break down, the diff section is the whole comment
-		breakdown = diffSection
+		// no notes to break down, the diffs are the whole comment
+		breakdown = trailing
 	}
 	breakdown = comment.AddMetadataToComment(breakdown, hash, comment.BreakdownCommentType)
 	return breakdown, nil
+}
+
+// trailingDiffs joins the diff markdown with no matching note to attach to, sorted for determinism
+func trailingDiffs(notes []models.ReleaseNote, sections models.DiffSections) string {
+	attached := make(map[string]bool)
+	for _, note := range notes {
+		for _, name := range note.Teams.GetAllTeamNames() {
+			attached[name] = true
+		}
+	}
+
+	var keys []string
+	for team := range sections {
+		if team == "" || !attached[team] {
+			keys = append(keys, team)
+		}
+	}
+	sort.Strings(keys)
+
+	var parts []string
+	for _, k := range keys {
+		parts = append(parts, sections[k])
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 func (uc *UseCase) SendReleaseNotes(subject string, notes []models.ReleaseNote) error {

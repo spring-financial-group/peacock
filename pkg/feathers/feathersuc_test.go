@@ -314,6 +314,16 @@ func Test_ValidateFeathers_Diffs(t *testing.T) {
 			diffs:       models.DiffConfigs{{Paths: []string{"config-root/**/[.yaml"}, Format: models.DiffFormatText}},
 			shouldError: true,
 		},
+		{
+			name:        "ValidTeam",
+			diffs:       models.DiffConfigs{{Paths: []string{"*.yaml"}, Format: models.DiffFormatText, Team: "infrastructure"}},
+			shouldError: false,
+		},
+		{
+			name:        "UnknownTeam",
+			diffs:       models.DiffConfigs{{Paths: []string{"*.yaml"}, Format: models.DiffFormatText, Team: "DoesNotExist"}},
+			shouldError: true,
+		},
 	}
 
 	for _, tt := range testCases {

@@ -28,52 +28,64 @@ func NewUseCase(scm domain.SCM) *UseCase {
 	return &UseCase{scm: scm}
 }
 
-// GenerateDiffSection renders the markdown file changes section for a PR, or an empty string
-// when nothing matched or nothing effectively changed. Both file versions are fetched via the
-// API at a single live snapshot rather than trusting the event payload, so webhook and CLI
-// modes behave identically.
-func (uc *UseCase) GenerateDiffSection(ctx context.Context, owner, repoName string, prNumber int, configs models.DiffConfigs) (string, error) {
+// GenerateDiffSection renders the markdown file changes for a PR, keyed by the feather team each
+// diff config attaches to, or an empty map when nothing matched or nothing effectively changed.
+// Both file versions are fetched via the API at a single live snapshot rather than trusting the
+// event payload, so webhook and CLI modes behave identically.
+func (uc *UseCase) GenerateDiffSection(ctx context.Context, owner, repoName string, prNumber int, configs models.DiffConfigs) (models.DiffSections, error) {
 	if len(configs) == 0 {
-		return "", nil
+		return models.DiffSections{}, nil
 	}
 	baseBranch, err := uc.scm.GetPRBaseBranchFromPRNumber(ctx, owner, repoName, prNumber)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get PR base branch")
+		return nil, errors.Wrap(err, "failed to get PR base branch")
 	}
 	_, headSHA, err := uc.scm.GetPRBranchSHAFromPRNumber(ctx, owner, repoName, prNumber)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get PR head SHA")
+		return nil, errors.Wrap(err, "failed to get PR head SHA")
 	}
 	files, err := uc.scm.GetFilesChangedFromPR(ctx, owner, repoName, prNumber)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get files changed from PR")
+		return nil, errors.Wrap(err, "failed to get files changed from PR")
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].GetFilename() < files[j].GetFilename() })
 
-	var blocks []string
+	blocksByTeam := make(map[string][]string)
+	rendered := 0
 	notShown := 0
 	for _, file := range files {
 		config := matchDiffConfig(file.GetFilename(), configs)
 		if config == nil {
 			continue
 		}
-		if len(blocks) >= maxMatchedFiles {
+		if rendered >= maxMatchedFiles {
 			notShown++
 			continue
 		}
-		block, rendered, err := uc.fileBlock(ctx, owner, repoName, prNumber, derefString(baseBranch), derefString(headSHA), file, config)
+		block, ok, err := uc.fileBlock(ctx, owner, repoName, prNumber, derefString(baseBranch), derefString(headSHA), file, config)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		if rendered {
-			blocks = append(blocks, block)
+		if !ok {
+			continue
 		}
+		blocksByTeam[config.Team] = append(blocksByTeam[config.Team], block)
+		rendered++
 	}
-	if len(blocks) == 0 {
-		return "", nil
+	if rendered == 0 {
+		return models.DiffSections{}, nil
 	}
 
-	// keep the section comfortably under GitHub's 65536-char comment limit
+	out := make(models.DiffSections)
+	for team, blocks := range blocksByTeam {
+		out[team] = capBlocks(blocks, notShown, owner, repoName, prNumber)
+	}
+	return out, nil
+}
+
+// capBlocks joins file blocks into one section under the comment size budget, dropping trailing
+// blocks when needed
+func capBlocks(blocks []string, notShown int, owner, repoName string, prNumber int) string {
 	header := fmt.Sprintf("📊 File Changes — %d file%s", len(blocks), plural(len(blocks)))
 	shown := len(blocks)
 	for shown > 1 && len(header)+2+len(strings.Join(blocks[:shown], "\n\n")) > maxSectionChars {
@@ -87,7 +99,7 @@ func (uc *UseCase) GenerateDiffSection(ctx context.Context, owner, repoName stri
 	if notShown > 0 {
 		out += fmt.Sprintf("\n\n> … %d more matched file%s not shown.", notShown, plural(notShown))
 	}
-	return out, nil
+	return out
 }
 
 // fileBlock renders one matched file's block, returning rendered=false for effectively unchanged files

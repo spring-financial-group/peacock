@@ -97,6 +97,8 @@ var (
 	mockDiffFeathersData, _ = yaml.Marshal(mockDiffFeathers)
 
 	mockDiffSection = "📊 File Changes — 1 file\n\n**`mqube-extract-service-origo-schema-cm.yaml`**"
+
+	mockDiffSections = models.DiffSections{"": mockDiffSection}
 )
 
 func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
@@ -136,8 +138,8 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil).Once()
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return(mockTemplateNotes, nil).Once()
-		mockNotesUC.On("GenerateHash", mockNotes, "").Return(mockHash, nil)
-		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2, "").Return("", nil)
+		mockNotesUC.On("GenerateHash", mockNotes, models.DiffSections(nil)).Return(mockHash, nil)
+		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2, models.DiffSections(nil)).Return("", nil)
 
 		err := uc.ValidatePeacock(mockEvent)
 		assert.NoError(t, err)
@@ -183,8 +185,8 @@ func TestWebHookUseCase_ValidatePeacock(t *testing.T) {
 
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", prBody, allTeams).Return(mockNotes, nil).Once()
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", string(templateContent), allTeams).Return([]models.ReleaseNote{}, nil).Once()
-		mockNotesUC.On("GenerateHash", mockNotes, "").Return(mockHash, nil)
-		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2, "").Return("", nil)
+		mockNotesUC.On("GenerateHash", mockNotes, models.DiffSections(nil)).Return(mockHash, nil)
+		mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, 2, models.DiffSections(nil)).Return("", nil)
 
 		err := uc.ValidatePeacock(mockEvent)
 		assert.NoError(t, err)
@@ -418,9 +420,9 @@ func TestWebHookUseCase_ValidatePeacock_Diffs(t *testing.T) {
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", mockEvent.Body, allTeams).Return(nil, nil).Once()
-		mockNotesUC.On("GenerateHash", []models.ReleaseNote(nil), mockDiffSection).Return(mockHash, nil).Once()
-		mockNotesUC.On("GenerateBreakdown", []models.ReleaseNote(nil), mockHash, 2, mockDiffSection).Return("", nil).Once()
-		mockDiffsUC.On("GenerateDiffSection", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockDiffFeathers.Diffs).Return(mockDiffSection, nil).Once()
+		mockNotesUC.On("GenerateHash", []models.ReleaseNote(nil), mockDiffSections).Return(mockHash, nil).Once()
+		mockNotesUC.On("GenerateBreakdown", []models.ReleaseNote(nil), mockHash, 2, mockDiffSections).Return("", nil).Once()
+		mockDiffsUC.On("GenerateDiffSection", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockDiffFeathers.Diffs).Return(mockDiffSections, nil).Once()
 
 		err := uc.ValidatePeacock(mockEvent)
 		assert.NoError(t, err)
@@ -456,8 +458,8 @@ func TestWebHookUseCase_ValidatePeacock_Diffs(t *testing.T) {
 		mockEvent := mockPullRequestEventDTO
 		mockEvent.Body = "no notify sections in here"
 
-		matchWarning := mock.MatchedBy(func(s string) bool {
-			return strings.Contains(s, "failed to compute file diffs: boom")
+		matchWarning := mock.MatchedBy(func(d models.DiffSections) bool {
+			return strings.Contains(d[""], "failed to compute file diffs: boom")
 		})
 
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.PendingState, domain.ValidationContext).Return(nil).Once()
@@ -470,7 +472,7 @@ func TestWebHookUseCase_ValidatePeacock_Diffs(t *testing.T) {
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", mockEvent.Body, allTeams).Return(nil, nil).Once()
 		mockNotesUC.On("GenerateHash", mock.Anything, matchWarning).Return(mockHash, nil).Once()
 		mockNotesUC.On("GenerateBreakdown", mock.Anything, mockHash, 2, matchWarning).Return("", nil).Once()
-		mockDiffsUC.On("GenerateDiffSection", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockDiffFeathers.Diffs).Return("", errors.New("boom")).Once()
+		mockDiffsUC.On("GenerateDiffSection", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockDiffFeathers.Diffs).Return(nil, errors.New("boom")).Once()
 
 		err := uc.ValidatePeacock(mockEvent)
 		assert.NoError(t, err)
@@ -493,8 +495,8 @@ func TestWebHookUseCase_ValidatePeacock_Diffs(t *testing.T) {
 		mockSCM.On("CreatePeacockCommitStatus", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.SHA, domain.SuccessState, domain.ValidationContext).Return(nil).Once()
 
 		mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", mockEvent.Body, allTeams).Return(nil, nil).Once()
-		mockNotesUC.On("GenerateHash", []models.ReleaseNote(nil), mockDiffSection).Return(mockHash, nil).Once()
-		mockDiffsUC.On("GenerateDiffSection", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockDiffFeathers.Diffs).Return(mockDiffSection, nil).Once()
+		mockNotesUC.On("GenerateHash", []models.ReleaseNote(nil), mockDiffSections).Return(mockHash, nil).Once()
+		mockDiffsUC.On("GenerateDiffSection", mockCTX, mockEvent.RepoOwner, mockEvent.RepoName, mockEvent.PRNumber, mockDiffFeathers.Diffs).Return(mockDiffSections, nil).Once()
 
 		err := uc.ValidatePeacock(mockEvent)
 		assert.NoError(t, err)

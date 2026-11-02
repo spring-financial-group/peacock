@@ -76,11 +76,11 @@ func (uc *UseCase) ValidateFeathers(f *models.Feathers) error {
 		unique[name][team.Name] = true
 		unique[apiKey][team.APIKey] = true
 	}
-	return uc.validateDiffs(f.Diffs)
+	return uc.validateDiffs(f.Diffs, f.Teams)
 }
 
-// validateDiffs checks each diffs entry has a valid format and valid glob patterns
-func (uc *UseCase) validateDiffs(configs models.DiffConfigs) error {
+// validateDiffs checks each diffs entry has a valid format, valid glob patterns and a known team
+func (uc *UseCase) validateDiffs(configs models.DiffConfigs, teams models.Teams) error {
 	for _, config := range configs {
 		if len(config.Paths) == 0 {
 			return errors.New("no paths found in diffs config")
@@ -91,6 +91,11 @@ func (uc *UseCase) validateDiffs(configs models.DiffConfigs) error {
 		for _, pattern := range config.Paths {
 			if !doublestar.ValidatePattern(pattern) {
 				return errors.Errorf("invalid glob pattern %s in diffs config", pattern)
+			}
+		}
+		if config.Team != "" {
+			if err := teams.Contains(config.Team); err != nil {
+				return errors.Errorf("team %s in diffs config not found in feathers", config.Team)
 			}
 		}
 	}

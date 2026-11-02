@@ -16,22 +16,24 @@ type DiffsUseCase struct {
 }
 
 // GenerateDiffSection provides a mock function with given fields: ctx, owner, repoName, prNumber, configs
-func (_m *DiffsUseCase) GenerateDiffSection(ctx context.Context, owner string, repoName string, prNumber int, configs models.DiffConfigs) (string, error) {
+func (_m *DiffsUseCase) GenerateDiffSection(ctx context.Context, owner string, repoName string, prNumber int, configs models.DiffConfigs) (models.DiffSections, error) {
 	ret := _m.Called(ctx, owner, repoName, prNumber, configs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GenerateDiffSection")
 	}
 
-	var r0 string
+	var r0 models.DiffSections
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, models.DiffConfigs) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, models.DiffConfigs) (models.DiffSections, error)); ok {
 		return rf(ctx, owner, repoName, prNumber, configs)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, models.DiffConfigs) string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, models.DiffConfigs) models.DiffSections); ok {
 		r0 = rf(ctx, owner, repoName, prNumber, configs)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(models.DiffSections)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, string, int, models.DiffConfigs) error); ok {

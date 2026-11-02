@@ -80,18 +80,18 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to parse release notes from markdown"))
 	}
 
-	// render the file changes section for any configured diffs
-	var diffSection string
+	// render the file changes for any configured diffs
+	var diffSections models.DiffSections
 	if len(feathers.Diffs) > 0 {
-		diffSection, err = w.diffsUC.GenerateDiffSection(ctx, e.RepoOwner, e.RepoName, e.PRNumber, feathers.Diffs)
+		diffSections, err = w.diffsUC.GenerateDiffSection(ctx, e.RepoOwner, e.RepoName, e.PRNumber, feathers.Diffs)
 		if err != nil {
 			// an opt-in feature shouldn't fail validation over a misconfiguration or transient API error
 			log.Warnf("failed to generate file diff section: %s", err.Error())
-			diffSection = fmt.Sprintf("> ⚠ failed to compute file diffs: %s", err.Error())
+			diffSections = models.DiffSections{"": fmt.Sprintf("> ⚠ failed to compute file diffs: %s", err.Error())}
 		}
 	}
 
-	if releaseNotes == nil && diffSection == "" {
+	if releaseNotes == nil && len(diffSections) == 0 {
 		log.Infof("no releaseNotes found in PR body, skipping")
 		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 	}
@@ -111,7 +111,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Prevent doing work if the new release notes are same as the previous release notes
-	newHash, err := w.notesUC.GenerateHash(releaseNotes, diffSection)
+	newHash, err := w.notesUC.GenerateHash(releaseNotes, diffSections)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to generate message hash"))
 	}
@@ -132,7 +132,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Break down the release notes to prove we've parsed them and to check the formatting
-	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, newHash, len(feathers.Teams), diffSection)
+	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, newHash, len(feathers.Teams), diffSections)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to generate message breakdown"))
 	}

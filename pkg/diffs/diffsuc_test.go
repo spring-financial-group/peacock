@@ -58,12 +58,12 @@ func TestUseCase_GenerateDiffSection(t *testing.T) {
 		mockSCM.On("GetFileFromBranch", mock.Anything, owner, repoName, headRef, schemaCMPath).Return(schemaCM(t, "1.1.0", schemaA2), nil).Once()
 
 		uc := NewUseCase(mockSCM)
-		section, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
+		sections, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
 		assert.NoError(t, err)
-		assert.Contains(t, section, "📊 File Changes — 1 file")
-		assert.Contains(t, section, "**[`mqube-extract-service-origo-schema-cm.yaml`](https://github.com/spring-financial-group/JX3_Azure_Vault_Dev_Cluster/pull/82352/files#diff-blob-sha)**")
-		assert.Contains(t, section, "<code>OrigoExtractEntry.json</code> — 2 fields changed")
-		assert.Contains(t, section, "| `a` | ✏ changed | string → integer |")
+		assert.Contains(t, sections[""], "📊 File Changes — 1 file")
+		assert.Contains(t, sections[""], "**[`mqube-extract-service-origo-schema-cm.yaml`](https://github.com/spring-financial-group/JX3_Azure_Vault_Dev_Cluster/pull/82352/files#diff-blob-sha)**")
+		assert.Contains(t, sections[""], "<code>OrigoExtractEntry.json</code> — 2 fields changed")
+		assert.Contains(t, sections[""], "| `a` | ✏ changed | string → integer |")
 	})
 
 	t.Run("new files skip the base fetch", func(t *testing.T) {
@@ -74,9 +74,9 @@ func TestUseCase_GenerateDiffSection(t *testing.T) {
 		mockSCM.On("GetFileFromBranch", mock.Anything, owner, repoName, headRef, schemaCMPath).Return(schemaCM(t, "1.0.0", schemaA), nil).Once()
 
 		uc := NewUseCase(mockSCM)
-		section, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
+		sections, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
 		assert.NoError(t, err)
-		assert.Contains(t, section, "<code>OrigoExtractEntry.json</code> — 1 field (new)")
+		assert.Contains(t, sections[""], "<code>OrigoExtractEntry.json</code> — 1 field (new)")
 		mockSCM.AssertNotCalled(t, "GetFileFromBranch", mock.Anything, owner, repoName, baseRef, schemaCMPath)
 	})
 
@@ -88,9 +88,9 @@ func TestUseCase_GenerateDiffSection(t *testing.T) {
 		mockSCM.On("GetFileFromBranch", mock.Anything, owner, repoName, baseRef, schemaCMPath).Return(schemaCM(t, "1.0.0", schemaA), nil).Once()
 
 		uc := NewUseCase(mockSCM)
-		section, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
+		sections, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
 		assert.NoError(t, err)
-		assert.Contains(t, section, "<code>OrigoExtractEntry.json</code> — removed")
+		assert.Contains(t, sections[""], "<code>OrigoExtractEntry.json</code> — removed")
 		mockSCM.AssertNotCalled(t, "GetFileFromBranch", mock.Anything, owner, repoName, headRef, schemaCMPath)
 	})
 
@@ -101,9 +101,9 @@ func TestUseCase_GenerateDiffSection(t *testing.T) {
 		})
 
 		uc := NewUseCase(mockSCM)
-		section, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
+		sections, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
 		assert.NoError(t, err)
-		assert.Equal(t, "", section)
+		assert.Empty(t, sections)
 	})
 
 	t.Run("matched but unchanged files return an empty section", func(t *testing.T) {
@@ -115,9 +115,9 @@ func TestUseCase_GenerateDiffSection(t *testing.T) {
 		mockSCM.On("GetFileFromBranch", mock.Anything, owner, repoName, headRef, schemaCMPath).Return(schemaCM(t, "1.1.0", schemaA), nil).Once()
 
 		uc := NewUseCase(mockSCM)
-		section, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
+		sections, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
 		assert.NoError(t, err)
-		assert.Equal(t, "", section)
+		assert.Empty(t, sections)
 	})
 
 	t.Run("output is deterministic", func(t *testing.T) {
@@ -140,6 +140,30 @@ func TestUseCase_GenerateDiffSection(t *testing.T) {
 		second, err := NewUseCase(secondSCM).GenerateDiffSection(context.Background(), owner, repoName, prNumber, diffConfigs)
 		assert.NoError(t, err)
 		assert.Equal(t, first, second)
+	})
+
+	t.Run("diffs attach to the configured team", func(t *testing.T) {
+		mockSCM := mocks.NewSCM(t)
+		mockPRBasics(mockSCM, []*github.CommitFile{
+			{Filename: github.String(schemaCMPath), Status: github.String("modified"), SHA: github.String("blob-sha")},
+		})
+		mockSCM.On("GetFileFromBranch", mock.Anything, owner, repoName, baseRef, schemaCMPath).Return(schemaCM(t, "1.0.0", schemaA), nil).Once()
+		mockSCM.On("GetFileFromBranch", mock.Anything, owner, repoName, headRef, schemaCMPath).Return(schemaCM(t, "1.1.0", schemaA2), nil).Once()
+
+		teamConfigs := models.DiffConfigs{
+			{
+				Paths:  []string{"config-root/**/*-schema-cm.yaml"},
+				Format: models.DiffFormatConfigMap,
+				Team:   "AllClients",
+			},
+		}
+
+		uc := NewUseCase(mockSCM)
+		sections, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, teamConfigs)
+		assert.NoError(t, err)
+		assert.Len(t, sections, 1)
+		assert.Contains(t, sections["AllClients"], "📊 File Changes — 1 file")
+		assert.NotContains(t, sections, "")
 	})
 
 	t.Run("api errors are returned", func(t *testing.T) {
@@ -170,8 +194,8 @@ func TestUseCase_GenerateDiffSection(t *testing.T) {
 		mockSCM.On("GetFileFromBranch", mock.Anything, owner, repoName, headRef, schemaCMPath).Return([]byte("also not json"), nil).Once()
 
 		uc := NewUseCase(mockSCM)
-		section, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, jsonConfigs)
+		sections, err := uc.GenerateDiffSection(context.Background(), owner, repoName, prNumber, jsonConfigs)
 		assert.NoError(t, err)
-		assert.Contains(t, section, "⚠ failed to diff this file")
+		assert.Contains(t, sections[""], "⚠ failed to diff this file")
 	})
 }
