@@ -220,8 +220,18 @@ func (uc *UseCase) parseTeamNames(teamNameReg *regexp.Regexp, markdown string) [
 	return teamsInNotes
 }
 
-func (uc *UseCase) GenerateHash(notes []models.ReleaseNote) (string, error) {
-	data, err := json.Marshal(notes)
+func (uc *UseCase) GenerateHash(notes []models.ReleaseNote, diffSection string) (string, error) {
+	// hash only the notes when there is no diff section so existing repos keep identical hashes
+	var data []byte
+	var err error
+	if diffSection == "" {
+		data, err = json.Marshal(notes)
+	} else {
+		data, err = json.Marshal(struct {
+			Notes []models.ReleaseNote `json:"notes"`
+			Diff  string               `json:"diff"`
+		}{notes, diffSection})
+	}
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal notes")
 	}
@@ -230,7 +240,7 @@ func (uc *UseCase) GenerateHash(notes []models.ReleaseNote) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
+func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int, diffSection string) (string, error) {
 	tmplFuncs := template.FuncMap{
 		"inc":          func(i int) int { return i + 1 },
 		"getTeamNames": func(ts models.Teams) string { return utils.CommaSeparated(ts.GetAllTeamNames()) },
@@ -258,6 +268,15 @@ func (uc *UseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, to
 	}
 
 	breakdown := strings.TrimSpace(buf.String())
+	switch {
+	case diffSection == "":
+		// unchanged path for repos without diffs
+	case len(notes) > 0:
+		breakdown += "\n\n***\n\n" + diffSection
+	default:
+		// no notes to break down, the diff section is the whole comment
+		breakdown = diffSection
+	}
 	breakdown = comment.AddMetadataToComment(breakdown, hash, comment.BreakdownCommentType)
 	return breakdown, nil
 }

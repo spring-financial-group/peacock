@@ -1,6 +1,9 @@
 package releasenotesuc
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/models"
@@ -391,7 +394,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockHash := "ReallyGoodHash"
 
-			actualBreakdown, err := uc.GenerateBreakdown(tt.inputNotes, mockHash, tt.numberOfTeams)
+			actualBreakdown, err := uc.GenerateBreakdown(tt.inputNotes, mockHash, tt.numberOfTeams, "")
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedBreakdown, actualBreakdown)
 		})
@@ -553,4 +556,63 @@ func TestUseCase_AppendReleaseNotesToExistingMarkdown(t *testing.T) {
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+func TestOptions_GenerateHash(t *testing.T) {
+	uc := NewUseCase(nil)
+	notes := []models.ReleaseNote{
+		{
+			Teams:   models.Teams{infraTeam},
+			Content: "Hello infra",
+		},
+	}
+
+	t.Run("hash without a diff section matches the notes only hash", func(t *testing.T) {
+		// repos without diffs must keep byte-for-byte identical hashes
+		data, err := json.Marshal(notes)
+		require.NoError(t, err)
+		h := sha256.New()
+		h.Write(data)
+
+		actual, err := uc.GenerateHash(notes, "")
+		require.NoError(t, err)
+		assert.Equal(t, hex.EncodeToString(h.Sum(nil)), actual)
+	})
+
+	t.Run("hash changes when only the diff section changes", func(t *testing.T) {
+		withoutDiff, err := uc.GenerateHash(notes, "")
+		require.NoError(t, err)
+		withDiff, err := uc.GenerateHash(notes, "📊 File Changes")
+		require.NoError(t, err)
+		assert.NotEqual(t, withoutDiff, withDiff)
+
+		again, err := uc.GenerateHash(notes, "📊 File Changes")
+		require.NoError(t, err)
+		assert.Equal(t, withDiff, again)
+	})
+}
+
+func TestOptions_GenerateBreakdown_WithDiffSection(t *testing.T) {
+	uc := NewUseCase(nil)
+	notes := []models.ReleaseNote{
+		{
+			Teams:   models.Teams{infraTeam},
+			Content: "Hello infra",
+		},
+	}
+	diffSection := "📊 File Changes — 1 file\n\n**`some-schema-cm.yaml`**"
+
+	t.Run("diff section is appended after the notes", func(t *testing.T) {
+		breakdown, err := uc.GenerateBreakdown(notes, "ReallyGoodHash", 1, diffSection)
+		require.NoError(t, err)
+		assert.Contains(t, breakdown, "Successfully validated 1 release note.")
+		assert.Contains(t, breakdown, "***\n\n"+diffSection)
+		assert.Contains(t, breakdown, "<!-- hash: ReallyGoodHash type: breakdown -->")
+	})
+
+	t.Run("diff only comments are the section without the notes header", func(t *testing.T) {
+		breakdown, err := uc.GenerateBreakdown(nil, "ReallyGoodHash", 1, diffSection)
+		require.NoError(t, err)
+		assert.Equal(t, diffSection+"\n<!-- hash: ReallyGoodHash type: breakdown -->\n", breakdown)
+	})
 }

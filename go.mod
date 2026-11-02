@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
+	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/cbrgm/githubevents v1.6.2
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.9.1
@@ -13,6 +14,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.21
 	github.com/migueleliasweb/go-github-mock v0.0.12
 	github.com/pkg/errors v0.9.1
+	github.com/pmezard/go-difflib v1.0.0
 	github.com/russross/blackfriday v1.6.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slack-go/slack v0.11.2
@@ -69,7 +71,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pelletier/go-toml/v2 v2.2.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

@@ -268,3 +268,63 @@ func Test_GetFeathersFromFile_Validate(t *testing.T) {
 		panic(err)
 	}
 }
+
+func Test_ValidateFeathers_Diffs(t *testing.T) {
+	validTeams := models.Teams{
+		{
+			Name:        "infrastructure",
+			ContactType: "slack",
+			APIKey:      "9e7a455e-39f4-489b-b9ee-dd54d03c576e",
+			Addresses:   []string{"C02BA9QHMD0"},
+		},
+	}
+
+	testCases := []struct {
+		name        string
+		diffs       models.DiffConfigs
+		shouldError bool
+	}{
+		{
+			name: "ValidDiffs",
+			diffs: models.DiffConfigs{
+				{
+					Paths:  []string{"config-root/**/*-schema-cm.yaml"},
+					Format: models.DiffFormatConfigMap,
+				},
+			},
+			shouldError: false,
+		},
+		{
+			name:        "NoPaths",
+			diffs:       models.DiffConfigs{{Format: models.DiffFormatText}},
+			shouldError: true,
+		},
+		{
+			name:        "EmptyPaths",
+			diffs:       models.DiffConfigs{{Paths: []string{}, Format: models.DiffFormatText}},
+			shouldError: true,
+		},
+		{
+			name:        "InvalidFormat",
+			diffs:       models.DiffConfigs{{Paths: []string{"*.yaml"}, Format: models.DiffFormat("yaml")}},
+			shouldError: true,
+		},
+		{
+			name:        "InvalidGlob",
+			diffs:       models.DiffConfigs{{Paths: []string{"config-root/**/[.yaml"}, Format: models.DiffFormatText}},
+			shouldError: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &models.Feathers{Teams: validTeams, Diffs: tt.diffs}
+			err := feathers.NewUseCase().ValidateFeathers(f)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

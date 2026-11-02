@@ -176,6 +176,36 @@ func (_m *SCM) GetLatestCommitSHAInBranch(ctx context.Context, owner string, rep
 	return r0, r1
 }
 
+// GetPRBaseBranchFromPRNumber provides a mock function with given fields: ctx, owner, repoName, prNumber
+func (_m *SCM) GetPRBaseBranchFromPRNumber(ctx context.Context, owner string, repoName string, prNumber int) (*string, error) {
+	ret := _m.Called(ctx, owner, repoName, prNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPRBaseBranchFromPRNumber")
+	}
+
+	var r0 *string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int) (*string, error)); ok {
+		return rf(ctx, owner, repoName, prNumber)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int) *string); ok {
+		r0 = rf(ctx, owner, repoName, prNumber)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, int) error); ok {
+		r1 = rf(ctx, owner, repoName, prNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetPRBranchSHAFromPRNumber provides a mock function with given fields: ctx, owner, repoName, prNumber
 func (_m *SCM) GetPRBranchSHAFromPRNumber(ctx context.Context, owner string, repoName string, prNumber int) (*string, *string, error) {
 	ret := _m.Called(ctx, owner, repoName, prNumber)

@@ -40,9 +40,9 @@ func (_m *ReleaseNotesUseCase) AppendReleaseNotesToExistingMarkdown(existingMark
 	return r0, r1
 }
 
-// GenerateBreakdown provides a mock function with given fields: notes, hash, totalTeams
-func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int) (string, error) {
-	ret := _m.Called(notes, hash, totalTeams)
+// GenerateBreakdown provides a mock function with given fields: notes, hash, totalTeams, diffSection
+func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, hash string, totalTeams int, diffSection string) (string, error) {
+	ret := _m.Called(notes, hash, totalTeams, diffSection)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GenerateBreakdown")
@@ -50,17 +50,17 @@ func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, has
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, string, int) (string, error)); ok {
-		return rf(notes, hash, totalTeams)
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, string, int, string) (string, error)); ok {
+		return rf(notes, hash, totalTeams, diffSection)
 	}
-	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, string, int) string); ok {
-		r0 = rf(notes, hash, totalTeams)
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, string, int, string) string); ok {
+		r0 = rf(notes, hash, totalTeams, diffSection)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func([]models.ReleaseNote, string, int) error); ok {
-		r1 = rf(notes, hash, totalTeams)
+	if rf, ok := ret.Get(1).(func([]models.ReleaseNote, string, int, string) error); ok {
+		r1 = rf(notes, hash, totalTeams, diffSection)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -68,9 +68,9 @@ func (_m *ReleaseNotesUseCase) GenerateBreakdown(notes []models.ReleaseNote, has
 	return r0, r1
 }
 
-// GenerateHash provides a mock function with given fields: messages
-func (_m *ReleaseNotesUseCase) GenerateHash(messages []models.ReleaseNote) (string, error) {
-	ret := _m.Called(messages)
+// GenerateHash provides a mock function with given fields: messages, diffSection
+func (_m *ReleaseNotesUseCase) GenerateHash(messages []models.ReleaseNote, diffSection string) (string, error) {
+	ret := _m.Called(messages, diffSection)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GenerateHash")
@@ -78,17 +78,17 @@ func (_m *ReleaseNotesUseCase) GenerateHash(messages []models.ReleaseNote) (stri
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]models.ReleaseNote) (string, error)); ok {
-		return rf(messages)
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, string) (string, error)); ok {
+		return rf(messages, diffSection)
 	}
-	if rf, ok := ret.Get(0).(func([]models.ReleaseNote) string); ok {
-		r0 = rf(messages)
+	if rf, ok := ret.Get(0).(func([]models.ReleaseNote, string) string); ok {
+		r0 = rf(messages, diffSection)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func([]models.ReleaseNote) error); ok {
-		r1 = rf(messages)
+	if rf, ok := ret.Get(1).(func([]models.ReleaseNote, string) error); ok {
+		r1 = rf(messages, diffSection)
 	} else {
 		r1 = ret.Error(1)
 	}

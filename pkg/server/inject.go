@@ -4,6 +4,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spring-financial-group/peacock/pkg/config"
+	"github.com/spring-financial-group/peacock/pkg/diffs"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git/github"
 	"github.com/spring-financial-group/peacock/pkg/health"
@@ -50,7 +51,9 @@ func inject(cfg *config.Config, data *DataSources) (*gin.Engine, error) {
 	releaseRepo := releaserepo.NewRepository(*data.MongoDBClient)
 	releaseUC := releaseuc.NewUseCase(releaseRepo)
 
-	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmClient, notesUC, feathersUC, releaseUC)
+	diffsUC := diffs.NewUseCase(scmClient)
+
+	webhookUC := webhookuc.NewUseCase(&cfg.SCM, scmClient, notesUC, feathersUC, releaseUC, diffsUC)
 
 	// Setup handlers
 	webhookhandler.NewHandler(&cfg.SCM, publicGroup, webhookUC)

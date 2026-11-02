@@ -2,6 +2,7 @@ package webhookuc
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/google/go-github/v48/github"
@@ -19,12 +20,13 @@ type WebHookUseCase struct {
 	notesUC   domain.ReleaseNotesUseCase
 	featherUC domain.FeathersUseCase
 	releaseUC domain.ReleaseUseCase
+	diffsUC   domain.DiffsUseCase
 
 	feathers    map[int64]*feathersMeta
 	prTemplates map[int64]*prTemplateMeta
 }
 
-func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseCase, feathersUC domain.FeathersUseCase, releaseUC domain.ReleaseUseCase) *WebHookUseCase {
+func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseCase, feathersUC domain.FeathersUseCase, releaseUC domain.ReleaseUseCase, diffsUC domain.DiffsUseCase) *WebHookUseCase {
 	return &WebHookUseCase{
 		cfg:         cfg,
 		scm:         scm,
@@ -32,6 +34,7 @@ func NewUseCase(cfg *config.SCM, scm domain.SCM, notesUC domain.ReleaseNotesUseC
 		featherUC:   feathersUC,
 		feathers:    make(map[int64]*feathersMeta),
 		releaseUC:   releaseUC,
+		diffsUC:     diffsUC,
 		prTemplates: make(map[int64]*prTemplateMeta),
 	}
 }
@@ -55,40 +58,60 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to create pending status"))
 	}
 
-	if e.Body == "" {
-		log.Infof("no text found in PR body, skipping")
-		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
-	}
-
 	// Get the feathers for the pull request, should cache this as this will run for any edited event
 	feathers, err := w.getFeathers(ctx, e.Branch, e)
 	if err != nil {
+		if e.Body == "" {
+			// no feathers and no body leaves nothing to validate, matching the previous behaviour
+			log.Infof("no feathers found and no text in PR body, skipping")
+			return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
+		}
 		return w.handleError(ctx, domain.ValidationContext, e, err)
+	}
+
+	// an empty body is only interesting when the feathers configure file diffs
+	if e.Body == "" && len(feathers.Diffs) == 0 {
+		log.Infof("no text found in PR body, skipping")
+		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 	}
 
 	releaseNotes, err := w.notesUC.GetReleaseNotesFromMarkdownAndTeamsInFeathers(e.Body, feathers.Teams)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to parse release notes from markdown"))
 	}
-	if releaseNotes == nil {
+
+	// render the file changes section for any configured diffs
+	var diffSection string
+	if len(feathers.Diffs) > 0 {
+		diffSection, err = w.diffsUC.GenerateDiffSection(ctx, e.RepoOwner, e.RepoName, e.PRNumber, feathers.Diffs)
+		if err != nil {
+			// an opt-in feature shouldn't fail validation over a misconfiguration or transient API error
+			log.Warnf("failed to generate file diff section: %s", err.Error())
+			diffSection = fmt.Sprintf("> ⚠ failed to compute file diffs: %s", err.Error())
+		}
+	}
+
+	if releaseNotes == nil && diffSection == "" {
 		log.Infof("no releaseNotes found in PR body, skipping")
 		return w.createCommitStatus(ctx, e, domain.SuccessState, e.SHA, domain.ValidationContext)
 	}
 
-	// ensure the current notes aren't the same as the template, as we don't want default messages being sent out
-	templateReleaseNotes, err := w.getPRTemplateOrDefault(ctx, e.Branch, e, feathers.Teams)
-	if err != nil {
-		return w.handleError(ctx, domain.ValidationContext, e, err)
-	}
+	if releaseNotes != nil {
+		// ensure the current notes aren't the same as the template, as we don't want default messages being sent out
+		templateReleaseNotes, err := w.getPRTemplateOrDefault(ctx, e.Branch, e, feathers.Teams)
+		if err != nil {
+			return w.handleError(ctx, domain.ValidationContext, e, err)
+		}
 
-	areEqual := w.areActualNotesAndTemplatesEqual(releaseNotes, templateReleaseNotes)
-	if areEqual {
-		log.Infof("release notes are same as the pull request template, failing")
-		return w.handleError(ctx, domain.ValidationContext, e, errors.New("release notes cannot be the same as the pull request template"))
+		areEqual := w.areActualNotesAndTemplatesEqual(releaseNotes, templateReleaseNotes)
+		if areEqual {
+			log.Infof("release notes are same as the pull request template, failing")
+			return w.handleError(ctx, domain.ValidationContext, e, errors.New("release notes cannot be the same as the pull request template"))
+		}
 	}
 
 	// Prevent doing work if the new release notes are same as the previous release notes
-	newHash, err := w.notesUC.GenerateHash(releaseNotes)
+	newHash, err := w.notesUC.GenerateHash(releaseNotes, diffSection)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to generate message hash"))
 	}
@@ -109,7 +132,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Break down the release notes to prove we've parsed them and to check the formatting
-	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, newHash, len(feathers.Teams))
+	breakdown, err := w.notesUC.GenerateBreakdown(releaseNotes, newHash, len(feathers.Teams), diffSection)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to generate message breakdown"))
 	}

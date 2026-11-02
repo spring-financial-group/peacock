@@ -2,6 +2,7 @@ package feathers
 
 import (
 	"fmt"
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"github.com/spring-financial-group/peacock/pkg/models"
 	"github.com/spring-financial-group/peacock/pkg/utils"
@@ -74,6 +75,24 @@ func (uc *UseCase) ValidateFeathers(f *models.Feathers) error {
 		}
 		unique[name][team.Name] = true
 		unique[apiKey][team.APIKey] = true
+	}
+	return uc.validateDiffs(f.Diffs)
+}
+
+// validateDiffs checks each diffs entry has a valid format and valid glob patterns
+func (uc *UseCase) validateDiffs(configs models.DiffConfigs) error {
+	for _, config := range configs {
+		if len(config.Paths) == 0 {
+			return errors.New("no paths found in diffs config")
+		}
+		if !config.Format.IsValid() {
+			return errors.Errorf("invalid format %s in diffs config", config.Format)
+		}
+		for _, pattern := range config.Paths {
+			if !doublestar.ValidatePattern(pattern) {
+				return errors.Errorf("invalid glob pattern %s in diffs config", pattern)
+			}
+		}
 	}
 	return nil
 }

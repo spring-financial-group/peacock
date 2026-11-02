@@ -61,6 +61,35 @@ teams:
       - C56H7G209DF
 ```
 
+### File Diffs
+Peacock can also render the changes to configured files directly in the validation comment on a pull request. Changed
+files matching a `diffs` path are fetched from the base and head of the PR via the GitHub API and their diff is appended
+to the breakdown comment. This is comment-only — file diffs are never sent to teams as release notes.
+
+```yaml
+diffs:
+  - paths:
+      - "config-root/**/*-schema-cm.yaml"
+    format: configmap
+```
+
+Paths are [doublestar](https://github.com/bmatcuk/doublestar) globs, so `**` crosses path segments. The first config whose
+glob matches a file wins if configs overlap.
+
+| Format        | Renders                                                                              |
+|---------------|--------------------------------------------------------------------------------------|
+| `text`        | A unified diff of the file                                                           |
+| `json`        | A key-path table of any JSON document                                                |
+| `json-schema` | A field-level table (type, nullable, enum) of a JSON Schema document                 |
+| `configmap`   | Each `data` value of a Kubernetes ConfigMap, rendered with its detected inner format |
+
+Only the `data` field of a ConfigMap is read — `metadata` (labels, annotations) is never parsed, so a version bump that
+doesn't change the data renders nothing at all. Very large diffs are collapsed and row-capped to stay within GitHub's
+comment size limit.
+
+Limitations: the changed-file list covers the first page of results (30 files), and files over 1MB can't be fetched via
+the contents API.
+
 ### Environment Variables
 Environment variables are used configure Peacock in a pipeline. For integrating into different CI/CD tools the keys for
 these variables can be overridden using flags for each command.

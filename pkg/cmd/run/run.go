@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/peacock/pkg/config"
+	"github.com/spring-financial-group/peacock/pkg/diffs"
 	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/feathers"
 	"github.com/spring-financial-group/peacock/pkg/git"
@@ -44,6 +45,7 @@ type Options struct {
 	GitServerClient domain.SCM
 	Git             domain.Git
 	NotesUC         domain.ReleaseNotesUseCase
+	DiffsUC         domain.DiffsUseCase
 	FeathersUC      domain.FeathersUseCase
 	Feathers        *models.Feathers
 }
@@ -143,38 +145,60 @@ func (o *Options) Run() error {
 	if err != nil {
 		return err
 	}
-	// We should check that the body actually exists
-	if prBody == nil {
-		log.Infof("No Body found for PR%d, exiting", o.PRNumber)
-		return nil
-	}
-
 	if o.Feathers == nil {
 		log.Info("Loading feathers from local instance")
 		o.Feathers, err = o.FeathersUC.GetFeathersFromFile()
 		if err != nil {
+			if prBody == nil {
+				// no body and no feathers leaves nothing to do, matching the previous behaviour
+				log.Infof("No Body found for PR%d, exiting", o.PRNumber)
+				return nil
+			}
 			err = errors.Wrapf(err, "failed to load feathers")
 			o.PostErrorToPR(ctx, err)
 			return err
 		}
 	}
 
+	// an empty body is only interesting when the feathers configure file diffs
+	if prBody == nil && len(o.Feathers.Diffs) == 0 {
+		log.Infof("No Body found for PR%d, exiting", o.PRNumber)
+		return nil
+	}
+
 	log.Info("Parsing messages from pull request body")
-	messages, err := o.NotesUC.GetReleaseNotesFromMarkdownAndTeamsInFeathers(*prBody, o.Feathers.Teams)
+	var body string
+	if prBody != nil {
+		body = *prBody
+	}
+	messages, err := o.NotesUC.GetReleaseNotesFromMarkdownAndTeamsInFeathers(body, o.Feathers.Teams)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to parse release notes from pull request")
 		o.PostErrorToPR(ctx, err)
 		return err
 	}
-	// If no messages then we should exit with 0 code
-	if messages == nil {
+
+	// file diffs are a validation-comment feature, they are never computed on a real run
+	var diffSection string
+	if o.DryRun && len(o.Feathers.Diffs) > 0 {
+		log.Info("Generating file diff section")
+		diffSection, err = o.DiffsUC.GenerateDiffSection(ctx, o.RepoOwner, o.RepoName, o.PRNumber, o.Feathers.Diffs)
+		if err != nil {
+			// an opt-in feature shouldn't fail the run over a misconfiguration or transient API error
+			log.Warnf("failed to generate file diff section: %s", err.Error())
+			diffSection = fmt.Sprintf("> ⚠ failed to compute file diffs: %s", err.Error())
+		}
+	}
+
+	// If no messages and no diffs then we should exit with 0 code
+	if messages == nil && diffSection == "" {
 		log.Info("No messages found in markdown, exiting")
 		return nil
 	}
 
 	if o.DryRun {
 		log.Info("Generating message breakdown")
-		breakdown, err := o.GetMessageBreakdown(ctx, messages)
+		breakdown, err := o.GetMessageBreakdown(ctx, messages, diffSection)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate breakdown of messages")
 			o.PostErrorToPR(ctx, err)
@@ -229,23 +253,23 @@ func (o *Options) GenerateSubject() {
 	o.Subject = fmt.Sprintf("New Release Notes for %s", o.RepoName)
 }
 
-// GetMessageBreakdown creates a breakdown of the messages found in the pr description if the messages have changed
-// since the last run
-func (o *Options) GetMessageBreakdown(ctx context.Context, messages []models.ReleaseNote) (string, error) {
-	changed, hash, err := o.HaveMessagesChanged(ctx, messages)
+// GetMessageBreakdown creates a breakdown of the messages found in the pr description if the messages or file diffs
+// have changed since the last run
+func (o *Options) GetMessageBreakdown(ctx context.Context, messages []models.ReleaseNote, diffSection string) (string, error) {
+	changed, hash, err := o.HaveMessagesChanged(ctx, messages, diffSection)
 	if err != nil {
 		return "", err
 	}
 	if !changed {
 		return "", nil
 	}
-	return o.NotesUC.GenerateBreakdown(messages, hash, len(o.Feathers.Teams.GetAllTeamNames()))
+	return o.NotesUC.GenerateBreakdown(messages, hash, len(o.Feathers.Teams.GetAllTeamNames()), diffSection)
 }
 
 // HaveMessagesChanged checks if the messages have changed since the last time the breakdown was posted to the PR
-func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.ReleaseNote) (bool, string, error) {
+func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.ReleaseNote, diffSection string) (bool, string, error) {
 	log.Info("Checking if messages have changed")
-	currentHash, err := o.NotesUC.GenerateHash(messages)
+	currentHash, err := o.NotesUC.GenerateHash(messages, diffSection)
 	if err != nil {
 		return false, "", err
 	}
@@ -341,6 +365,10 @@ func (o *Options) initialiseFlagsAndClients() (err error) {
 
 	if o.FeathersUC == nil {
 		o.FeathersUC = feathers.NewUseCase()
+	}
+
+	if o.DiffsUC == nil {
+		o.DiffsUC = diffs.NewUseCase(o.GitServerClient)
 	}
 	return nil
 }

@@ -2,11 +2,15 @@ package github
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/google/go-github/v48/github"
 	ghmock "github.com/migueleliasweb/go-github-mock/src/mock"
+	"github.com/pkg/errors"
+	"github.com/spring-financial-group/peacock/pkg/domain"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -122,4 +126,69 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 			assert.Equal(t, tt.expectedBody, actualBody)
 		})
 	}
+}
+
+func TestGit_GetPRBaseBranchFromPRNumber(t *testing.T) {
+	mockedHTTPClient := ghmock.NewMockedHTTPClient(
+		ghmock.WithRequestMatch(
+			ghmock.GetReposPullsByOwnerByRepoByPullNumber,
+			&github.PullRequest{
+				Base: &github.PullRequestBranch{
+					Ref: utils.NewPtr("master"),
+				},
+			},
+		),
+	)
+	client := Client{
+		github: github.NewClient(mockedHTTPClient),
+		user:   "mqube-bot",
+	}
+
+	actual, err := client.GetPRBaseBranchFromPRNumber(context.Background(), "spring-financial-group", "peacock", 1)
+	assert.NoError(t, err)
+	assert.Equal(t, utils.NewPtr("master"), actual)
+}
+
+func TestGit_GetFileFromBranch(t *testing.T) {
+	baseContent := base64.StdEncoding.EncodeToString([]byte(`{"base": true}`))
+	headContent := base64.StdEncoding.EncodeToString([]byte(`{"head": true}`))
+
+	mockedHTTPClient := ghmock.NewMockedHTTPClient(
+		ghmock.WithRequestMatchHandler(
+			ghmock.GetReposContentsByOwnerByRepoByPath,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch ref := r.URL.Query().Get("ref"); ref {
+				case "master":
+					_, _ = fmt.Fprintf(w, `{"name":"schema.json","path":"schema.json","content":%q,"encoding":"base64"}`, baseContent)
+				case "missing":
+					w.WriteHeader(http.StatusNotFound)
+				default:
+					_, _ = fmt.Fprintf(w, `{"name":"schema.json","path":"schema.json","content":%q,"encoding":"base64"}`, headContent)
+				}
+			}),
+		),
+	)
+	client := Client{
+		github: github.NewClient(mockedHTTPClient),
+		user:   "mqube-bot",
+	}
+
+	t.Run("file is fetched from the base ref", func(t *testing.T) {
+		actual, err := client.GetFileFromBranch(context.Background(), "spring-financial-group", "peacock", "master", "schema.json")
+		assert.NoError(t, err)
+		assert.Equal(t, `{"base": true}`, string(actual))
+	})
+
+	t.Run("file is fetched from the head sha", func(t *testing.T) {
+		actual, err := client.GetFileFromBranch(context.Background(), "spring-financial-group", "peacock", "head-sha", "schema.json")
+		assert.NoError(t, err)
+		assert.Equal(t, `{"head": true}`, string(actual))
+	})
+
+	t.Run("missing files map to ErrFileNotFound", func(t *testing.T) {
+		_, err := client.GetFileFromBranch(context.Background(), "spring-financial-group", "peacock", "missing", "schema.json")
+		assert.Error(t, err)
+		var notFound *domain.ErrFileNotFound
+		assert.True(t, errors.As(err, &notFound))
+	})
 }

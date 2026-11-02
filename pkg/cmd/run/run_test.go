@@ -178,10 +178,10 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 
 			mockHash := "SomeReallyGoodHash"
 
-			mockNotesUC.On("GenerateHash", tt.inputMessages).Return(mockHash, nil)
+			mockNotesUC.On("GenerateHash", tt.inputMessages, "").Return(mockHash, nil)
 			mockSCM.On("GetPRComments", mock.Anything, "", "", 0).Return(tt.returnedComments, nil).Once()
 
-			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages)
+			actualChanged, actualHash, err := opts.HaveMessagesChanged(context.Background(), tt.inputMessages, "")
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedChanged, actualChanged)
 			assert.Equal(t, tt.expectedHash, actualHash)
@@ -256,8 +256,8 @@ func TestOptions_Run(t *testing.T) {
 		mockBreakdown := "This is the message breakdown"
 
 		if tt.opts.DryRun {
-			mockNotesUC.On("GenerateHash", mockNotes).Return(mockHash, nil)
-			mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, len(allTeams)).Return(mockBreakdown, nil)
+			mockNotesUC.On("GenerateHash", mockNotes, "").Return(mockHash, nil)
+			mockNotesUC.On("GenerateBreakdown", mockNotes, mockHash, len(allTeams), "").Return(mockBreakdown, nil)
 
 			mockSCM.On("GetPullRequestBodyFromPRNumber", mock.Anything, "spring-financial-group", "peacock", 1).Return(tt.prBody, nil).Once()
 			mockSCM.On("CommentOnPR", mock.Anything, "spring-financial-group", "peacock", 1, mock.AnythingOfType("string")).Return(nil).Once()
@@ -283,4 +283,49 @@ func TestOptions_Run(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOptions_Run_DryRunWithDiffs(t *testing.T) {
+	mockSCM := mocks.NewSCM(t)
+	mockGitClient := mocks.NewGit(t)
+	mockNotesUC := mocks.NewReleaseNotesUseCase(t)
+	mockDiffsUC := mocks.NewDiffsUseCase(t)
+
+	diffFeathers := &models.Feathers{
+		Teams: allTeams,
+		Diffs: models.DiffConfigs{
+			{
+				Paths:  []string{"config-root/**/*-schema-cm.yaml"},
+				Format: models.DiffFormatConfigMap,
+			},
+		},
+	}
+	mockDiffSection := "📊 File Changes — 1 file"
+
+	opts := &run.Options{
+		PRNumber:          1,
+		GitServerURL:      "https://github.com",
+		GitHubToken:       "testGitToken",
+		RepoOwner:         "spring-financial-group",
+		RepoName:          "peacock",
+		DryRun:            true,
+		CommentValidation: true,
+		Git:               mockGitClient,
+		GitServerClient:   mockSCM,
+		NotesUC:           mockNotesUC,
+		DiffsUC:           mockDiffsUC,
+		Feathers:          diffFeathers,
+	}
+
+	// a nil body only survives the early exits because the feathers configure diffs
+	mockSCM.On("GetPullRequestBodyFromPRNumber", mock.Anything, "spring-financial-group", "peacock", 1).Return(nil, nil).Once()
+	mockNotesUC.On("GetReleaseNotesFromMarkdownAndTeamsInFeathers", "", allTeams).Return(nil, nil).Once()
+	mockDiffsUC.On("GenerateDiffSection", mock.Anything, "spring-financial-group", "peacock", 1, diffFeathers.Diffs).Return(mockDiffSection, nil).Once()
+	mockNotesUC.On("GenerateHash", []models.ReleaseNote(nil), mockDiffSection).Return("SomeReallyGoodHash", nil).Once()
+	mockSCM.On("GetPRComments", mock.Anything, "spring-financial-group", "peacock", 1).Return(nil, nil).Once()
+	mockNotesUC.On("GenerateBreakdown", []models.ReleaseNote(nil), "SomeReallyGoodHash", len(allTeams), mockDiffSection).Return("breakdown", nil).Once()
+	mockSCM.On("CommentOnPR", mock.Anything, "spring-financial-group", "peacock", 1, "breakdown").Return(nil).Once()
+
+	err := opts.Run()
+	assert.NoError(t, err)
 }

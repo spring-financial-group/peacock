@@ -1,8 +1,9 @@
 package models
 
 type Feathers struct {
-	Teams  Teams  `yaml:"teams"`
-	Config Config `yaml:"config"`
+	Teams  Teams       `yaml:"teams"`
+	Config Config      `yaml:"config"`
+	Diffs  DiffConfigs `yaml:"diffs,omitempty"`
 }
 
 type Config struct {
