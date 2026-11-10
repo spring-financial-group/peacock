@@ -23,7 +23,7 @@ spec:
           - name: SpecPath
             value: ./docs/swagger.json
           - name: OutputLanguages
-            value: csharp angular
+            value: csharp angular python
           - name: GOPROXY
             value: "http://athens-proxy.infrastructure.svc.cluster.local,direct"
         steps:
@@ -94,9 +94,6 @@ spec:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/updatebot/release.yaml@versionStream
           resources: {}
         - image: uses:spring-financial-group/jx3-openapi-generation/pipeline/generate-packages.yaml@master
-          name: ""
-          resources: {}
-        - image: uses:spring-financial-group/jx3-openapi-generation/pipeline/generate-python-package.yaml@master
           name: ""
           resources: {}
   podTemplate: {}
