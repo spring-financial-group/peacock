@@ -139,3 +139,21 @@ func TestMarkdown_Converters(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToHTML_StylesTables(t *testing.T) {
+	actual := markdown.ConvertToHTML("| Field | Change |\n| --- | --- |\n| brokerId | Added |")
+
+	assert.Contains(t, actual, `<table style="border-collapse: collapse; width: 100%; margin: 12px 0;">`)
+	assert.Contains(t, actual, `<th style="border: 1px solid #d0d7de; padding: 8px 12px; text-align: left;">Field</th>`)
+	assert.Contains(t, actual, `<td style="border: 1px solid #d0d7de; padding: 8px 12px; text-align: left;">brokerId</td>`)
+}
+
+func TestConvertToHTML_StylesCodeDiffLines(t *testing.T) {
+	actual := markdown.ConvertToHTML("```diff\n--- previous.json\n+++ proposed.json\n-oldValue\n+newValue\n```")
+
+	assert.Contains(t, actual, `<pre style="border: 1px solid #d0d7de; background-color: #f6f8fa; padding: 12px; white-space: pre-wrap;">`)
+	assert.Contains(t, actual, `<span style="color: #cf222e; background-color: #ffebe9;">--- previous.json</span>`)
+	assert.Contains(t, actual, `<span style="color: #1a7f37; background-color: #dafbe1;">+++ proposed.json</span>`)
+	assert.Contains(t, actual, `<span style="color: #cf222e; background-color: #ffebe9;">-oldValue</span>`)
+	assert.Contains(t, actual, `<span style="color: #1a7f37; background-color: #dafbe1;">+newValue</span>`)
+}
