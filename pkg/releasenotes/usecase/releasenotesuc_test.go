@@ -368,7 +368,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 				},
 			},
 			numberOfTeams:     1,
-			expectedBreakdown: "Successfully validated 1 release note.\n\n***\nRelease Note 1 will be sent to: infrastructure\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: ReallyGoodHash type: breakdown -->\n",
+			expectedBreakdown: "Successfully validated 1 release note.\n\n***\nRelease Note 1 will be sent to: infrastructure\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n<!-- hash: ReallyGoodHash type: peacock-breakdown -->\n",
 		},
 		{
 			name: "MultipleMessages",
@@ -383,7 +383,7 @@ func TestOptions_GenerateMessageBreakdown(t *testing.T) {
 				},
 			},
 			numberOfTeams:     2,
-			expectedBreakdown: "Successfully validated 2 release notes.\n\n***\nRelease Note 1 will be sent to: infrastructure\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nRelease Note 2 will be sent to: ml\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ReallyGoodHash type: breakdown -->\n",
+			expectedBreakdown: "Successfully validated 2 release notes.\n\n***\nRelease Note 1 will be sent to: infrastructure\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some infrastructure\nrelated things\n\n</details>\n\n\n***\nRelease Note 2 will be sent to: ml\n<details>\n<summary>Release Note Breakdown</summary>\n\nNew release of some ml\nrelated things\n\n</details>\n<!-- hash: ReallyGoodHash type: peacock-breakdown -->\n",
 		},
 	}
 
