@@ -70,12 +70,12 @@ func (_m *SCM) CreatePeacockCommitStatus(ctx context.Context, owner string, repo
 	return r0
 }
 
-// DeleteUsersComments provides a mock function with given fields: ctx, owner, repoName, prNumber
-func (_m *SCM) DeleteUsersComments(ctx context.Context, owner string, repoName string, prNumber int) error {
+// DeletePeacockComments provides a mock function with given fields: ctx, owner, repoName, prNumber
+func (_m *SCM) DeletePeacockComments(ctx context.Context, owner string, repoName string, prNumber int) error {
 	ret := _m.Called(ctx, owner, repoName, prNumber)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteUsersComments")
+		panic("no return value specified for DeletePeacockComments")
 	}
 
 	var r0 error
@@ -245,12 +245,12 @@ func (_m *SCM) GetPRComments(ctx context.Context, owner string, repoName string,
 	return r0, r1
 }
 
-// GetPRCommentsByUser provides a mock function with given fields: ctx, owner, repoName, prNumber
-func (_m *SCM) GetPRCommentsByUser(ctx context.Context, owner string, repoName string, prNumber int) ([]*github.IssueComment, error) {
+// GetPeacockComments provides a mock function with given fields: ctx, owner, repoName, prNumber
+func (_m *SCM) GetPeacockComments(ctx context.Context, owner string, repoName string, prNumber int) ([]*github.IssueComment, error) {
 	ret := _m.Called(ctx, owner, repoName, prNumber)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetPRCommentsByUser")
+		panic("no return value specified for GetPeacockComments")
 	}
 
 	var r0 []*github.IssueComment

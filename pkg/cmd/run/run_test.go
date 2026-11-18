@@ -50,7 +50,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: peacock-breakdown -->"),
 				},
 			},
 			expectedHash:    "",
@@ -65,7 +65,7 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: SomeOtherHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeOtherHash type: peacock-breakdown -->"),
 				},
 			},
 			expectedHash:    "SomeReallyGoodHash",
@@ -80,16 +80,16 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: SomeOtherHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeOtherHash type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: AnotherHash type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: HashingHel type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: HashingHel type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: AllTheHashes type: peacock-breakdown -->"),
 				},
 			},
 			expectedHash:    "SomeReallyGoodHash",
@@ -104,16 +104,16 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: AnotherHash type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: HashingHel type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: HashingHel type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: AllTheHashes type: peacock-breakdown -->"),
 				},
 			},
 			expectedHash:    "",
@@ -128,16 +128,16 @@ func TestOptions_HaveMessagesChanged(t *testing.T) {
 			},
 			returnedComments: []*github.IssueComment{
 				{
-					Body: utils.NewPtr("<!-- hash: AnotherHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: AnotherHash type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: SomeReallyGoodHash type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: HashingHel type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: HashingHel type: peacock-breakdown -->"),
 				},
 				{
-					Body: utils.NewPtr("<!-- hash: AllTheHashes type: breakdown -->"),
+					Body: utils.NewPtr("<!-- hash: AllTheHashes type: peacock-breakdown -->"),
 				},
 			},
 			expectedHash:    "SomeReallyGoodHash",
