@@ -23,7 +23,7 @@ spec:
           - name: SpecPath
             value: ./docs/swagger.json
           - name: OutputLanguages
-            value: csharp angular python
+            value: csharp angular
           - name: GOPROXY
             value: "http://athens-proxy.infrastructure.svc.cluster.local,direct"
         steps:
