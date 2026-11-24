@@ -47,10 +47,10 @@ type SCM interface {
 	GetPRComments(ctx context.Context, owner, repoName string, prNumber int) ([]*github.IssueComment, error)
 	// GetFileFromBranch returns the file as a string from a branch
 	GetFileFromBranch(ctx context.Context, owner, repoName, branch, path string) ([]byte, error)
-	// GetPRCommentsByUser returns all the comments on a pull request by a user
-	GetPRCommentsByUser(ctx context.Context, owner, repoName string, prNumber int) ([]*github.IssueComment, error)
-	// DeleteUsersComments deletes all the comments on a pull request by a user
-	DeleteUsersComments(ctx context.Context, owner, repoName string, prNumber int) error
+	// GetPeacockComments returns the comments peacock has made on a pull request, sorted by most recent first
+	GetPeacockComments(ctx context.Context, owner, repoName string, prNumber int) ([]*github.IssueComment, error)
+	// DeletePeacockComments deletes the comments peacock has made on a pull request, leaving other bots' comments intact
+	DeletePeacockComments(ctx context.Context, owner, repoName string, prNumber int) error
 	// CreatePeacockCommitStatus creates a commit status on a commit
 	CreatePeacockCommitStatus(ctx context.Context, owner, repoName, ref string, state State, statusContext string) error
 	// GetLatestCommitSHAInBranch returns the most recent commit in a branch

@@ -75,14 +75,44 @@ func ConvertToSlack(markdown string) string {
 func ConvertToHTML(markdown string) string {
 	markdown = stripDetailsTags(markdown)
 
-	mdParser := md.New(md.HTML(true), md.Breaks(true))
+	mdParser := md.New(md.HTML(true), md.Breaks(true), md.Tables(true))
 	unsafeHTML := mdParser.RenderToString([]byte(markdown))
-	safeHTML := bluemonday.UGCPolicy().Sanitize(unsafeHTML)
+	policy := bluemonday.UGCPolicy()
+	policy.AllowAttrs("style").Matching(regexp.MustCompile(`^color: #[0-9a-fA-F]{6}; background-color: #[0-9a-fA-F]{6};?$`)).OnElements("span")
+	safeHTML := policy.Sanitize(unsafeHTML)
+	safeHTML = styleEmailTables(safeHTML)
+	safeHTML = styleDiffLines(safeHTML)
 
 	// the parser converts headers to <h1> tags, but we want <header> tags to make the
 	// notifications consistent
 	regex := regexp.MustCompile(`(?miU)((<h\d>)(.+)(</h\d>))`)
 	return regex.ReplaceAllString(safeHTML, "<header>$3</header>")
+}
+
+func styleEmailTables(html string) string {
+	tableRegex := regexp.MustCompile(`(?s)<table>(.*?)</table>`)
+	return tableRegex.ReplaceAllStringFunc(html, func(table string) string {
+		table = strings.ReplaceAll(table, `<table>`, `<table style="border-collapse: collapse; width: 100%; margin: 12px 0;">`)
+		return regexp.MustCompile(`<(th|td)>`).ReplaceAllString(table, `<$1 style="border: 1px solid #d0d7de; padding: 8px 12px; text-align: left;">`)
+	})
+}
+
+func styleDiffLines(html string) string {
+	codeBlockRegex := regexp.MustCompile(`(?s)(<pre><code(?: class="language-[^"]*")?>)(.*?)(</code></pre>)`)
+	return codeBlockRegex.ReplaceAllStringFunc(html, func(block string) string {
+		parts := codeBlockRegex.FindStringSubmatch(block)
+		lines := strings.Split(parts[2], "\n")
+		for i, line := range lines {
+			switch {
+			case strings.HasPrefix(line, "+"):
+				lines[i] = `<span style="color: #1a7f37; background-color: #dafbe1;">` + line + `</span>`
+			case strings.HasPrefix(line, "-"):
+				lines[i] = `<span style="color: #cf222e; background-color: #ffebe9;">` + line + `</span>`
+			}
+		}
+		opening := strings.Replace(parts[1], `<pre>`, `<pre style="border: 1px solid #d0d7de; background-color: #f6f8fa; padding: 12px; white-space: pre-wrap;">`, 1)
+		return opening + strings.Join(lines, "\n") + parts[3]
+	})
 }
 
 // stripDetailsTags handles GitHub-style <details>/<summary> markup so it renders

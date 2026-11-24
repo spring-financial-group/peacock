@@ -263,7 +263,10 @@ func (o *Options) HaveMessagesChanged(ctx context.Context, messages []models.Rel
 	for _, c := range comments {
 		// Comments sorted by most recent first, so the first matching comment
 		// was the last one posted by the bot
-		previousHash, _ = comment.GetMetadataFromComment(*c.Body)
+		if !comment.IsPeacockComment(c.GetBody()) {
+			continue
+		}
+		previousHash, _ = comment.GetMetadataFromComment(c.GetBody())
 		if previousHash != "" {
 			log.Info("Found previous hash in comment")
 			break

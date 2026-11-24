@@ -94,11 +94,11 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// Compare the previous hash to the current one, stop here if there are no changes (there's no work to do)
-	comments, err := w.scm.GetPRCommentsByUser(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
+	comments, err := w.scm.GetPeacockComments(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to get comments"))
 	}
-	// Currently we only support one type of comment, so we can just get the most recent and check that
+	// Error comments have an empty hash, so they never match and a fresh breakdown is posted
 	if len(comments) > 0 {
 		lastComment := comments[0]
 		oldHash, _ := comment.GetMetadataFromComment(*lastComment.Body)
@@ -115,7 +115,7 @@ func (w *WebHookUseCase) ValidatePeacock(e *models.PullRequestEventDTO) error {
 	}
 
 	// prune the previous comments to prevent spam
-	err = w.scm.DeleteUsersComments(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
+	err = w.scm.DeletePeacockComments(ctx, e.RepoOwner, e.RepoName, e.PRNumber)
 	if err != nil {
 		return w.handleError(ctx, domain.ValidationContext, e, errors.Wrap(err, "failed to delete previous comments"))
 	}
