@@ -59,3 +59,10 @@ func TestAddMetadataToComment(t *testing.T) {
 		})
 	}
 }
+
+func TestIsPeacockComment(t *testing.T) {
+	assert.False(t, IsPeacockComment("this is a comment"))
+	assert.True(t, IsPeacockComment(AddMetadataToComment("breakdown", "1234567890", BreakdownCommentType)))
+	assert.True(t, IsPeacockComment(AddMetadataToComment("validation failed", "", ErrorCommentType)))
+	assert.False(t, IsPeacockComment(AddMetadataToComment("another bot", "1234567890", "summary")))
+}

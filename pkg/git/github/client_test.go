@@ -7,6 +7,8 @@ import (
 	ghmock "github.com/migueleliasweb/go-github-mock/src/mock"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -122,4 +124,44 @@ func TestGit_GetPullRequestBodyWithCommit(t *testing.T) {
 			assert.Equal(t, tt.expectedBody, actualBody)
 		})
 	}
+}
+
+func TestClient_DeletePeacockComments(t *testing.T) {
+	now := time.Now()
+	newComment := func(id int64, user, body string, age time.Duration) *github.IssueComment {
+		return &github.IssueComment{
+			ID:        utils.NewPtr(id),
+			User:      &github.User{Login: utils.NewPtr(user)},
+			Body:      utils.NewPtr(body),
+			CreatedAt: utils.NewPtr(now.Add(-age)),
+		}
+	}
+
+	var deleted []string
+	mockedHTTPClient := ghmock.NewMockedHTTPClient(
+		ghmock.WithRequestMatchPages(
+			ghmock.GetReposIssuesCommentsByOwnerByRepoByIssueNumber,
+			[]*github.IssueComment{
+				newComment(1, "mqube-bot", "breakdown\n<!-- hash: abc123 type: peacock-breakdown -->\n", 5*time.Hour),
+				newComment(2, "mqube-bot", "comment from another bot", 4*time.Hour),
+				newComment(5, "mqube-bot", "other bot\n<!-- hash: abc123 type: summary -->\n", 4*time.Hour),
+			},
+			[]*github.IssueComment{
+				newComment(3, "another-account", "breakdown\n<!-- hash: abc123 type: peacock-breakdown -->\n", 3*time.Hour),
+				newComment(4, "mqube-bot", "Validation failed\n<!-- hash:  type: peacock-error -->\n", 2*time.Hour),
+			},
+		),
+		ghmock.WithRequestMatchHandler(
+			ghmock.DeleteReposIssuesCommentsByOwnerByRepoByCommentId,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				deleted = append(deleted, r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:])
+				w.WriteHeader(http.StatusNoContent)
+			}),
+		),
+	)
+
+	client := Client{github: github.NewClient(mockedHTTPClient), user: "mqube-bot"}
+	err := client.DeletePeacockComments(context.Background(), "spring-financial-group", "peacock", 1)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"4", "3", "1"}, deleted)
 }

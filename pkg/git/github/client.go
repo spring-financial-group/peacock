@@ -3,14 +3,16 @@ package github
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"sort"
+
 	"github.com/google/go-github/v48/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spring-financial-group/peacock/pkg/domain"
+	"github.com/spring-financial-group/peacock/pkg/git/comment"
 	"github.com/spring-financial-group/peacock/pkg/utils"
 	"golang.org/x/oauth2"
-	"net/http"
-	"sort"
 )
 
 const (
@@ -98,6 +100,7 @@ func (c *Client) CommentError(ctx context.Context, owner, repoName string, prNum
 		tagString = fmt.Sprintf("@%s: ", prOwner)
 	}
 	errorMsg := fmt.Sprintf("%sValidation failed for the release notes in this PR:\n%s", tagString, err.Error())
+	errorMsg = comment.AddMetadataToComment(errorMsg, "", comment.ErrorCommentType)
 	return c.CommentOnPR(ctx, owner, repoName, prNumber, errorMsg)
 }
 
@@ -118,9 +121,18 @@ func (c *Client) findPRByMergedTime(pullRequests []*github.PullRequest) *github.
 }
 
 func (c *Client) GetPRComments(ctx context.Context, owner, repoName string, prNumber int) ([]*github.IssueComment, error) {
-	comments, _, err := c.github.Issues.ListComments(ctx, owner, repoName, prNumber, nil)
-	if err != nil {
-		return nil, err
+	opts := &github.IssueListCommentsOptions{PerPage: 100}
+	var comments []*github.IssueComment
+	for {
+		page, resp, err := c.github.Issues.ListComments(ctx, owner, repoName, prNumber, opts)
+		if err != nil {
+			return nil, err
+		}
+		comments = append(comments, page...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
 	// Issue comments are returned sorted by ID, but we want them sorted by created time
 	sort.Slice(comments, func(i, j int) bool {
@@ -129,18 +141,18 @@ func (c *Client) GetPRComments(ctx context.Context, owner, repoName string, prNu
 	return comments, nil
 }
 
-func (c *Client) GetPRCommentsByUser(ctx context.Context, owner, repoName string, prNumber int) ([]*github.IssueComment, error) {
+func (c *Client) GetPeacockComments(ctx context.Context, owner, repoName string, prNumber int) ([]*github.IssueComment, error) {
 	comments, err := c.GetPRComments(ctx, owner, repoName, prNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get all PR comments")
 	}
-	var userComments []*github.IssueComment
-	for _, comment := range comments {
-		if *comment.User.Login == c.user {
-			userComments = append(userComments, comment)
+	var peacockComments []*github.IssueComment
+	for _, cmt := range comments {
+		if comment.IsPeacockComment(cmt.GetBody()) {
+			peacockComments = append(peacockComments, cmt)
 		}
 	}
-	return userComments, nil
+	return peacockComments, nil
 }
 
 func (c *Client) GetFileFromBranch(ctx context.Context, owner, repoName, branch, path string) ([]byte, error) {
@@ -172,13 +184,13 @@ func (c *Client) GetFilesChangedFromPR(ctx context.Context, owner string, repoNa
 	return commitFiles, nil
 }
 
-func (c *Client) DeleteUsersComments(ctx context.Context, owner, repoName string, prNumber int) error {
-	comments, err := c.GetPRCommentsByUser(ctx, owner, repoName, prNumber)
+func (c *Client) DeletePeacockComments(ctx context.Context, owner, repoName string, prNumber int) error {
+	comments, err := c.GetPeacockComments(ctx, owner, repoName, prNumber)
 	if err != nil {
-		return errors.Wrap(err, "failed to get all PR comments")
+		return errors.Wrap(err, "failed to get peacock PR comments")
 	}
-	for _, comment := range comments {
-		_, err = c.github.Issues.DeleteComment(ctx, owner, repoName, *comment.ID)
+	for _, cmt := range comments {
+		_, err = c.github.Issues.DeleteComment(ctx, owner, repoName, cmt.GetID())
 		if err != nil {
 			return errors.Wrap(err, "failed to delete comment")
 		}
